@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Modal from '../modals/Modal';
 import TransferForm from '../modals/transfers/TransferForm'; // Importamos el formulario de traspaso
 import PermisosModal from '../modals/configuration/permissions/PermissionsModal'; // Importamos el modal de permisos
 import TicketConfigModal from '../modals/configuration/printers/TicketConfigModal'; // Importamos el nuevo modal de configuración de tickets
 import empleadosData from '../../data/empleados.json'; // Importamos los datos de empleados
+import { AuthContext } from '../../AuthContext';
 
 // Inicializamos los permisos en memoria
 const permisosIniciales = {
@@ -23,6 +24,9 @@ const NavbarCard = () => {
   const [currentView, setCurrentView] = useState('main'); // Control de vista actual ('main', 'traspasos', 'entrada', 'salida', etc.)
   const [empleadoActual, setEmpleadoActual] = useState(null); // Estado para almacenar el empleado actual
   const [permisosGlobal, setPermisosGlobal] = useState(permisosIniciales); // Estado para manejar los permisos globales
+  const { setIsAuthenticated } = useContext(AuthContext);
+
+  
 
   useEffect(() => {
     // Simulamos que el empleado actual es el Admin cargando su información desde empleados.json
@@ -65,7 +69,14 @@ const NavbarCard = () => {
 
   return (
     <div className="bg-white shadow p-4 flex justify-between items-center">
-      <h1 className="text-xl font-bold">Pueblo Nuevo TPV</h1>
+      <h1 className="text-xl font-bold">{shopName} TPV</h1>
+
+      <div>
+        <span className="font-semibold text-gray-700 mr-4">
+          Empleado: {employeeName}
+        </span>
+      </div>
+
       <div className="space-x-4">
         {/* Botón único de Traspasos */}
         <button className="text-black hover:text-gray-600" onClick={openTransferView}>
@@ -76,6 +87,9 @@ const NavbarCard = () => {
         {/* Botón para abrir la configuración */}
         <button className="text-black hover:text-gray-600" onClick={openConfigView}>
           Configuración
+        </button>
+        <button className="text-black hover:text-gray-600" onClick={handleLogout}>
+          Cerrar Sesión
         </button>
       </div>
 
