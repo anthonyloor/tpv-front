@@ -1,41 +1,23 @@
-// LoginPage.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../AuthContext';
 import { useNavigate } from 'react-router-dom';
+
+const routeToShopName = {
+  penaprieta8: 'Peña Prieta',
+  bravomurillo205: 'Bravo Murillo',
+  alcala397: 'Pueblo Nuevo',
+  bodega: 'Bodega',
+  mayretmodacolombiana: 'Mayret Moda Colombiana',
+};
 
 function LoginPage({ shopRoute }) {
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const { isAuthenticated, setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } =
-    useContext(AuthContext);
+  const { isAuthenticated, setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
   const navigate = useNavigate();
   const [shopInfo, setShopInfo] = useState(null);
-
-  // Mapeo de rutas de tiendas a nombres de tiendas
-  const routeToShopName = {
-    penaprieta8: 'Peña Prieta',
-    bravomurillo205: 'Bravo Murillo',
-    alcala397: 'Pueblo Nuevo',
-    bodega: 'Bodega',
-    MayretModaColombiana: 'Mayret Moda Colombiana',
-  };
-
-  // Mapeo de tiendas a empleados
-  const storeEmployees = {
-    'Peña Prieta': [1, 2],
-    'Bravo Murillo': [5, 16],
-    'Pueblo Nuevo': [25, 30],
-    'Bodega': [31, 32],
-    'Mayret Moda Colombiana': [37, 38],
-  };
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/');
-    }
-  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     const shopName = routeToShopName[shopRoute];
@@ -44,13 +26,12 @@ function LoginPage({ shopRoute }) {
       return;
     }
 
-    // Obtener la información de la tienda desde la API
     fetch('https://apitpv.anthonyloor.com/shops')
       .then((response) => response.json())
       .then((shopsData) => {
         const shop = shopsData.find((s) => s.name === shopName);
         if (shop) {
-          setShopInfo(shop);
+          setShopInfo({ ...shop, route: shopRoute });
           setShopId(shop.id_shop);
           setShopName(shop.name);
         } else {
@@ -65,39 +46,41 @@ function LoginPage({ shopRoute }) {
 
   useEffect(() => {
     if (shopInfo) {
-      // Obtener empleados y filtrar por tienda
       fetch('https://apitpv.anthonyloor.com/employees')
         .then((response) => response.json())
         .then((data) => {
-          const employeesForStore = data.filter((employee) =>
-            storeEmployees[shopInfo.name]?.includes(employee.id_employee)
-          );
-          setEmployees(employeesForStore);
+          setEmployees(data);
         })
         .catch((error) => console.error('Error al obtener empleados:', error));
     }
   }, [shopInfo]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(`/${shopRoute}/app`);
+    }
+  }, [isAuthenticated, navigate, shopRoute]);
 
   const handleEmployeeSelect = (employee) => {
     setSelectedEmployee(employee);
   };
 
   const handleLogin = () => {
-    // Simulación de comprobación de contraseña
     if (password !== '1234') {
       setErrorMessage('Contraseña incorrecta. Inténtalo de nuevo.');
       return;
     }
 
-    // Inicio de sesión exitoso (simulado)
     setIsAuthenticated(true);
     setEmployeeId(selectedEmployee.id_employee);
     setEmployeeName(selectedEmployee.employee_name);
-    navigate('/');
+    localStorage.setItem('token', 'fake-jwt-token');
+    localStorage.setItem('employee', JSON.stringify(selectedEmployee));
+    localStorage.setItem('shop', JSON.stringify(shopInfo));
+    navigate(`/${shopRoute}/app`);
   };
 
   if (shopInfo === null) {
-    // Tienda no encontrada o aún cargando
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="text-center">
@@ -115,7 +98,6 @@ function LoginPage({ shopRoute }) {
           Iniciar Sesión - {shopInfo.name}
         </h1>
 
-        {/* Sección de Empleados */}
         <div className="mb-6">
           <h2 className="text-lg font-medium mb-4">Selecciona un Empleado</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -135,7 +117,6 @@ function LoginPage({ shopRoute }) {
           </div>
         </div>
 
-        {/* Campo de Contraseña */}
         <div className="mb-6">
           <h2 className="text-lg font-medium mb-4">Introduce tu Contraseña</h2>
           <input
@@ -144,18 +125,16 @@ function LoginPage({ shopRoute }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full py-2 px-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            autoComplete="new-password" // Evita que el navegador recuerde la contraseña
+            autoComplete="new-password"
           />
         </div>
 
-        {/* Mensaje de error */}
         {errorMessage && (
           <div className="mb-4 text-red-500 text-center">
             {errorMessage}
           </div>
         )}
 
-        {/* Botón de Iniciar Sesión */}
         <button
           onClick={handleLogin}
           disabled={!selectedEmployee || !password}

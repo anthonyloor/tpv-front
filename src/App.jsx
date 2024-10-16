@@ -1,5 +1,5 @@
-import React, { useState, useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useState, useContext, useEffect } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import NavbarCard from './components/base/NavbarCard.jsx';
 import SalesCard from './components/base/SalesCard.jsx';
 import ProductSearchCard from './components/base/ProductSearchCard.jsx';
@@ -12,7 +12,30 @@ import PrivateRoute from './PrivateRoute.js';
 function App() {
   const [cartItems, setCartItems] = useState([]);
   const [lastAction, setLastAction] = useState(null);
-  const { isAuthenticated } = useContext(AuthContext);
+  const { isAuthenticated, setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+    const storedEmployee = JSON.parse(localStorage.getItem('employee'));
+
+    if (storedShop && storedEmployee) {
+      setIsAuthenticated(true);
+      setShopId(storedShop.id_shop);
+      setShopName(storedShop.name);
+      setEmployeeId(storedEmployee.id_employee);
+      setEmployeeName(storedEmployee.employee_name);
+    }
+  }, [setIsAuthenticated, setShopId, setShopName, setEmployeeId, setEmployeeName]);
+
+  useEffect(() => {
+    const currentPath = window.location.pathname.split('/')[1];
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+
+    if (storedShop && currentPath !== storedShop.route) {
+      navigate(`/${storedShop.route}/app`);
+    }
+  }, [navigate]);
 
   // Función para añadir productos al ticket, verificando la cantidad máxima disponible
   const handleAddProduct = (
@@ -91,49 +114,44 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="bg-gray-light min-h-screen flex flex-col">
-        {/* Mostrar NavbarCard solo si el usuario está autenticado */}
-        {isAuthenticated && <NavbarCard />}
+    <div className="bg-gray-light min-h-screen flex flex-col">
+      {/* Mostrar NavbarCard solo si el usuario está autenticado */}
+      {isAuthenticated && <NavbarCard />}
 
-        <Routes>
-          {/* Rutas para cada tienda */}
-          <Route path="/penaprieta8" element={<LoginPage shopRoute="penaprieta8" />} />
-          <Route path="/bravomurillo205" element={<LoginPage shopRoute="bravomurillo205" />} />
-          <Route path="/alcala397" element={<LoginPage shopRoute="alcala397" />} />
-          <Route path="/bodega" element={<LoginPage shopRoute="bodega" />} />
-          <Route
-            path="/MayretModaColombiana"
-            element={<LoginPage shopRoute="MayretModaColombiana" />}
-          />
-          <Route path="/pin" element={<PinPage />} />
-          {/* Ruta protegida para la aplicación principal */}
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <div className="flex flex-col md:flex-row flex-grow p-4 space-y-4 md:space-y-0 md:space-x-4">
-                  <div className="w-full md:w-2/5">
-                    <SalesCard
-                      cartItems={cartItems}
-                      setCartItems={setCartItems}
-                      onRemoveProduct={handleRemoveProduct}
-                      onDecreaseProduct={handleDecreaseProduct}
-                      lastAction={lastAction}
-                    />
-                  </div>
-                  <div className="w-full md:w-3/5">
-                    <ProductSearchCard onAddProduct={handleAddProduct} />
-                  </div>
+      <Routes>
+        {/* Rutas para cada tienda */}
+        <Route path="/penaprieta8" element={<LoginPage shopRoute="penaprieta8" />} />
+        <Route path="/bravomurillo205" element={<LoginPage shopRoute="bravomurillo205" />} />
+        <Route path="/alcala397" element={<LoginPage shopRoute="alcala397" />} />
+        <Route path="/bodega" element={<LoginPage shopRoute="bodega" />} />
+        <Route path="/mayretmodacolombiana" element={<LoginPage shopRoute="mayretmodacolombiana" />} />
+        <Route path="/pin" element={<PinPage />} />
+        {/* Ruta protegida para la aplicación principal */}
+        <Route
+          path="/:shopRoute/app"
+          element={
+            <PrivateRoute>
+              <div className="flex flex-col md:flex-row flex-grow p-4 space-y-4 md:space-y-0 md:space-x-4">
+                <div className="w-full md:w-2/5">
+                  <SalesCard
+                    cartItems={cartItems}
+                    setCartItems={setCartItems}
+                    onRemoveProduct={handleRemoveProduct}
+                    onDecreaseProduct={handleDecreaseProduct}
+                    lastAction={lastAction}
+                  />
                 </div>
-              </PrivateRoute>
-            }
-          />
-          {/* Ruta para manejar páginas no encontradas */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </div>
-    </Router>
+                <div className="w-full md:w-3/5">
+                  <ProductSearchCard onAddProduct={handleAddProduct} />
+                </div>
+              </div>
+            </PrivateRoute>
+          }
+        />
+        {/* Ruta para manejar páginas no encontradas */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </div>
   );
 }
 

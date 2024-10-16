@@ -1,10 +1,16 @@
-import React, { useContext } from 'react';
-import { Navigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { AuthContext } from './AuthContext';
 
-function PrivateRoute({ children }) {
-  const { isAuthenticated } = useContext(AuthContext);
-  return isAuthenticated ? children : <Navigate to="/penaprieta8" />;
-}
+const PrivateRoute = ({ children }) => {
+  const { isAuthenticated } = React.useContext(AuthContext);
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to={`/login?redirect=${location.pathname}`} />;
+  }
+
+  return children;
+};
 
 export default PrivateRoute;

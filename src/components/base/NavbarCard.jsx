@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from '../modals/Modal';
 import TransferForm from '../modals/transfers/TransferForm'; // Importamos el formulario de traspaso
 import PermisosModal from '../modals/configuration/permissions/PermissionsModal'; // Importamos el modal de permisos
@@ -24,8 +25,23 @@ const NavbarCard = () => {
   const [currentView, setCurrentView] = useState('main'); // Control de vista actual ('main', 'traspasos', 'entrada', 'salida', etc.)
   const [empleadoActual, setEmpleadoActual] = useState(null); // Estado para almacenar el empleado actual
   const [permisosGlobal, setPermisosGlobal] = useState(permisosIniciales); // Estado para manejar los permisos globales
-  const { setIsAuthenticated } = useContext(AuthContext);
+  const { setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
+  const navigate = useNavigate();
 
+  const shop = JSON.parse(localStorage.getItem('shop'));
+  const employee = JSON.parse(localStorage.getItem('employee'));
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('employee');
+    localStorage.removeItem('shop');
+    setIsAuthenticated(false);
+    setShopId(null);
+    setEmployeeId(null);
+    setEmployeeName(null);
+    setShopName(null);
+    navigate(`/${shop.route}`);
+  };
   
 
   useEffect(() => {
@@ -69,11 +85,10 @@ const NavbarCard = () => {
 
   return (
     <div className="bg-white shadow p-4 flex justify-between items-center">
-      <h1 className="text-xl font-bold">{shopName} TPV</h1>
-
+      <h1 className="text-xl font-semibold">{shop ? shop.name : 'Tienda'} TPV</h1>
       <div>
         <span className="font-semibold text-gray-700 mr-4">
-          Empleado: {employeeName}
+          Empleado: {employee ? employee.employee_name : 'Empleado'}
         </span>
       </div>
 
@@ -88,7 +103,10 @@ const NavbarCard = () => {
         <button className="text-black hover:text-gray-600" onClick={openConfigView}>
           Configuración
         </button>
-        <button className="text-black hover:text-gray-600" onClick={handleLogout}>
+        <button
+        onClick={handleLogout}
+        className="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 transition-colors duration-200"
+        >
           Cerrar Sesión
         </button>
       </div>
