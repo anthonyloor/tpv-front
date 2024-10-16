@@ -7,7 +7,7 @@ const PrivateRoute = ({ children }) => {
   const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to={`/login?redirect=${location.pathname}`} />;
+    return <Navigate to={location.pathname} />;
   }
 
   return children;

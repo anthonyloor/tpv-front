@@ -115,8 +115,6 @@ function App() {
 
   return (
     <div className="bg-gray-light min-h-screen flex flex-col">
-      {/* Mostrar NavbarCard solo si el usuario está autenticado */}
-      {isAuthenticated && <NavbarCard />}
 
       <Routes>
         {/* Rutas para cada tienda */}
@@ -131,6 +129,7 @@ function App() {
           path="/:shopRoute/app"
           element={
             <PrivateRoute>
+              <NavbarCard />
               <div className="flex flex-col md:flex-row flex-grow p-4 space-y-4 md:space-y-0 md:space-x-4">
                 <div className="w-full md:w-2/5">
                   <SalesCard
