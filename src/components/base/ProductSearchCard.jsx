@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../modals/Modal';
-import productsData from '../../data/products.json';
 import sessionConfig from '../../data/sessionConfig.json';
 
 const ProductSearchCard = ({ onAddProduct }) => {
@@ -12,6 +11,7 @@ const ProductSearchCard = ({ onAddProduct }) => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [clickedButtons, setClickedButtons] = useState({});
+  const jwtToken = localStorage.getItem('token'); // Obtener el JWT desde el localStorage
 
   useEffect(() => {
     // Cargamos la configuración de la sesión para obtener la tienda en curso
@@ -23,14 +23,23 @@ const ProductSearchCard = ({ onAddProduct }) => {
     setSearchTerm(term);
   };
 
-  const handleKeyDown = (event) => {
+  const handleKeyDown = async (event) => {
     // Solo realiza la búsqueda si el término tiene al menos 3 caracteres y se presiona Enter
     if (event.key === 'Enter' && searchTerm.length >= 3) {
-      const results = productsData.filter(
-        (product) =>
-          product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.ean13_combination.toString().includes(searchTerm)
-      );
+    try {
+      const response = await fetch(`https://apitpv.anthonyloor.com/product_search?b=${searchTerm}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwtToken}`, // Incluimos el token en el header
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Error fetching products');
+      }
+
+      const results = await response.json();
 
       const filteredForCurrentShop = results.filter(
         (product) => product.shop_name === currentShop.shop_name
@@ -43,8 +52,10 @@ const ProductSearchCard = ({ onAddProduct }) => {
         addProductToCart(filteredForCurrentShop[0]);
         // Limpiamos el campo de búsqueda
         setSearchTerm('');
-        // Limpiamos los productos filtrados para vaciar la lista de resultados
-        // setFilteredProducts([]);
+        }
+      } catch (error) {
+        console.error('Error en la búsqueda:', error);
+        alert('Error al buscar productos. Inténtalo de nuevo más tarde.');
       }
     }
   };
@@ -203,7 +214,7 @@ const ProductSearchCard = ({ onAddProduct }) => {
                     <td className="py-2 px-4 border-b">{product.price.toFixed(2)} €</td>
                     <td className="py-2 px-4 border-b relative group">
                       <span>{getStockForCurrentShop(product.stocks)}</span>
-                      <div className="absolute left-0 mt-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 shadow-lg z-10">
+                      <div className="absolute left-0 mt-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 shadow-</td>lg z-10">
                         {Array.isArray(product.stocks) ? (
                           product.stocks.map((stock, stockIndex) => (
                             <div key={`${stock.shop_name}_${stockIndex}`}>

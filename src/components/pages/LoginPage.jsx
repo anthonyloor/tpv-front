@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../AuthContext';
 import { useNavigate } from 'react-router-dom';
+import LicenseModal from '../modals/license/LicenseModal'; // Importa el LicenseModal
 
 const routeToShopName = {
   penaprieta8: 'Peña Prieta',
@@ -27,35 +28,43 @@ function LoginPage({ shopRoute }) {
   const [shopInfo, setShopInfo] = useState(); // Inicializado como undefined
   const [isLoadingShopInfo, setIsLoadingShopInfo] = useState(true);
 
-  useEffect(() => {
-    setIsLoadingShopInfo(true);
-    const shopName = routeToShopName[shopRoute];
-    if (!shopName) {
-      setShopInfo(null);
-      setIsLoadingShopInfo(false);
-      return;
-    }
+  // Añade un estado para controlar la licencia
+  const [hasLicense, setHasLicense] = useState(() => {
+    return !!localStorage.getItem('licenseKey');
+  });
+  const [showLicenseModal, setShowLicenseModal] = useState(!hasLicense);
 
-    fetch('https://apitpv.anthonyloor.com/shops')
-      .then((response) => response.json())
-      .then((shopsData) => {
-        const shop = shopsData.find((s) => s.name === shopName);
-        if (shop) {
-          setShopInfo({ ...shop, route: shopRoute });
-          setShopId(shop.id_shop);
-          setShopName(shop.name);
-        } else {
-          setShopInfo(null);
-        }
-      })
-      .catch((error) => {
-        console.error('Error al obtener tiendas:', error);
+  useEffect(() => {
+    if (hasLicense) {
+      setIsLoadingShopInfo(true);
+      const shopName = routeToShopName[shopRoute];
+      if (!shopName) {
         setShopInfo(null);
-      })
-      .finally(() => {
         setIsLoadingShopInfo(false);
-      });
-  }, [shopRoute, setShopId, setShopName]);
+        return;
+      }
+
+      fetch('https://apitpv.anthonyloor.com/shops')
+        .then((response) => response.json())
+        .then((shopsData) => {
+          const shop = shopsData.find((s) => s.name === shopName);
+          if (shop) {
+            setShopInfo({ ...shop, route: shopRoute });
+            setShopId(shop.id_shop);
+            setShopName(shop.name);
+          } else {
+            setShopInfo(null);
+          }
+        })
+        .catch((error) => {
+          console.error('Error al obtener tiendas:', error);
+          setShopInfo(null);
+        })
+        .finally(() => {
+          setIsLoadingShopInfo(false);
+        });
+      }
+  }, [shopRoute, setShopId, setShopName, hasLicense]);
 
   useEffect(() => {
     if (shopInfo) {
@@ -77,6 +86,17 @@ function LoginPage({ shopRoute }) {
   const handleEmployeeSelect = (employee) => {
     setSelectedEmployee(employee);
   };
+
+  // Función para cerrar el modal y actualizar el estado
+  const handleLicenseModalClose = () => {
+    setHasLicense(true);
+    setShowLicenseModal(false);
+  };
+
+  // Si no hay licencia, mostramos el modal
+  if (showLicenseModal) {
+    return <LicenseModal onClose={handleLicenseModalClose} />;
+  }
 
   const handleLogin = () => {
     fetch('https://apitpv.anthonyloor.com/login', {
