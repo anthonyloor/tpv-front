@@ -5,6 +5,13 @@ import sessionConfig from '../../data/sessionConfig.json';
 import ticketConfigData from '../../data/ticket.json'; // Importa la configuración del ticket
 import JsBarcode from 'jsbarcode';
 
+// Datos de clientes de prueba
+const testClients = [
+  { id_customer: 1, full_name: 'Juan Pérez' },
+  { id_customer: 2, full_name: 'María López' },
+  { id_customer: 3, full_name: 'Carlos Sánchez' },
+];
+
 const SalesCard = ({
   cartItems,
   setCartItems, // Necesitamos esta función para vaciar el carrito
@@ -21,6 +28,8 @@ const SalesCard = ({
   const [copies, setCopies] = useState(1); // Número de copias del ticket
   const [giftTicket, setGiftTicket] = useState(false); // Estado del ticket de regalo
   const [highlightedItems, setHighlightedItems] = useState({});
+  const [selectedClient, setSelectedClient] = useState({ id_customer: 0, full_name: 'Cliente genérico' });
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   useEffect(() => {
     if (lastAction !== null) {
@@ -311,23 +320,64 @@ const SalesCard = ({
       iframe.contentWindow.print();
     };
   };
-    
+
+  // Funciones para manejar el cliente seleccionado
+  const handleSelectClient = (client) => {
+    setSelectedClient(client);
+    setIsClientModalOpen(false);
+  };
+
+  const handleResetClient = () => {
+    setSelectedClient({ id_customer: 0, full_name: 'Cliente genérico' });
+  };
 
   const isFinalizeDisabled =
     Object.values(amounts).reduce((sum, value) => sum + (parseFloat(value) || 0), 0) < total;
 
   return (
     <div className="bg-white rounded-lg shadow p-4 h-full flex flex-col justify-between relative overflow-hidden">
-      {/* Fondo del logo */}
-      <div
-        className="absolute inset-0 bg-center bg-no-repeat opacity-10"
-        style={{
-          backgroundImage: 'url(/logo-marca.png)', // Asegúrate de que la imagen esté en la carpeta public y se llame logo-marca.png
-          backgroundSize: '40%',
-        }}
-      ></div>
 
-      <div className="relative z-10">
+      {/* Sección para el cliente seleccionado y los botones */}
+      <div className="mb-4 flex items-center justify-between">
+        <span className="font-semibold">
+          {selectedClient.full_name}
+        </span>
+        <div className="flex space-x-2">
+          {/* Botón 'P' para volver al cliente predeterminado (solo se muestra si el cliente no es genérico) */}
+          {selectedClient.id_customer !== 0 && (
+            <button
+              className="bg-gray-200 p-2 rounded font-bold text-black"
+              onClick={handleResetClient}
+            >
+              P
+            </button>
+          )}
+          {/* Botón para gestionar clientes */}
+          <button
+            className="bg-gray-200 p-2 rounded"
+            onClick={() => setIsClientModalOpen(true)}
+          >
+            {/* Ícono de usuario */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 text-black"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              {/* Icono de usuario */}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5.121 17.804A4 4 0 0112 15a4 4 0 016.879 2.804M12 15v7m0 0h8m-8 0H4"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div className="relative z-10 flex-grow overflow-auto">
         <div className="grid grid-cols-5 gap-4 font-bold border-b py-2">
           <span>Und.</span>
           <span>Producto</span>
@@ -419,6 +469,37 @@ const SalesCard = ({
           </button>
         </div>
       </div>
+
+      {/* Modal para gestionar clientes */}
+      <Modal isOpen={isClientModalOpen} onClose={() => setIsClientModalOpen(false)}>
+        <div className="p-4">
+          <h2 className="text-lg font-bold mb-4">Seleccionar Cliente</h2>
+          <div className="space-y-2">
+            {testClients.map((client) => (
+              <div
+                key={client.id_customer}
+                className="flex justify-between items-center border-b pb-2"
+              >
+                <span>{client.full_name}</span>
+                <button
+                  className="bg-blue-500 text-white px-2 py-1 rounded"
+                  onClick={() => handleSelectClient(client)}
+                >
+                  Seleccionar
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <button
+              className="bg-green-500 text-white px-4 py-2 rounded w-full"
+              onClick={() => alert('Crear nuevo cliente')}
+            >
+              Crear Cliente Nuevo
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Modal para finalizar la venta */}
       <Modal isOpen={isFinalSaleModalOpen} onClose={handleCloseModal}>
