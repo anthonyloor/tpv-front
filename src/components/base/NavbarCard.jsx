@@ -1,3 +1,4 @@
+// NavbarCard.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../modals/Modal';
@@ -6,6 +7,13 @@ import PermisosModal from '../modals/configuration/permissions/PermissionsModal'
 import TicketConfigModal from '../modals/configuration/printers/TicketConfigModal'; // Importamos el nuevo modal de configuración de tickets
 import empleadosData from '../../data/empleados.json'; // Importamos los datos de empleados
 import { AuthContext } from '../../AuthContext';
+
+// Datos de clientes de prueba
+const testClients = [
+  { id_customer: 1, full_name: 'Juan Pérez' },
+  { id_customer: 2, full_name: 'María López' },
+  { id_customer: 3, full_name: 'Carlos Sánchez' },
+];
 
 // Inicializamos los permisos en memoria
 const permisosIniciales = {
@@ -31,6 +39,10 @@ const NavbarCard = () => {
   const shop = JSON.parse(localStorage.getItem('shop'));
   const employee = JSON.parse(localStorage.getItem('employee'));
 
+  // Estado para el cliente seleccionado y el modal de clientes
+  const [selectedClient, setSelectedClient] = useState({ id_customer: 0, full_name: 'Cliente genérico' });
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('employee');
@@ -42,7 +54,6 @@ const NavbarCard = () => {
     setShopName(null);
     navigate(`/${shop.route}`);
   };
-  
 
   useEffect(() => {
     // Simulamos que el empleado actual es el Admin cargando su información desde empleados.json
@@ -83,31 +94,84 @@ const NavbarCard = () => {
     }
   };
 
+  // Funciones para manejar el cliente seleccionado
+  const handleSelectClient = (client) => {
+    setSelectedClient(client);
+    setIsClientModalOpen(false);
+  };
+
+  const handleResetClient = () => {
+    setSelectedClient({ id_customer: 0, full_name: 'Cliente genérico' });
+  };
+
   return (
-    <div className="bg-white shadow p-4 flex justify-between items-center">
+    <div className="bg-white shadow p-4 flex items-center justify-between">
+      {/* Logo o nombre de la tienda */}
       <h1 className="text-xl font-semibold">{shop ? shop.name : 'Tienda'} TPV</h1>
-      <div>
-        <span className="font-semibold text-gray-700 mr-4">
-          Empleado: {employee ? employee.employee_name : 'Empleado'}
+
+      {/* Opciones de navegación */}
+
+      {/* Cliente seleccionado y botones */}
+      <div className="flex items-center space-x-2">
+        <span className="font-semibold">
+          {selectedClient.full_name}
         </span>
+        {/* Botón para gestionar clientes */}
+        <button
+          className="bg-gray-200 p-2 rounded"
+          onClick={() => setIsClientModalOpen(true)}
+        >
+          {/* Ícono de usuario */}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+            <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
+          </svg>
+        </button>
+        {/* Botón 'P' para volver al cliente predeterminado */}
+        {selectedClient.id_customer !== 0 && (
+          <button
+            className="bg-gray-200 p-2 rounded font-bold text-black"
+            onClick={handleResetClient}
+          >
+            P
+          </button>
+        )}
       </div>
 
-      <div className="space-x-4">
-        {/* Botón único de Traspasos */}
+      {/* Separador */}
+      <div className="border-l h-6 mx-4"></div>
+
+      <div className="flex items-center space-x-4">
+        {/* Botones de navegación */}
         <button className="text-black hover:text-gray-600" onClick={openTransferView}>
           Traspasos
         </button>
         <button className="text-black hover:text-gray-600">Etiquetas</button>
         <button className="text-black hover:text-gray-600">Caja</button>
-        {/* Botón para abrir la configuración */}
         <button className="text-black hover:text-gray-600" onClick={openConfigView}>
           Configuración
         </button>
-        <button
-        onClick={handleLogout}
-        className="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 transition-colors duration-200"
-        >
-          Cerrar Sesión
+      </div>
+
+      {/* Separador */}
+      <div className="border-l h-6 mx-4"></div>
+
+      {/* Información del empleado y logout */}
+      <div className="flex items-center space-x-2">
+        {/* Ícono de usuario */}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+        <path fillRule="evenodd" d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" clipRule="evenodd" />
+       </svg>
+        <span className="font-semibold text-gray-700">
+          {employee ? employee.employee_name : 'Empleado'}
+        </span>
+        {/* Botón de cerrar sesión */}
+        <button onClick={handleLogout} className="text-black hover:text-gray-600">
+          {/* Ícono de cerrar sesión */}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+            <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+          </svg>
+
+
         </button>
       </div>
 
@@ -191,6 +255,37 @@ const NavbarCard = () => {
             <TransferForm type={currentView} onSave={closeModal} permisosUsuario={empleadoActual?.nivel_permisos} permisosGlobal={permisosGlobal} />
           </div>
         )}
+      </Modal>
+
+      {/* Modal para gestionar clientes */}
+      <Modal isOpen={isClientModalOpen} onClose={() => setIsClientModalOpen(false)}>
+        <div className="p-4">
+          <h2 className="text-lg font-bold mb-4">Seleccionar Cliente</h2>
+          <div className="space-y-2">
+            {testClients.map((client) => (
+              <div
+                key={client.id_customer}
+                className="flex justify-between items-center border-b pb-2"
+              >
+                <span>{client.full_name}</span>
+                <button
+                  className="bg-blue-500 text-white px-2 py-1 rounded"
+                  onClick={() => handleSelectClient(client)}
+                >
+                  Seleccionar
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <button
+              className="bg-green-500 text-white px-4 py-2 rounded w-full"
+              onClick={() => alert('Crear nuevo cliente')}
+            >
+              Crear Cliente Nuevo
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

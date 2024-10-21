@@ -5,13 +5,6 @@ import sessionConfig from '../../data/sessionConfig.json';
 import ticketConfigData from '../../data/ticket.json'; // Importa la configuración del ticket
 import JsBarcode from 'jsbarcode';
 
-// Datos de clientes de prueba
-const testClients = [
-  { id_customer: 1, full_name: 'Juan Pérez' },
-  { id_customer: 2, full_name: 'María López' },
-  { id_customer: 3, full_name: 'Carlos Sánchez' },
-];
-
 const SalesCard = ({
   cartItems,
   setCartItems, // Necesitamos esta función para vaciar el carrito
@@ -28,8 +21,6 @@ const SalesCard = ({
   const [copies, setCopies] = useState(1); // Número de copias del ticket
   const [giftTicket, setGiftTicket] = useState(false); // Estado del ticket de regalo
   const [highlightedItems, setHighlightedItems] = useState({});
-  const [selectedClient, setSelectedClient] = useState({ id_customer: 0, full_name: 'Cliente genérico' });
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   useEffect(() => {
     if (lastAction !== null) {
@@ -37,13 +28,29 @@ const SalesCard = ({
       setHighlightedItems((prev) => ({ ...prev, [id]: action }));
       const timer = setTimeout(() => {
         setHighlightedItems((prev) => ({ ...prev, [id]: null }));
-      }, 500); // Duración de la animación (más rápida)
+      }, 300); // Duración de la animación (más rápida)
 
       return () => clearTimeout(timer);
     }
   }, [lastAction]);
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  // Funciones para los nuevos botones
+  const handleParkCart = () => {
+    alert('Carrito aparcado');
+  };
+
+  const handleApplyDiscount = () => {
+    alert('Aplicar descuento');
+  };
+
+  const handleClearCart = () => {
+    setCartItems([]);
+  };
+
+  // Determinar el número total de artículos en el carrito
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleFinalSale = () => {
     setIsLoading(true); // Establecer el estado de carga a true
@@ -321,61 +328,52 @@ const SalesCard = ({
     };
   };
 
-  // Funciones para manejar el cliente seleccionado
-  const handleSelectClient = (client) => {
-    setSelectedClient(client);
-    setIsClientModalOpen(false);
-  };
-
-  const handleResetClient = () => {
-    setSelectedClient({ id_customer: 0, full_name: 'Cliente genérico' });
-  };
-
   const isFinalizeDisabled =
     Object.values(amounts).reduce((sum, value) => sum + (parseFloat(value) || 0), 0) < total;
 
-  return (
-    <div className="bg-white rounded-lg shadow p-4 h-full flex flex-col justify-between relative overflow-hidden">
-
-      {/* Sección para el cliente seleccionado y los botones */}
-      <div className="mb-4 flex items-center justify-between">
-        <span className="font-semibold">
-          {selectedClient.full_name}
-        </span>
-        <div className="flex space-x-2">
-          {/* Botón 'P' para volver al cliente predeterminado (solo se muestra si el cliente no es genérico) */}
-          {selectedClient.id_customer !== 0 && (
+    return (
+      <div className="bg-white rounded-lg shadow p-4 h-full flex flex-col relative">
+        {/* Sección superior con indicador numérico y botones */}
+        <div className="mb-4 flex items-center justify-between">
+          {/* Indicador numérico con fondo naranja */}
+          <div className="bg-orange-500 text-white px-3 py-1 rounded-full">
+            {totalItems}
+          </div>
+          {/* Botones */}
+          <div className="flex space-x-2">
+            {/* Botón para aparcar el carrito */}
             <button
-              className="bg-gray-200 p-2 rounded font-bold text-black"
-              onClick={handleResetClient}
+              className="bg-gray-200 p-2 rounded"
+              onClick={handleParkCart}
             >
-              P
+              {/* Ícono de pasar página */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                <path fillRule="evenodd" d="M6.32 2.577a49.255 49.255 0 0 1 11.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 0 1-1.085.67L12 18.089l-7.165 3.583A.75.75 0 0 1 3.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93Z" clipRule="evenodd" />
+              </svg>
+
             </button>
-          )}
-          {/* Botón para gestionar clientes */}
-          <button
-            className="bg-gray-200 p-2 rounded"
-            onClick={() => setIsClientModalOpen(true)}
-          >
-            {/* Ícono de usuario */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-black"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            {/* Botón de descuento */}
+            <button
+              className="bg-gray-200 p-2 rounded"
+              onClick={handleApplyDiscount}
             >
-              {/* Icono de usuario */}
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5.121 17.804A4 4 0 0112 15a4 4 0 016.879 2.804M12 15v7m0 0h8m-8 0H4"
-              />
-            </svg>
-          </button>
+              {/* Ícono de descuento */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                <path fillRule="evenodd" d="M12 2.25C6.477 2.25 2.25 6.477 2.25 12S6.477 21.75 12 21.75 21.75 17.523 21.75 12 17.523 2.25 12 2.25ZM7.75 12.25a.75.75 0 0 1 0-1.5h8.5a.75.75 0 0 1 0 1.5h-8.5ZM8.5 9.75a1.25 1.25 0 1 1 2.5 0 1.25 1.25 0 0 1-2.5 0Zm5.5 4.5a1.25 1.25 0 1 1 2.5 0 1.25 1.25 0 0 1-2.5 0Z" clipRule="evenodd"/>
+              </svg>
+            </button>
+            {/* Botón para vaciar el carrito */}
+            <button
+              className="bg-gray-200 p-2 rounded"
+              onClick={handleClearCart}
+            >
+              {/* Ícono de X */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                <path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
 
       <div className="relative z-10 flex-grow overflow-auto">
         <div className="grid grid-cols-5 gap-4 font-bold border-b py-2">
@@ -427,24 +425,35 @@ const SalesCard = ({
           <p>No hay productos en el ticket.</p>
         )}
       </div>
-      <div className="relative mt-4">
+      {/* Área inferior con total y botones */}
+      <div className="mt-4">
         <div className="border-t pt-4 flex justify-between items-center">
           <h3 className="text-2xl font-bold">Total: {total.toFixed(2)} €</h3>
         </div>
-        <div className="mt-4 flex justify-between space-x-4">
+
+        {/* Botones de acciones */}
+        <div className="mt-4 flex justify-between space-x-2">
           <button
-            className="bg-gray-300 text-black px-4 py-2 rounded w-full"
-            onClick={() => alert('Descuento aplicado')}
+            className="bg-gray-300 text-black px-2 py-2 rounded w-1/3"
+            onClick={() => alert('Devoluciones/Cambios')}
           >
-            Descuento
+            Devoluciones/Cambios
           </button>
-          <button className="bg-gray-300 text-black px-4 py-2 rounded w-full">
-            Reimprimir Ticket
+          <button
+            className="bg-gray-300 text-black px-2 py-2 rounded w-1/3"
+            onClick={() => alert('Reimprimir')}
+          >
+            Reimprimir
           </button>
-          <button className="bg-green-500 text-white px-4 py-2 rounded w-full">
-            + Añadir Manualmente
+          <button
+            className="bg-green-500 text-white px-2 py-2 rounded w-1/3"
+            onClick={() => alert('Añadir Manualmente')}
+          >
+            + Añadir Manual
           </button>
         </div>
+
+        {/* Botón de Finalizar Venta */}
         <div className="mt-4">
           <button
             className={`px-4 py-3 rounded w-full text-lg font-bold flex items-center justify-center ${
@@ -469,37 +478,6 @@ const SalesCard = ({
           </button>
         </div>
       </div>
-
-      {/* Modal para gestionar clientes */}
-      <Modal isOpen={isClientModalOpen} onClose={() => setIsClientModalOpen(false)}>
-        <div className="p-4">
-          <h2 className="text-lg font-bold mb-4">Seleccionar Cliente</h2>
-          <div className="space-y-2">
-            {testClients.map((client) => (
-              <div
-                key={client.id_customer}
-                className="flex justify-between items-center border-b pb-2"
-              >
-                <span>{client.full_name}</span>
-                <button
-                  className="bg-blue-500 text-white px-2 py-1 rounded"
-                  onClick={() => handleSelectClient(client)}
-                >
-                  Seleccionar
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4">
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded w-full"
-              onClick={() => alert('Crear nuevo cliente')}
-            >
-              Crear Cliente Nuevo
-            </button>
-          </div>
-        </div>
-      </Modal>
 
       {/* Modal para finalizar la venta */}
       <Modal isOpen={isFinalSaleModalOpen} onClose={handleCloseModal}>
