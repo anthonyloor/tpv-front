@@ -1,15 +1,23 @@
+// LoginPage.jsx
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { AuthContext } from '../../AuthContext';
 import { useNavigate } from 'react-router-dom';
-import LicenseModal from '../modals/license/LicenseModal';
+import LicenseModal from '../modals/license/LicenseModal'; // Importamos el LicenseModal
 
-const routeToShopName = {
-  penaprieta8: 'Peña Prieta',
-  bravomurillo205: 'Bravo Murillo',
-  alcala397: 'Pueblo Nuevo',
-  bodega: 'Bodega',
-  mayretmodacolombiana: 'Mayret Moda Colombiana',
+const routeToShopInfo = {
+  penaprieta8: { name: 'Peña Prieta', id_shop: 11 },
+  bravomurillo205: { name: 'Bravo Murillo', id_shop: 9 },
+  alcala397: { name: 'Pueblo Nuevo', id_shop: 14 },
+  bodega: { name: 'Bodega', id_shop: 13 },
+  mayretmodacolombiana: { name: 'Mayret Moda Colombiana', id_shop: 1 },
 };
+
+// Crear un mapeo inverso de id_shop a shopRoute
+const idShopToRoute = {};
+for (const route in routeToShopInfo) {
+  const shopData = routeToShopInfo[route];
+  idShopToRoute[shopData.id_shop] = route;
+}
 
 function LoginPage({ shopRoute }) {
   const [employees, setEmployees] = useState([]);
@@ -29,43 +37,29 @@ function LoginPage({ shopRoute }) {
   const [isLoadingShopInfo, setIsLoadingShopInfo] = useState(false);
 
   // Estado para controlar la licencia
-  const [hasLicense, setHasLicense] = useState(() => {
-    return !!localStorage.getItem('licenseKey');
+  const [licenseData, setLicenseData] = useState(() => {
+    const data = localStorage.getItem('licenseData');
+    return data ? JSON.parse(data) : null;
   });
+  const [hasLicense, setHasLicense] = useState(!!licenseData);
   const [showLicenseModal, setShowLicenseModal] = useState(!hasLicense);
   const [isValidatingLicense, setIsValidatingLicense] = useState(false);
   const [licenseErrorMessage, setLicenseErrorMessage] = useState(''); // Estado para mensajes de error de licencia
-  const [licenseKey, setLicenseKey] = useState(localStorage.getItem('licenseKey') || '');
 
   // Función para cargar la tienda y empleados
   const proceedToLoadShopAndEmployees = useCallback(() => {
     setIsLoadingShopInfo(true);
-    const shopName = routeToShopName[shopRoute];
-    if (!shopName) {
+    const shopData = routeToShopInfo[shopRoute];
+    if (!shopData) {
       setShopInfo(null);
       setIsLoadingShopInfo(false);
       return;
     }
 
-    fetch('https://apitpv.anthonyloor.com/shops')
-      .then((response) => response.json())
-      .then((shopsData) => {
-        const shop = shopsData.find((s) => s.name === shopName);
-        if (shop) {
-          setShopInfo({ ...shop, route: shopRoute });
-          setShopId(shop.id_shop);
-          setShopName(shop.name);
-        } else {
-          setShopInfo(null);
-        }
-      })
-      .catch((error) => {
-        console.error('Error al obtener tiendas:', error);
-        setShopInfo(null);
-      })
-      .finally(() => {
-        setIsLoadingShopInfo(false);
-      });
+    // Establecer información de la tienda
+    setShopInfo({ ...shopData, route: shopRoute });
+    setShopId(shopData.id_shop);
+    setShopName(shopData.name);
 
     // Cargar empleados
     fetch('https://apitpv.anthonyloor.com/employees')
@@ -73,15 +67,36 @@ function LoginPage({ shopRoute }) {
       .then((data) => {
         setEmployees(data);
       })
-      .catch((error) => console.error('Error al obtener empleados:', error));
+      .catch((error) => console.error('Error al obtener empleados:', error))
+      .finally(() => {
+        setIsLoadingShopInfo(false);
+      });
   }, [shopRoute, setShopId, setShopName]);
 
   // Función para validar la licencia
   const validateLicense = useCallback(
-    (key) => {
+    (key, idShop) => {
       setIsValidatingLicense(true);
 
-      fetch(`https://apitpv.anthonyloor.com/license_check?license=${key}`)
+      const shopData = routeToShopInfo[shopRoute];
+      if (!shopData) {
+        setLicenseErrorMessage('La tienda no existe. Por favor, verifica la URL.');
+        setIsValidatingLicense(false);
+        return;
+      }
+
+      const requestBody = {
+        license: key,
+        id_shop: idShop || shopData.id_shop,
+      };
+
+      fetch('https://apitpv.anthonyloor.com/license_check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      })
         .then((response) => {
           return response.json().then((data) => {
             if (!response.ok) {
@@ -94,16 +109,21 @@ function LoginPage({ shopRoute }) {
         .then((data) => {
           if (data.status === 'OK' && data.message === 'License actived') {
             // La licencia se activó correctamente
-            localStorage.setItem('licenseKey', key);
-            setLicenseKey(key);
+            const newLicenseData = {
+              licenseKey: key,
+              id_shop: shopData.id_shop,
+            };
+            localStorage.setItem('licenseData', JSON.stringify(newLicenseData));
+            setLicenseData(newLicenseData);
             setHasLicense(true);
             setShowLicenseModal(false); // Cerramos el modal
             proceedToLoadShopAndEmployees();
           } else if (data.status === 'OK' && data.message === 'License already in use') {
             // La licencia ya está en uso
-            const storedLicenseKey = localStorage.getItem('licenseKey');
-            if (storedLicenseKey === key) {
+            const storedLicenseData = JSON.parse(localStorage.getItem('licenseData'));
+            if (storedLicenseData && storedLicenseData.licenseKey === key) {
               // La licencia es la misma que tenemos, procedemos
+              // No actualizamos licenseData, ya que es el mismo
               setHasLicense(true);
               setShowLicenseModal(false); // Cerramos el modal
               proceedToLoadShopAndEmployees();
@@ -148,14 +168,40 @@ function LoginPage({ shopRoute }) {
           setIsValidatingLicense(false);
         });
     },
-    [proceedToLoadShopAndEmployees]
+    [shopRoute, proceedToLoadShopAndEmployees]
   );
 
   useEffect(() => {
-    if (hasLicense && licenseKey) {
-      validateLicense(licenseKey);
+    if (licenseData) {
+      const storedIdShop = licenseData.id_shop;
+      const currentShopData = routeToShopInfo[shopRoute];
+      if (currentShopData && storedIdShop !== currentShopData.id_shop) {
+        // El id_shop no coincide, redirigir a la ruta correcta
+        // Encontrar el shopRoute correspondiente al storedIdShop
+        const correctShopRoute = idShopToRoute[storedIdShop];
+        if (correctShopRoute) {
+          navigate(`/${correctShopRoute}`);
+        } else {
+          // Si no encontramos la ruta correcta, manejar el error
+          console.error('No se encontró la ruta de la tienda correspondiente al id_shop almacenado.');
+        }
+      } else {
+        // El id_shop coincide, proceder
+        setHasLicense(true);
+        setShowLicenseModal(false);
+        if (!shopInfo) {
+          // Validamos la licencia solo si no hemos cargado la shopInfo aún
+          validateLicense(licenseData.licenseKey, licenseData.id_shop);
+        }
+      }
+    } else {
+      // No hay licenseData, mostrar el modal de licencia
+      setHasLicense(false);
+      setShowLicenseModal(true);
     }
-  }, [hasLicense, licenseKey, validateLicense]);
+    // Eliminamos validateLicense de las dependencias para evitar bucles
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [licenseData, shopRoute, navigate]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -170,7 +216,6 @@ function LoginPage({ shopRoute }) {
   // Función que se llama cuando el usuario envía la licencia desde el modal
   const handleLicenseSubmit = (key) => {
     // Validar la licencia
-    setLicenseKey(key); // Actualizamos el estado con la nueva licencia
     setLicenseErrorMessage(''); // Limpiamos cualquier mensaje de error anterior
     validateLicense(key);
   };
