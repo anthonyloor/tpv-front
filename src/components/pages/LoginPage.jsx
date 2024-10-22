@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { AuthContext } from '../../AuthContext';
 import { useNavigate } from 'react-router-dom';
-import LicenseModal from '../modals/license/LicenseModal'; // Importa el LicenseModal
+import LicenseModal from '../modals/license/LicenseModal';
 
 const routeToShopName = {
   penaprieta8: 'Peña Prieta',
@@ -25,57 +25,137 @@ function LoginPage({ shopRoute }) {
     setShopName,
   } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [shopInfo, setShopInfo] = useState(); // Inicializado como undefined
-  const [isLoadingShopInfo, setIsLoadingShopInfo] = useState(true);
+  const [shopInfo, setShopInfo] = useState(null); // Inicializado como null
+  const [isLoadingShopInfo, setIsLoadingShopInfo] = useState(false);
 
-  // Añade un estado para controlar la licencia
+  // Estado para controlar la licencia
   const [hasLicense, setHasLicense] = useState(() => {
     return !!localStorage.getItem('licenseKey');
   });
   const [showLicenseModal, setShowLicenseModal] = useState(!hasLicense);
+  const [isValidatingLicense, setIsValidatingLicense] = useState(false);
+  const [licenseErrorMessage, setLicenseErrorMessage] = useState(''); // Estado para mensajes de error de licencia
+  const [licenseKey, setLicenseKey] = useState(localStorage.getItem('licenseKey') || '');
 
-  useEffect(() => {
-    if (hasLicense) {
-      setIsLoadingShopInfo(true);
-      const shopName = routeToShopName[shopRoute];
-      if (!shopName) {
+  // Función para cargar la tienda y empleados
+  const proceedToLoadShopAndEmployees = useCallback(() => {
+    setIsLoadingShopInfo(true);
+    const shopName = routeToShopName[shopRoute];
+    if (!shopName) {
+      setShopInfo(null);
+      setIsLoadingShopInfo(false);
+      return;
+    }
+
+    fetch('https://apitpv.anthonyloor.com/shops')
+      .then((response) => response.json())
+      .then((shopsData) => {
+        const shop = shopsData.find((s) => s.name === shopName);
+        if (shop) {
+          setShopInfo({ ...shop, route: shopRoute });
+          setShopId(shop.id_shop);
+          setShopName(shop.name);
+        } else {
+          setShopInfo(null);
+        }
+      })
+      .catch((error) => {
+        console.error('Error al obtener tiendas:', error);
         setShopInfo(null);
+      })
+      .finally(() => {
         setIsLoadingShopInfo(false);
-        return;
-      }
+      });
 
-      fetch('https://apitpv.anthonyloor.com/shops')
-        .then((response) => response.json())
-        .then((shopsData) => {
-          const shop = shopsData.find((s) => s.name === shopName);
-          if (shop) {
-            setShopInfo({ ...shop, route: shopRoute });
-            setShopId(shop.id_shop);
-            setShopName(shop.name);
+    // Cargar empleados
+    fetch('https://apitpv.anthonyloor.com/employees')
+      .then((response) => response.json())
+      .then((data) => {
+        setEmployees(data);
+      })
+      .catch((error) => console.error('Error al obtener empleados:', error));
+  }, [shopRoute, setShopId, setShopName]);
+
+  // Función para validar la licencia
+  const validateLicense = useCallback(
+    (key) => {
+      setIsValidatingLicense(true);
+
+      fetch(`https://apitpv.anthonyloor.com/license_check?license=${key}`)
+        .then((response) => {
+          return response.json().then((data) => {
+            if (!response.ok) {
+              const error = { status: response.status, message: data.message };
+              return Promise.reject(error);
+            }
+            return data;
+          });
+        })
+        .then((data) => {
+          if (data.status === 'OK' && data.message === 'License actived') {
+            // La licencia se activó correctamente
+            localStorage.setItem('licenseKey', key);
+            setLicenseKey(key);
+            setHasLicense(true);
+            setShowLicenseModal(false); // Cerramos el modal
+            proceedToLoadShopAndEmployees();
+          } else if (data.status === 'OK' && data.message === 'License already in use') {
+            // La licencia ya está en uso
+            const storedLicenseKey = localStorage.getItem('licenseKey');
+            if (storedLicenseKey === key) {
+              // La licencia es la misma que tenemos, procedemos
+              setHasLicense(true);
+              setShowLicenseModal(false); // Cerramos el modal
+              proceedToLoadShopAndEmployees();
+            } else {
+              // Licencia en uso y no es la misma, mostramos error
+              setLicenseErrorMessage('La licencia ya está en uso en otro dispositivo.');
+              setHasLicense(false);
+              setShowLicenseModal(true);
+            }
           } else {
-            setShopInfo(null);
+            // Respuesta inesperada
+            const error = {
+              status: 500,
+              message: data.message || 'Respuesta inesperada del servidor',
+            };
+            return Promise.reject(error);
           }
         })
         .catch((error) => {
-          console.error('Error al obtener tiendas:', error);
-          setShopInfo(null);
+          console.error('Error al verificar la licencia:', error);
+
+          // Manejo de errores según el código de estado y mensaje
+          if (error.status === 400) {
+            setLicenseErrorMessage('La licencia es requerida. Por favor, ingresa una licencia válida.');
+          } else if (error.status === 403) {
+            setLicenseErrorMessage('La licencia ha expirado.');
+          } else if (error.status === 404) {
+            if (error.message === 'License not found') {
+              setLicenseErrorMessage('La licencia no existe. Por favor, verifica tu licencia.');
+            } else {
+              setLicenseErrorMessage('Error con la licencia. Por favor, verifica tu licencia.');
+            }
+          } else {
+            setLicenseErrorMessage('Error al verificar la licencia. Inténtalo de nuevo.');
+          }
+
+          // Mostrar el LicenseModal con el mensaje de error
+          setHasLicense(false);
+          setShowLicenseModal(true);
         })
         .finally(() => {
-          setIsLoadingShopInfo(false);
+          setIsValidatingLicense(false);
         });
-      }
-  }, [shopRoute, setShopId, setShopName, hasLicense]);
+    },
+    [proceedToLoadShopAndEmployees]
+  );
 
   useEffect(() => {
-    if (shopInfo) {
-      fetch('https://apitpv.anthonyloor.com/employees')
-        .then((response) => response.json())
-        .then((data) => {
-          setEmployees(data);
-        })
-        .catch((error) => console.error('Error al obtener empleados:', error));
+    if (hasLicense && licenseKey) {
+      validateLicense(licenseKey);
     }
-  }, [shopInfo]);
+  }, [hasLicense, licenseKey, validateLicense]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -87,15 +167,63 @@ function LoginPage({ shopRoute }) {
     setSelectedEmployee(employee);
   };
 
-  // Función para cerrar el modal y actualizar el estado
-  const handleLicenseModalClose = () => {
-    setHasLicense(true);
-    setShowLicenseModal(false);
+  // Función que se llama cuando el usuario envía la licencia desde el modal
+  const handleLicenseSubmit = (key) => {
+    // Validar la licencia
+    setLicenseKey(key); // Actualizamos el estado con la nueva licencia
+    setLicenseErrorMessage(''); // Limpiamos cualquier mensaje de error anterior
+    validateLicense(key);
   };
 
-  // Si no hay licencia, mostramos el modal
+  // Si no hay licencia o hay un error, mostramos el modal
   if (showLicenseModal) {
-    return <LicenseModal onClose={handleLicenseModalClose} />;
+    return (
+      <LicenseModal
+        onSubmit={handleLicenseSubmit}
+        errorMessage={licenseErrorMessage}
+      />
+    );
+  }
+
+  if (isValidatingLicense || isLoadingShopInfo || !shopInfo) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <svg
+            className="animate-spin h-10 w-10 text-gray-600 mx-auto mb-4"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
+          <p>{isValidatingLicense ? 'Verificando licencia...' : 'Cargando...'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shopInfo === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold mb-6">Tienda no encontrada</h1>
+          <p>La tienda que estás buscando no existe.</p>
+        </div>
+      </div>
+    );
   }
 
   const handleLogin = () => {
@@ -145,47 +273,6 @@ function LoginPage({ shopRoute }) {
         // Ya manejamos el error 401 anteriormente
       });
   };
-
-  if (isLoadingShopInfo) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center">
-          <svg
-            className="animate-spin h-10 w-10 text-gray-600 mx-auto mb-4"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            ></path>
-          </svg>
-          <p>Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (shopInfo === null) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-6">Tienda no encontrada</h1>
-          <p>La tienda que estás buscando no existe.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
