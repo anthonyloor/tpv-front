@@ -401,8 +401,8 @@ const SalesCard = ({
                   <span>
                     {item.product_name} {item.combination_name}
                   </span>
-                  <span>{item.price.toFixed(2)} €</span>
-                  <span className="font-bold">{(item.price * item.quantity).toFixed(2)} €</span>
+                  <span>{item.price} €</span>
+                  <span className="font-bold">{(item.price * item.quantity)} €</span>
                   <div className="flex justify-end space-x-2">
                     <button
                       className="bg-red-500 text-white px-2 py-1 rounded"

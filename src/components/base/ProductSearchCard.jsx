@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../modals/Modal';
-import sessionConfig from '../../data/sessionConfig.json';
 
 const ProductSearchCard = ({ onAddProduct }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,7 +14,8 @@ const ProductSearchCard = ({ onAddProduct }) => {
 
   useEffect(() => {
     // Cargamos la configuración de la sesión para obtener la tienda en curso
-    setCurrentShop(sessionConfig);
+    const shopData = JSON.parse(localStorage.getItem('shop'));
+    setCurrentShop(shopData);
   }, []);
 
   const handleSearch = (event) => {
@@ -26,32 +26,32 @@ const ProductSearchCard = ({ onAddProduct }) => {
   const handleKeyDown = async (event) => {
     // Solo realiza la búsqueda si el término tiene al menos 3 caracteres y se presiona Enter
     if (event.key === 'Enter' && searchTerm.length >= 3) {
-    try {
-      const response = await fetch(`https://apitpv.anthonyloor.com/product_search?b=${searchTerm}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwtToken}`, // Incluimos el token en el header
-        },
-      });
+      try {
+        const response = await fetch(`https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(searchTerm)}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${jwtToken}`, // Incluimos el token en el header
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error('Error fetching products');
-      }
+        if (!response.ok) {
+          throw new Error('Error fetching products');
+        }
 
-      const results = await response.json();
+        const results = await response.json();
 
-      const filteredForCurrentShop = results.filter(
-        (product) => product.shop_name === currentShop.shop_name
-      );
+        const filteredForCurrentShop = results.filter(
+          (product) => product.shop_name === currentShop.name
+        );
 
-      setFilteredProducts(groupProductsByProductName(results));
+        setFilteredProducts(groupProductsByProductName(results));
 
-      // Verificamos si solo hay un producto para la tienda actual
-      if (filteredForCurrentShop.length === 1) {
-        addProductToCart(filteredForCurrentShop[0]);
-        // Limpiamos el campo de búsqueda
-        setSearchTerm('');
+        // Verificamos si solo hay un producto para la tienda actual
+        if (filteredForCurrentShop.length === 1) {
+          addProductToCart(filteredForCurrentShop[0]);
+          // Limpiamos el campo de búsqueda
+          setSearchTerm('');
         }
       } catch (error) {
         console.error('Error en la búsqueda:', error);
@@ -100,7 +100,7 @@ const ProductSearchCard = ({ onAddProduct }) => {
       return 0; // Devolvemos 0 si stocks no es un array o si no hay tienda configurada
     }
 
-    const currentShopStock = stocks.find((stock) => stock.shop_name === currentShop.shop_name);
+    const currentShopStock = stocks.find((stock) => stock.shop_name === currentShop.name);
     return currentShopStock ? currentShopStock.quantity : 0;
   };
 
@@ -112,7 +112,7 @@ const ProductSearchCard = ({ onAddProduct }) => {
     }
 
     // Obtener el stock actual para la tienda en curso
-    const currentShopStock = stocks.find((stock) => stock.shop_name === currentShop.shop_name);
+    const currentShopStock = stocks.find((stock) => stock.shop_name === currentShop.name);
     const stockQuantity = currentShopStock ? currentShopStock.quantity : 0;
 
     // Verificar si se permite vender sin stock
@@ -121,11 +121,10 @@ const ProductSearchCard = ({ onAddProduct }) => {
       return;
     }
 
-    // Rest of the code remains the same
     const productForCart = {
       ...product,
       quantity: 1, // Añadimos una unidad
-      shop_name: currentShop ? currentShop.shop_name : '',
+      shop_name: currentShop ? currentShop.name : '',
       id_shop: currentShop ? currentShop.id_shop : '',
     };
 
@@ -211,10 +210,24 @@ const ProductSearchCard = ({ onAddProduct }) => {
                     <td className="py-2 px-4 border-b">{product.combination_name}</td>
                     <td className="py-2 px-4 border-b">{product.reference_combination}</td>
                     <td className="py-2 px-4 border-b">{product.ean13_combination}</td>
-                    <td className="py-2 px-4 border-b">{product.price.toFixed(2)} €</td>
+                    <td className="py-2 px-4 border-b">
+                      {product.final_price_incl_tax !== product.price_incl_tax ? (
+                        <div>
+                          <span style={{ textDecoration: 'line-through', fontSize: '0.9em' }}>
+                            {product.price_incl_tax} €
+                          </span>
+                          <br />
+                          <span style={{ color: 'red', fontWeight: 'bold' }}>
+                            {product.final_price_incl_tax} €
+                          </span>
+                        </div>
+                      ) : (
+                        <span>{product.price_incl_tax} €</span>
+                      )}
+                    </td>
                     <td className="py-2 px-4 border-b relative group">
                       <span>{getStockForCurrentShop(product.stocks)}</span>
-                      <div className="absolute left-0 mt-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 shadow-</td>lg z-10">
+                      <div className="absolute left-0 mt-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 shadow-lg z-10">
                         {Array.isArray(product.stocks) ? (
                           product.stocks.map((stock, stockIndex) => (
                             <div key={`${stock.shop_name}_${stockIndex}`}>

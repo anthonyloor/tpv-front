@@ -5,9 +5,10 @@ import Modal from '../modals/Modal';
 import TransferForm from '../modals/transfers/TransferForm'; // Importamos el formulario de traspaso
 import PermisosModal from '../modals/configuration/permissions/PermissionsModal'; // Importamos el modal de permisos
 import TicketConfigModal from '../modals/configuration/printers/TicketConfigModal'; // Importamos el nuevo modal de configuración de tickets
-import empleadosData from '../../data/empleados.json'; // Importamos los datos de empleados
+import empleadosData from '../../data/empleados.json';
 import { AuthContext } from '../../AuthContext';
-import ClientModal from '../modals/customer/CustomerModal'; // Importamos el nuevo componente
+import ClientModal from '../modals/customer/CustomerModal';
+import AddressModal from '../modals/customer/AddressModal';
 
 // Inicializamos los permisos en memoria
 const permisosIniciales = {
@@ -35,7 +36,9 @@ const NavbarCard = () => {
 
   // Estado para el cliente seleccionado y el modal de clientes
   const [selectedClient, setSelectedClient] = useState({ id_customer: 0, firstname: '', lastname: '', full_name: 'Cliente genérico' });
+  const [selectedAddress, setSelectedAddress] = useState(null);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -89,17 +92,26 @@ const NavbarCard = () => {
   };
 
   // Función para manejar la selección de un cliente desde el modal
-  const handleSelectClient = (client) => {
+  const handleSelectClientAndAddress = (client, address) => {
     setSelectedClient({
       id_customer: client.id_customer,
       firstname: client.firstname,
       lastname: client.lastname,
       full_name: `${client.firstname} ${client.lastname}`,
     });
+    setSelectedAddress(address);
+    setIsClientModalOpen(false);
   };
 
   const handleResetClient = () => {
     setSelectedClient({ id_customer: 0, firstname: '', lastname: '', full_name: 'Cliente genérico' });
+    setSelectedAddress(null);
+  };
+
+  // Función para manejar la selección de una dirección desde el modal de direcciones
+  const handleSelectAddress = (address) => {
+    setSelectedAddress(address);
+    setIsAddressModalOpen(false);
   };
 
   return (
@@ -132,6 +144,21 @@ const NavbarCard = () => {
           >
             P
           </button>
+        )}
+        {/* Mostrar dirección seleccionada y botón para cambiar dirección */}
+        {selectedClient.id_customer !== 0 && (
+          <>
+            <span className="font-semibold">
+              {selectedAddress ? selectedAddress.alias : 'Sin dirección'}
+            </span>
+            <button
+              className="bg-gray-200 p-2 rounded"
+              onClick={() => setIsAddressModalOpen(true)}
+            >
+              {/* Ícono de libreta de direcciones */}
+              {/* ... svg icon ... */}
+            </button>
+          </>
         )}
       </div>
 
@@ -259,9 +286,20 @@ const NavbarCard = () => {
       <ClientModal
         isOpen={isClientModalOpen}
         onClose={() => setIsClientModalOpen(false)}
-        handleSelectClient={handleSelectClient}
+        handleSelectClientAndAddress={handleSelectClientAndAddress}
       />
-    </div>
+
+      {/* Modal para seleccionar dirección */}
+      {isAddressModalOpen && (
+        <AddressModal
+          isOpen={isAddressModalOpen}
+          onClose={() => setIsAddressModalOpen(false)}
+          clientId={selectedClient.id_customer}
+          handleSelectAddress={handleSelectAddress}
+          shop={shop}
+        />
+      )}
+      </div>
   );
 };
 
