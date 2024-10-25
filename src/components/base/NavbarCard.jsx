@@ -7,13 +7,7 @@ import PermisosModal from '../modals/configuration/permissions/PermissionsModal'
 import TicketConfigModal from '../modals/configuration/printers/TicketConfigModal'; // Importamos el nuevo modal de configuración de tickets
 import empleadosData from '../../data/empleados.json'; // Importamos los datos de empleados
 import { AuthContext } from '../../AuthContext';
-
-// Datos de clientes de prueba
-const testClients = [
-  { id_customer: 1, full_name: 'Juan Pérez' },
-  { id_customer: 2, full_name: 'María López' },
-  { id_customer: 3, full_name: 'Carlos Sánchez' },
-];
+import ClientModal from '../modals/customer/CustomerModal'; // Importamos el nuevo componente
 
 // Inicializamos los permisos en memoria
 const permisosIniciales = {
@@ -40,7 +34,7 @@ const NavbarCard = () => {
   const employee = JSON.parse(localStorage.getItem('employee'));
 
   // Estado para el cliente seleccionado y el modal de clientes
-  const [selectedClient, setSelectedClient] = useState({ id_customer: 0, full_name: 'Cliente genérico' });
+  const [selectedClient, setSelectedClient] = useState({ id_customer: 0, firstname: '', lastname: '', full_name: 'Cliente genérico' });
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
 
   const handleLogout = () => {
@@ -94,14 +88,18 @@ const NavbarCard = () => {
     }
   };
 
-  // Funciones para manejar el cliente seleccionado
+  // Función para manejar la selección de un cliente desde el modal
   const handleSelectClient = (client) => {
-    setSelectedClient(client);
-    setIsClientModalOpen(false);
+    setSelectedClient({
+      id_customer: client.id_customer,
+      firstname: client.firstname,
+      lastname: client.lastname,
+      full_name: `${client.firstname} ${client.lastname}`,
+    });
   };
 
   const handleResetClient = () => {
-    setSelectedClient({ id_customer: 0, full_name: 'Cliente genérico' });
+    setSelectedClient({ id_customer: 0, firstname: '', lastname: '', full_name: 'Cliente genérico' });
   };
 
   return (
@@ -258,35 +256,11 @@ const NavbarCard = () => {
       </Modal>
 
       {/* Modal para gestionar clientes */}
-      <Modal isOpen={isClientModalOpen} onClose={() => setIsClientModalOpen(false)}>
-        <div className="p-4">
-          <h2 className="text-lg font-bold mb-4">Seleccionar Cliente</h2>
-          <div className="space-y-2">
-            {testClients.map((client) => (
-              <div
-                key={client.id_customer}
-                className="flex justify-between items-center border-b pb-2"
-              >
-                <span>{client.full_name}</span>
-                <button
-                  className="bg-blue-500 text-white px-2 py-1 rounded"
-                  onClick={() => handleSelectClient(client)}
-                >
-                  Seleccionar
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4">
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded w-full"
-              onClick={() => alert('Crear nuevo cliente')}
-            >
-              Crear Cliente Nuevo
-            </button>
-          </div>
-        </div>
-      </Modal>
+      <ClientModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        handleSelectClient={handleSelectClient}
+      />
     </div>
   );
 };
