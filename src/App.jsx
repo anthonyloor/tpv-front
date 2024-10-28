@@ -46,7 +46,7 @@ function App() {
     forceAdd = false
   ) => {
     const existingProduct = cartItems.find(
-      (item) => item.id_product_attribute === product.id_product_attribute
+      (item) => item.id_stock_available === product.id_stock_available
     );
 
     const maxQuantity =
@@ -65,33 +65,50 @@ function App() {
       }
     }
 
+    // Obtener la tasa de impuestos del producto o usar un valor predeterminado
+    const tax_rate = product.tax_rate !== undefined ? product.tax_rate : 0.21; // 21% por defecto
+    const price_excl_tax = product.price_incl_tax / (1 + tax_rate);
+    const final_price_excl_tax = product.final_price_incl_tax / (1 + tax_rate);
+
     // Ahora actualizamos el carrito
     setCartItems((prevItems) => {
       if (existingProduct) {
         return prevItems.map((item) =>
-          item.id_product_attribute === product.id_product_attribute
+          item.id_stock_available === product.id_stock_available
             ? { ...item, quantity: newQuantity }
             : item
         );
       } else {
-        return [...prevItems, { ...product, quantity: 1 }];
+        return [
+          ...prevItems,
+          {
+            ...product,
+            quantity: 1,
+            price_incl_tax: product.price_incl_tax,
+            final_price_incl_tax: product.final_price_incl_tax,
+            price_excl_tax: parseFloat(price_excl_tax.toFixed(2)),
+            final_price_excl_tax: parseFloat(final_price_excl_tax.toFixed(2)),
+            unit_price_tax_excl: parseFloat(final_price_excl_tax.toFixed(2)),
+            tax_rate: tax_rate,
+          },
+        ];
       }
     });
 
     // Establecemos la última acción para la animación en SalesCard
     setLastAction({
-      id: product.id_product_attribute,
+      id: product.id_stock_available,
       action: 'add',
       timestamp: Date.now(),
     });
   };
 
-  // Función para reducir la cantidad de un producto o eliminarlo si llega a 0
-  const handleDecreaseProduct = (idProductAttribute) => {
+    /// Reducir la cantidad de un producto
+  const handleDecreaseProduct = (idStockAvailable) => {
     setCartItems((prevItems) =>
       prevItems
         .map((item) =>
-          item.id_product_attribute === idProductAttribute
+          item.id_stock_available === idStockAvailable
             ? { ...item, quantity: item.quantity - 1 }
             : item
         )
@@ -100,18 +117,19 @@ function App() {
 
     // Establecemos la última acción para la animación en SalesCard
     setLastAction({
-      id: idProductAttribute,
+      id: idStockAvailable,
       action: 'decrease',
       timestamp: Date.now(),
     });
   };
 
-  // Función para eliminar un producto completamente del ticket
-  const handleRemoveProduct = (idProductAttribute) => {
+  // Eliminar un producto completamente del ticket
+  const handleRemoveProduct = (idStockAvailable) => {
     setCartItems((prevItems) =>
-      prevItems.filter((item) => item.id_product_attribute !== idProductAttribute)
+      prevItems.filter((item) => item.id_stock_available !== idStockAvailable)
     );
   };
+
 
   return (
     <div className="bg-gray-light min-h-screen flex flex-col">

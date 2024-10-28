@@ -7,19 +7,19 @@ import JsBarcode from 'jsbarcode';
 
 const SalesCard = ({
   cartItems,
-  setCartItems, // Necesitamos esta función para vaciar el carrito
+  setCartItems,
   onRemoveProduct,
   onDecreaseProduct,
   permisosUsuario,
   lastAction,
 }) => {
   const [isFinalSaleModalOpen, setFinalSaleModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Estado de carga para el botón
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedMethods, setSelectedMethods] = useState([]);
   const [amounts, setAmounts] = useState({ efectivo: '', tarjeta: '', bizum: '' });
   const [changeAmount, setChangeAmount] = useState(0);
-  const [copies, setCopies] = useState(1); // Número de copias del ticket
-  const [giftTicket, setGiftTicket] = useState(false); // Estado del ticket de regalo
+  const [copies, setCopies] = useState(1);
+  const [giftTicket, setGiftTicket] = useState(false);
   const [highlightedItems, setHighlightedItems] = useState({});
 
   useEffect(() => {
@@ -28,13 +28,17 @@ const SalesCard = ({
       setHighlightedItems((prev) => ({ ...prev, [id]: action }));
       const timer = setTimeout(() => {
         setHighlightedItems((prev) => ({ ...prev, [id]: null }));
-      }, 300); // Duración de la animación (más rápida)
+      }, 300);
 
       return () => clearTimeout(timer);
     }
   }, [lastAction]);
 
-  const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Actualizamos el cálculo del total utilizando final_price_incl_tax
+  const total = cartItems.reduce(
+    (sum, item) => sum + item.final_price_incl_tax * item.quantity,
+    0
+  );
 
   // Funciones para los nuevos botones
   const handleParkCart = () => {
@@ -53,24 +57,24 @@ const SalesCard = ({
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleFinalSale = () => {
-    setIsLoading(true); // Establecer el estado de carga a true
+    setIsLoading(true);
     setFinalSaleModalOpen(true);
   };
 
   const handleCloseModal = () => {
-    setIsLoading(false); // Restablecer el estado de carga a false al cerrar el modal
+    setIsLoading(false);
     setFinalSaleModalOpen(false);
   };
 
   const updateChangeAmount = (updatedAmounts) => {
     if (selectedMethods.length === 0) {
-      setChangeAmount(0); // Si no hay métodos de pago seleccionados, el cambio es 0
+      setChangeAmount(0);
     } else {
       const totalEnteredAmount = Object.values(updatedAmounts).reduce(
         (sum, value) => sum + (parseFloat(value) || 0),
         0
       );
-      setChangeAmount(totalEnteredAmount - total); // Mostrar la diferencia, incluso si es negativa
+      setChangeAmount(totalEnteredAmount - total);
     }
   };
 
@@ -104,35 +108,97 @@ const SalesCard = ({
   };
 
   const finalizeSale = () => {
+    // Recuperar datos necesarios de localStorage
+    const shop = JSON.parse(localStorage.getItem('shop'));
+    const employee = JSON.parse(localStorage.getItem('employee'));
+    const client = JSON.parse(localStorage.getItem('selectedClient'));
+    const address = JSON.parse(localStorage.getItem('selectedAddress'));
+
+    // Si no hay cliente o dirección seleccionados, usar valores predeterminados
+    const id_customer = client ? client.id_customer : 0; // 0 para cliente genérico
+    const id_address_delivery = address ? address.id_address : 0; // 0 para dirección predeterminada
+
+    // Calcular total sin impuestos
+    const total_paid_tax_excl = cartItems.reduce(
+      (sum, item) => sum + item.final_price_excl_tax * item.quantity,
+      0
+    );
+
+    // Total de productos (suma de total_price_tax_excl)
+    const total_products = total_paid_tax_excl;
+
+    // Preparar order_details
+    const order_details = cartItems.map((item) => ({
+      product_id: item.id_product,
+      product_attribute_id: item.id_product_attribute,
+      stock_available_id: item.id_stock_available,
+      product_name: `${item.product_name} ${item.combination_name}`,
+      product_quantity: item.quantity,
+      product_price: item.unit_price_tax_excl, // Precio unitario sin impuestos
+      product_ean13: item.ean13_combination,
+      product_reference: item.reference_combination,
+      total_price_tax_incl: parseFloat((item.final_price_incl_tax * item.quantity).toFixed(2)),
+      total_price_tax_excl: parseFloat((item.final_price_excl_tax * item.quantity).toFixed(2)),
+      unit_price_tax_incl: item.final_price_incl_tax,
+      unit_price_tax_excl: item.final_price_excl_tax,
+      id_shop: item.id_shop,
+    }));
+
+    // Preparar el objeto saleData para la API
     const saleData = {
-      cartItems,
-      total,
-      selectedMethods,
-      amounts,
-      changeAmount,
-      copies,
-      giftTicket,
-      date: new Date(),
-      shop: sessionConfig,
-      employeeName: sessionConfig.name_employee, // Asegúrate de que este campo existe
+      id_shop: shop.id_shop,
+      id_customer: id_customer,
+      id_address_delivery: id_address_delivery,
+      payment: selectedMethods.join(', '),
+      total_paid: parseFloat(total.toFixed(2)),
+      total_paid_tax_excl: parseFloat(total_paid_tax_excl.toFixed(2)),
+      total_products: parseFloat(total_products.toFixed(2)),
+      order_details: order_details,
+      // Puedes incluir otros campos si lo deseas
     };
 
     console.log('Información del ticket de compra:', saleData);
 
-    // Generar el ticket de compra en PDF
-    generatePDF(saleData);
+    // Realizar la llamada a la API
+    const token = localStorage.getItem('token');
+    fetch('https://apitpv.anthonyloor.com/create_order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(saleData),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Error al crear la orden');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log('Orden creada:', data);
 
-    // Después de generar el PDF, vaciamos el carrito
-    setCartItems([]);
+        // Después de crear la orden, vaciamos el carrito
+        setCartItems([]);
 
-    // Restablecer los estados
-    setIsLoading(false);
-    setFinalSaleModalOpen(false);
-    setSelectedMethods([]);
-    setAmounts({ efectivo: '', tarjeta: '', bizum: '' });
-    setChangeAmount(0);
-    setCopies(1);
-    setGiftTicket(false);
+        // Restablecer los estados
+        setIsLoading(false);
+        setFinalSaleModalOpen(false);
+        setSelectedMethods([]);
+        setAmounts({ efectivo: '', tarjeta: '', bizum: '' });
+        setChangeAmount(0);
+        setCopies(1);
+        setGiftTicket(false);
+
+        // Puedes mostrar un mensaje de éxito o redirigir al usuario
+        alert('Venta finalizada con éxito');
+      })
+      .catch((error) => {
+        console.error('Error al crear la orden:', error);
+        // Manejar el error, mostrar mensaje al usuario, etc.
+        alert('Error al finalizar la venta. Por favor, intenta nuevamente.');
+        setIsLoading(false);
+      });
   };
 
   const generatePDF = (saleData) => {
@@ -221,8 +287,8 @@ const SalesCard = ({
         doc.text(splittedText, 20, yPosition);
   
         if (!saleData.giftTicket) {
-          doc.text(`${item.price.toFixed(2)} €`, 50, yPosition, { align: 'right' });
-          doc.text(`${(item.price * item.quantity).toFixed(2)} €`, 70, yPosition, { align: 'right' });
+          doc.text(`${item.final_price_incl_tax.toFixed(2)} €`, 50, yPosition, { align: 'right' });
+          doc.text(`${(item.final_price_incl_tax * item.quantity).toFixed(2)} €`, 70, yPosition, { align: 'right' });
         }
   
         const lineHeight = 5;
@@ -375,44 +441,61 @@ const SalesCard = ({
           </div>
         </div>
 
+      {/* Lista de productos en el ticket */}
       <div className="relative z-10 flex-grow overflow-auto">
+        {/* Encabezados de las columnas */}
         <div className="grid grid-cols-5 gap-4 font-bold border-b py-2">
-          <span>Und.</span>
+          <span className="text-center">Und.</span>
           <span>Producto</span>
-          <span>P/U</span>
-          <span>Total</span>
+          <span className="text-right">P/U</span>
+          <span className="text-right">Total</span>
+          <span className="text-right">Desc.</span>
         </div>
         {cartItems.length > 0 ? (
           <ul>
             {cartItems.map((item, index) => {
               const highlightClass =
-                highlightedItems[item.id_product_attribute] === 'add'
+                highlightedItems[item.id_stock_available] === 'add'
                   ? 'bg-green-100'
-                  : highlightedItems[item.id_product_attribute] === 'decrease'
+                  : highlightedItems[item.id_stock_available] === 'decrease'
                   ? 'bg-red-100'
                   : '';
 
+              // Calculamos el porcentaje de descuento
+              const discountPercentage =
+                item.price_incl_tax !== 0
+                  ? ((1 - item.final_price_incl_tax / item.price_incl_tax) * 100).toFixed(0)
+                  : 0;
+
               return (
                 <li
-                  key={index}
+                  key={item.id_stock_available}
                   className={`grid grid-cols-5 gap-4 py-2 items-center border-b ${highlightClass}`}
                 >
-                  <span className="font-bold">{item.quantity}x</span>
+                  <span className="text-center">{item.quantity}x</span>
                   <span>
                     {item.product_name} {item.combination_name}
                   </span>
-                  <span>{item.price} €</span>
-                  <span className="font-bold">{(item.price * item.quantity)} €</span>
-                  <div className="flex justify-end space-x-2">
+                  <span className="text-right">
+                    {item.final_price_incl_tax.toFixed(2)} €
+                  </span>
+                  <span className="text-right font-bold">
+                    {(item.final_price_incl_tax * item.quantity).toFixed(2)} €
+                  </span>
+                  <span className="text-right">
+                    {discountPercentage > 0 ? `-${discountPercentage}%` : ''}
+                  </span>
+                  {/* Botones de acción */}
+                  <div className="col-span-5 flex justify-end space-x-2 mt-2">
                     <button
                       className="bg-red-500 text-white px-2 py-1 rounded"
-                      onClick={() => onDecreaseProduct(item.id_product_attribute)}
+                      onClick={() => onDecreaseProduct(item.id_stock_available)}
                     >
                       -
                     </button>
                     <button
                       className="bg-red-500 text-white px-2 py-1 rounded"
-                      onClick={() => onRemoveProduct(item.id_product_attribute)}
+                      onClick={() => onRemoveProduct(item.id_stock_available)}
                     >
                       X
                     </button>

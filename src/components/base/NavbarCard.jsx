@@ -40,6 +40,20 @@ const NavbarCard = () => {
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
+  // Cargar cliente y dirección seleccionados desde localStorage al montar el componente
+  useEffect(() => {
+    const storedClient = JSON.parse(localStorage.getItem('selectedClient'));
+    const storedAddress = JSON.parse(localStorage.getItem('selectedAddress'));
+
+    if (storedClient) {
+      setSelectedClient(storedClient);
+    }
+    if (storedAddress) {
+      setSelectedAddress(storedAddress);
+    }
+  }, []);
+
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('employee');
@@ -93,25 +107,37 @@ const NavbarCard = () => {
 
   // Función para manejar la selección de un cliente desde el modal
   const handleSelectClientAndAddress = (client, address) => {
-    setSelectedClient({
+    const clientData = {
       id_customer: client.id_customer,
       firstname: client.firstname,
       lastname: client.lastname,
       full_name: `${client.firstname} ${client.lastname}`,
-    });
+    };
+    setSelectedClient(clientData);
     setSelectedAddress(address);
     setIsClientModalOpen(false);
+
+    // Guardar en localStorage
+    localStorage.setItem('selectedClient', JSON.stringify(clientData));
+    localStorage.setItem('selectedAddress', JSON.stringify(address));
   };
 
   const handleResetClient = () => {
     setSelectedClient({ id_customer: 0, firstname: '', lastname: '', full_name: 'Cliente genérico' });
     setSelectedAddress(null);
+
+    // Eliminar del localStorage
+    localStorage.removeItem('selectedClient');
+    localStorage.removeItem('selectedAddress');
   };
 
   // Función para manejar la selección de una dirección desde el modal de direcciones
   const handleSelectAddress = (address) => {
     setSelectedAddress(address);
     setIsAddressModalOpen(false);
+
+    // Actualizar en localStorage
+    localStorage.setItem('selectedAddress', JSON.stringify(address));
   };
 
   return (
