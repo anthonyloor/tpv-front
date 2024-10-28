@@ -8,6 +8,7 @@ import LoginPage from './components/pages/LoginPage.jsx';
 import NotFoundPage from './components/pages/NotFoundPage.jsx';
 import { AuthContext } from './AuthContext';
 import PrivateRoute from './PrivateRoute.js';
+import ConfigLoader from './components/ConfigLoader.jsx'; // Importa el ConfigLoader
 
 function App() {
   const [cartItems, setCartItems] = useState([]);
@@ -147,6 +148,7 @@ function App() {
           path="/:shopRoute/app"
           element={
             <PrivateRoute>
+              <ConfigLoader />
               <NavbarCard />
               <div className="flex flex-col md:flex-row flex-grow p-4 space-y-4 md:space-y-0 md:space-x-4">
                 <div className="w-full md:w-1/3">
