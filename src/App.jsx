@@ -1,15 +1,41 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useState, useContext, useEffect } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import NavbarCard from './components/base/NavbarCard.jsx';
 import SalesCard from './components/base/SalesCard.jsx';
 import ProductSearchCard from './components/base/ProductSearchCard.jsx';
 import PinPage from './components/pages/PinPage.jsx';
-import sessionConfig from './data/sessionConfig.json';
+import LoginPage from './components/pages/LoginPage.jsx';
+import NotFoundPage from './components/pages/NotFoundPage.jsx';
+import { AuthContext } from './AuthContext';
+import PrivateRoute from './PrivateRoute.js';
 
 function App() {
   const [cartItems, setCartItems] = useState([]);
-  const [currentShop, setCurrentShop] = useState(sessionConfig);
   const [lastAction, setLastAction] = useState(null);
+  const { isAuthenticated, setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+    const storedEmployee = JSON.parse(localStorage.getItem('employee'));
+
+    if (storedShop && storedEmployee) {
+      setIsAuthenticated(true);
+      setShopId(storedShop.id_shop);
+      setShopName(storedShop.name);
+      setEmployeeId(storedEmployee.id_employee);
+      setEmployeeName(storedEmployee.employee_name);
+    }
+  }, [setIsAuthenticated, setShopId, setShopName, setEmployeeId, setEmployeeName]);
+
+  useEffect(() => {
+    const currentPath = window.location.pathname.split('/')[1];
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+
+    if (storedShop && currentPath !== storedShop.route) {
+      navigate(`/${storedShop.route}/app`);
+    }
+  }, [navigate]);
 
   // Función para añadir productos al ticket, verificando la cantidad máxima disponible
   const handleAddProduct = (
@@ -20,7 +46,7 @@ function App() {
     forceAdd = false
   ) => {
     const existingProduct = cartItems.find(
-      (item) => item.id_product_attribute === product.id_product_attribute
+      (item) => item.id_stock_available === product.id_stock_available
     );
 
     const maxQuantity =
@@ -39,33 +65,50 @@ function App() {
       }
     }
 
+    // Obtener la tasa de impuestos del producto o usar un valor predeterminado
+    const tax_rate = product.tax_rate !== undefined ? product.tax_rate : 0.21; // 21% por defecto
+    const price_excl_tax = product.price_incl_tax / (1 + tax_rate);
+    const final_price_excl_tax = product.final_price_incl_tax / (1 + tax_rate);
+
     // Ahora actualizamos el carrito
     setCartItems((prevItems) => {
       if (existingProduct) {
         return prevItems.map((item) =>
-          item.id_product_attribute === product.id_product_attribute
+          item.id_stock_available === product.id_stock_available
             ? { ...item, quantity: newQuantity }
             : item
         );
       } else {
-        return [...prevItems, { ...product, quantity: 1 }];
+        return [
+          ...prevItems,
+          {
+            ...product,
+            quantity: 1,
+            price_incl_tax: product.price_incl_tax,
+            final_price_incl_tax: product.final_price_incl_tax,
+            price_excl_tax: parseFloat(price_excl_tax.toFixed(2)),
+            final_price_excl_tax: parseFloat(final_price_excl_tax.toFixed(2)),
+            unit_price_tax_excl: parseFloat(final_price_excl_tax.toFixed(2)),
+            tax_rate: tax_rate,
+          },
+        ];
       }
     });
 
     // Establecemos la última acción para la animación en SalesCard
     setLastAction({
-      id: product.id_product_attribute,
+      id: product.id_stock_available,
       action: 'add',
       timestamp: Date.now(),
     });
   };
 
-  // Función para reducir la cantidad de un producto o eliminarlo si llega a 0
-  const handleDecreaseProduct = (idProductAttribute) => {
+    /// Reducir la cantidad de un producto
+  const handleDecreaseProduct = (idStockAvailable) => {
     setCartItems((prevItems) =>
       prevItems
         .map((item) =>
-          item.id_product_attribute === idProductAttribute
+          item.id_stock_available === idStockAvailable
             ? { ...item, quantity: item.quantity - 1 }
             : item
         )
@@ -74,29 +117,39 @@ function App() {
 
     // Establecemos la última acción para la animación en SalesCard
     setLastAction({
-      id: idProductAttribute,
+      id: idStockAvailable,
       action: 'decrease',
       timestamp: Date.now(),
     });
   };
 
-  // Función para eliminar un producto completamente del ticket
-  const handleRemoveProduct = (idProductAttribute) => {
+  // Eliminar un producto completamente del ticket
+  const handleRemoveProduct = (idStockAvailable) => {
     setCartItems((prevItems) =>
-      prevItems.filter((item) => item.id_product_attribute !== idProductAttribute)
+      prevItems.filter((item) => item.id_stock_available !== idStockAvailable)
     );
   };
 
+
   return (
-    <Router>
-      <div className="bg-gray-light min-h-screen flex flex-col">
-        <NavbarCard />
-        <Routes>
-          <Route
-            path="/"
-            element={
+    <div className="bg-gray-light min-h-screen flex flex-col">
+
+      <Routes>
+        {/* Rutas para cada tienda */}
+        <Route path="/penaprieta8" element={<LoginPage shopRoute="penaprieta8" />} />
+        <Route path="/bravomurillo205" element={<LoginPage shopRoute="bravomurillo205" />} />
+        <Route path="/alcala397" element={<LoginPage shopRoute="alcala397" />} />
+        <Route path="/bodega" element={<LoginPage shopRoute="bodega" />} />
+        <Route path="/mayretmodacolombiana" element={<LoginPage shopRoute="mayretmodacolombiana" />} />
+        <Route path="/pin" element={<PinPage />} />
+        {/* Ruta protegida para la aplicación principal */}
+        <Route
+          path="/:shopRoute/app"
+          element={
+            <PrivateRoute>
+              <NavbarCard />
               <div className="flex flex-col md:flex-row flex-grow p-4 space-y-4 md:space-y-0 md:space-x-4">
-                <div className="w-full md:w-2/5">
+                <div className="w-full md:w-1/3">
                   <SalesCard
                     cartItems={cartItems}
                     setCartItems={setCartItems}
@@ -105,16 +158,17 @@ function App() {
                     lastAction={lastAction}
                   />
                 </div>
-                <div className="w-full md:w-3/5">
+                <div className="w-full md:w-2/3">
                   <ProductSearchCard onAddProduct={handleAddProduct} />
                 </div>
               </div>
-            }
-          />
-          <Route path="/pin" element={<PinPage />} />
-        </Routes>
-      </div>
-    </Router>
+            </PrivateRoute>
+          }
+        />
+        {/* Ruta para manejar páginas no encontradas */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </div>
   );
 }
 
