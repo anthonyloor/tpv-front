@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Modal from '../modals/Modal';
 import { jsPDF } from 'jspdf';
-import sessionConfig from '../../data/sessionConfig.json';
 import ticketConfigData from '../../data/ticket.json'; // Importa la configuración del ticket
 import JsBarcode from 'jsbarcode';
+import { useApiFetch } from '../../components/utils/useApiFetch';
+import { ConfigContext } from '../../ConfigContext';
 
 const SalesCard = ({
   cartItems,
@@ -21,6 +22,11 @@ const SalesCard = ({
   const [copies, setCopies] = useState(1);
   const [giftTicket, setGiftTicket] = useState(false);
   const [highlightedItems, setHighlightedItems] = useState({});
+  const apiFetch = useApiFetch();
+  const { configData } = useContext(ConfigContext); // Obtenemos configData del contexto
+
+  // Extraemos allow_out_of_stock_sales de configData
+  const allowOutOfStockSales = configData ? configData.allow_out_of_stock_sales : false;
 
   useEffect(() => {
     if (lastAction !== null) {
@@ -107,7 +113,8 @@ const SalesCard = ({
     updateChangeAmount(updatedAmounts);
   };
 
-  const finalizeSale = () => {
+  const finalizeSale = async () => {
+    setIsLoading(true);
     // Recuperar datos necesarios de localStorage
     const shop = JSON.parse(localStorage.getItem('shop'));
     const employee = JSON.parse(localStorage.getItem('employee'));
@@ -159,46 +166,48 @@ const SalesCard = ({
 
     console.log('Información del ticket de compra:', saleData);
 
-    // Realizar la llamada a la API
-    const token = localStorage.getItem('token');
-    fetch('https://apitpv.anthonyloor.com/create_order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(saleData),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Error al crear la orden');
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log('Orden creada:', data);
-
-        // Después de crear la orden, vaciamos el carrito
-        setCartItems([]);
-
-        // Restablecer los estados
-        setIsLoading(false);
-        setFinalSaleModalOpen(false);
-        setSelectedMethods([]);
-        setAmounts({ efectivo: '', tarjeta: '', bizum: '' });
-        setChangeAmount(0);
-        setCopies(1);
-        setGiftTicket(false);
-
-        // Puedes mostrar un mensaje de éxito o redirigir al usuario
-        alert('Venta finalizada con éxito');
-      })
-      .catch((error) => {
-        console.error('Error al crear la orden:', error);
-        // Manejar el error, mostrar mensaje al usuario, etc.
-        alert('Error al finalizar la venta. Por favor, intenta nuevamente.');
-        setIsLoading(false);
+    try {
+      // Realizar la llamada a la API
+      const data = await apiFetch('https://apitpv.anthonyloor.com/create_order', {
+        method: 'POST',
+        body: JSON.stringify(saleData),
       });
+
+      console.log('Orden creada:', data);
+
+      // Después de crear la orden, vaciamos el carrito
+      setCartItems([]);
+
+      // Restablecer los estados
+      setIsLoading(false);
+      setFinalSaleModalOpen(false);
+      setSelectedMethods([]);
+      setAmounts({ efectivo: '', tarjeta: '', bizum: '' });
+      setChangeAmount(0);
+      setCopies(1);
+      setGiftTicket(false);
+
+      // Puedes mostrar un mensaje de éxito o redirigir al usuario
+      alert('Venta finalizada con éxito');
+
+      // Generar y imprimir el ticket
+      generatePDF({
+        cartItems,
+        total,
+        selectedMethods,
+        amounts,
+        changeAmount,
+        copies,
+        giftTicket,
+        date: new Date(),
+        employeeName: employee ? employee.employee_name : 'Empleado',
+      });
+    } catch (error) {
+      console.error('Error al crear la orden:', error);
+      // Manejar el error, mostrar mensaje al usuario, etc.
+      alert('Error al finalizar la venta. Por favor, intenta nuevamente.');
+      setIsLoading(false);
+    }
   };
 
   const generatePDF = (saleData) => {

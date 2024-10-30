@@ -9,6 +9,7 @@ import empleadosData from '../../data/empleados.json';
 import { AuthContext } from '../../AuthContext';
 import ClientModal from '../modals/customer/CustomerModal';
 import AddressModal from '../modals/customer/AddressModal';
+import { useApiFetch } from '../../components/utils/useApiFetch';
 
 // Inicializamos los permisos en memoria
 const permisosIniciales = {
@@ -30,6 +31,7 @@ const NavbarCard = () => {
   const [permisosGlobal, setPermisosGlobal] = useState(permisosIniciales); // Estado para manejar los permisos globales
   const { setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
   const navigate = useNavigate();
+  const apiFetch = useApiFetch();
 
   const shop = JSON.parse(localStorage.getItem('shop'));
   const employee = JSON.parse(localStorage.getItem('employee'));
@@ -58,6 +60,8 @@ const NavbarCard = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('employee');
     localStorage.removeItem('shop');
+    localStorage.removeItem('selectedClient');
+    localStorage.removeItem('selectedAddress');
     setIsAuthenticated(false);
     setShopId(null);
     setEmployeeId(null);

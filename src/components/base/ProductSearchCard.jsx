@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useContext } from 'react';
 import Modal from '../modals/Modal';
+import { useApiFetch } from '../../components/utils/useApiFetch';
+import { ConfigContext } from '../../ConfigContext'
 
 const ProductSearchCard = ({ onAddProduct }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -10,8 +13,11 @@ const ProductSearchCard = ({ onAddProduct }) => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [clickedButtons, setClickedButtons] = useState({});
-  const [isLoading, setIsLoading] = useState(false); // Nuevo estado para el indicador de carga
-  const jwtToken = localStorage.getItem('token'); // Obtener el JWT desde el localStorage
+  const [isLoading, setIsLoading] = useState(false);
+  const { configData } = useContext(ConfigContext);
+  const allowOutOfStockSales = configData ? configData.allow_out_of_stock_sales : false;
+
+  const apiFetch = useApiFetch(); // Usamos el hook personalizado
 
   useEffect(() => {
     // Cargamos la configuración de la sesión para obtener la tienda en curso
@@ -29,19 +35,9 @@ const ProductSearchCard = ({ onAddProduct }) => {
     if (event.key === 'Enter' && searchTerm.length >= 3) {
       setIsLoading(true); // Inicia la carga
       try {
-        const response = await fetch(`https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(searchTerm)}`, {
+        const results = await apiFetch(`https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(searchTerm)}`, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${jwtToken}`, // Incluimos el token en el header
-          },
         });
-
-        if (!response.ok) {
-          throw new Error('Error fetching products');
-        }
-
-        const results = await response.json();
 
         const filteredForCurrentShop = results.filter(
           (product) => product.id_shop === currentShop.id_shop
@@ -74,7 +70,7 @@ const ProductSearchCard = ({ onAddProduct }) => {
         if (existingCombination) {
           existingCombination.stocks.push({
             shop_name: product.shop_name,
-            id_shop: product.id_shop, // Agregamos id_shop
+            id_shop: product.id_shop,
             quantity: product.quantity,
             id_stock_available: product.id_stock_available,
           });
@@ -83,7 +79,7 @@ const ProductSearchCard = ({ onAddProduct }) => {
             ...product,
             stocks: [{
               shop_name: product.shop_name,
-              id_shop: product.id_shop, // Agregamos id_shop
+              id_shop: product.id_shop,
               quantity: product.quantity,
               id_stock_available: product.id_stock_available,
             }],
@@ -98,7 +94,7 @@ const ProductSearchCard = ({ onAddProduct }) => {
               ...product,
               stocks: [{
                 shop_name: product.shop_name,
-                id_shop: product.id_shop, // Agregamos id_shop
+                id_shop: product.id_shop,
                 quantity: product.quantity,
                 id_stock_available: product.id_stock_available,
               }],
@@ -141,7 +137,7 @@ const ProductSearchCard = ({ onAddProduct }) => {
     const stockQuantity = currentShopStock ? currentShopStock.quantity : 0;
 
     // Verificar si se permite vender sin stock
-    if (!currentShop.allowOutOfStockSales && stockQuantity <= 0) {
+    if (!allowOutOfStockSales && stockQuantity <= 0) {
       alert('No puedes añadir este producto porque no hay stock disponible.');
       return;
     }
@@ -164,17 +160,13 @@ const ProductSearchCard = ({ onAddProduct }) => {
       quantity: 1,
       shop_name: currentShop.name,
       id_shop: currentShop.id_shop,
-      // id_stock_available: currentShopStock ? currentShopStock.id_stock_available : null,
       // Agrega otros campos necesarios específicos de la tienda actual
     };
-
-    //delete productForCart.stocks; // Eliminamos la propiedad stocks si existe
 
     // Llamamos a la función onAddProduct y pasamos el stockQuantity para que se maneje en el carrito
     onAddProduct(
       productForCart,
       stockQuantity,
-      currentShop.allowOutOfStockSales,
       (exceedsStock) => {
         if (exceedsStock) {
           // Si se excede el stock y allowOutOfStockSales es true, mostramos el modal de confirmación
@@ -214,7 +206,7 @@ const ProductSearchCard = ({ onAddProduct }) => {
   return (
     <div className="bg-white rounded-lg shadow p-4 h-full">
       <div className="relative mb-4">
-      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           {/* Ícono de lupa */}
           <svg
             className="h-5 w-5 text-gray-500"
@@ -269,16 +261,16 @@ const ProductSearchCard = ({ onAddProduct }) => {
       <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 226px)' }}>
         <table className="min-w-full bg-white border rounded-lg">
           <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10 border-b border-gray-200">
-          <tr>
-            <th className="py-3 px-4 text-left font-semibold">Combinación</th>
-            <th className="py-3 px-4 text-left font-semibold">Referencia</th>
-            <th className="py-3 px-4 text-left font-semibold">Cod. Barras</th>
-            <th className="py-3 px-4 text-left font-semibold">Precio</th>
-            <th className="py-3 px-4 text-left font-semibold">Cantidad</th>
-            <th className="py-3 px-4 text-left font-semibold"></th>
-          </tr>
-        </thead>
-        <tbody>
+            <tr>
+              <th className="py-3 px-4 text-left font-semibold">Combinación</th>
+              <th className="py-3 px-4 text-left font-semibold">Referencia</th>
+              <th className="py-3 px-4 text-left font-semibold">Cod. Barras</th>
+              <th className="py-3 px-4 text-left font-semibold">Precio</th>
+              <th className="py-3 px-4 text-left font-semibold">Cantidad</th>
+              <th className="py-3 px-4 text-left font-semibold"></th>
+            </tr>
+          </thead>
+          <tbody>
             {filteredProducts.map((productGroup) => (
               <React.Fragment key={productGroup.product_name}>
                 <tr className="bg-gray-50">

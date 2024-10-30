@@ -8,12 +8,16 @@ import LoginPage from './components/pages/LoginPage.jsx';
 import NotFoundPage from './components/pages/NotFoundPage.jsx';
 import { AuthContext } from './AuthContext';
 import PrivateRoute from './PrivateRoute.js';
-import ConfigLoader from './components/ConfigLoader.jsx'; // Importa el ConfigLoader
+import ConfigLoader from './components/ConfigLoader.jsx';
+import SessionExpiredModal from './components/modals/session/SessionExpiredModal';
+import { ConfigContext } from './ConfigContext';
 
 function App() {
   const [cartItems, setCartItems] = useState([]);
   const [lastAction, setLastAction] = useState(null);
   const { isAuthenticated, setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
+  const { configData } = useContext(ConfigContext);
+  const allowOutOfStockSales = configData ? configData.allow_out_of_stock_sales : false;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,7 +46,6 @@ function App() {
   const handleAddProduct = (
     product,
     stockQuantity,
-    allowOutOfStockSales,
     exceedsStockCallback,
     forceAdd = false
   ) => {
@@ -134,7 +137,7 @@ function App() {
 
   return (
     <div className="bg-gray-light min-h-screen flex flex-col">
-
+      <SessionExpiredModal />
       <Routes>
         {/* Rutas para cada tienda */}
         <Route path="/penaprieta8" element={<LoginPage shopRoute="penaprieta8" />} />

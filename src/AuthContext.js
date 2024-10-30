@@ -8,6 +8,12 @@ function AuthProvider({ children }) {
   const [shopName, setShopName] = useState('');
   const [employeeId, setEmployeeId] = useState(null);
   const [employeeName, setEmployeeName] = useState('');
+  // Nuevo estado para sesión expirada
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
+  // Función para manejar sesión expirada
+  const handleSessionExpired = () => {
+    setIsSessionExpired(true);
+  };
 
   return (
     <AuthContext.Provider
@@ -22,6 +28,9 @@ function AuthProvider({ children }) {
         setEmployeeId,
         employeeName,
         setEmployeeName,
+        isSessionExpired,
+        setIsSessionExpired,
+        handleSessionExpired,
       }}
     >
       {children}
