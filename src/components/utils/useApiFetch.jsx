@@ -1,20 +1,43 @@
-// src/utils/useApiFetch.js
-
-import { useContext } from 'react';
-import { AuthContext } from '../../AuthContext';
-import { apiFetch } from './apiFetch';
+import { useCallback } from 'react';
 
 export const useApiFetch = () => {
-  const { handleSessionExpired } = useContext(AuthContext);
+  const token = localStorage.getItem('token');
 
-  const customFetch = (url, options = {}) => {
-    return apiFetch(url, options).catch((error) => {
-      if (error.status === 401) {
-        handleSessionExpired(); // Actualizamos el estado de sesión expirada
+  const apiFetch = useCallback(async (url, options = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      if (response.status === 401) {
+        // Token inválido o expirado
+        const data = await response.json();
+        const error = { status: response.status, message: data.message };
+        return Promise.reject(error);
       }
-      throw error;
-    });
-  };
 
-  return customFetch;
+      const data = await response.json();
+
+      if (!response.ok) {
+        const error = { status: response.status, message: data.message };
+        return Promise.reject(error);
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }, [token]); // Memoizamos apiFetch dependiendo del token
+
+  return apiFetch;
 };

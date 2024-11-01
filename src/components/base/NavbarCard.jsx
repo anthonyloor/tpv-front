@@ -9,7 +9,7 @@ import empleadosData from '../../data/empleados.json';
 import { AuthContext } from '../../AuthContext';
 import ClientModal from '../modals/customer/CustomerModal';
 import AddressModal from '../modals/customer/AddressModal';
-import { useApiFetch } from '../../components/utils/useApiFetch';
+import { ClientContext } from '../../ClientContext';
 
 // Inicializamos los permisos en memoria
 const permisosIniciales = {
@@ -31,30 +31,14 @@ const NavbarCard = () => {
   const [permisosGlobal, setPermisosGlobal] = useState(permisosIniciales); // Estado para manejar los permisos globales
   const { setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
   const navigate = useNavigate();
-  const apiFetch = useApiFetch();
 
   const shop = JSON.parse(localStorage.getItem('shop'));
   const employee = JSON.parse(localStorage.getItem('employee'));
 
   // Estado para el cliente seleccionado y el modal de clientes
-  const [selectedClient, setSelectedClient] = useState({ id_customer: 0, firstname: '', lastname: '', full_name: 'Cliente genérico' });
-  const [selectedAddress, setSelectedAddress] = useState(null);
+  const { selectedClient, setSelectedClient, selectedAddress, setSelectedAddress, resetToDefaultClientAndAddress } = useContext(ClientContext);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-
-  // Cargar cliente y dirección seleccionados desde localStorage al montar el componente
-  useEffect(() => {
-    const storedClient = JSON.parse(localStorage.getItem('selectedClient'));
-    const storedAddress = JSON.parse(localStorage.getItem('selectedAddress'));
-
-    if (storedClient) {
-      setSelectedClient(storedClient);
-    }
-    if (storedAddress) {
-      setSelectedAddress(storedAddress);
-    }
-  }, []);
-
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -127,12 +111,7 @@ const NavbarCard = () => {
   };
 
   const handleResetClient = () => {
-    setSelectedClient({ id_customer: 0, firstname: '', lastname: '', full_name: 'Cliente genérico' });
-    setSelectedAddress(null);
-
-    // Eliminar del localStorage
-    localStorage.removeItem('selectedClient');
-    localStorage.removeItem('selectedAddress');
+    resetToDefaultClientAndAddress();
   };
 
   // Función para manejar la selección de una dirección desde el modal de direcciones
