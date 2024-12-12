@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import ConfigModal from './modals/config/ConfigModal';
 import { useApiFetch } from '../components/utils/useApiFetch';
-import { ConfigContext } from '../ConfigContext';
+import { ConfigContext } from '../contexts/ConfigContext';
 
 function ConfigLoader() {
   const [showConfigModal, setShowConfigModal] = useState(false);

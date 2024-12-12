@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import Modal from '../modals/Modal';
-import { useApiFetch } from '../../components/utils/useApiFetch';
-import { ConfigContext } from '../../ConfigContext'
+import { useApiFetch } from '../utils/useApiFetch';
+import { ConfigContext } from '../../contexts/ConfigContext'
 
 const ProductSearchCard = ({ onAddProduct }) => {
   const [searchTerm, setSearchTerm] = useState('');

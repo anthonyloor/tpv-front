@@ -1,23 +1,31 @@
-import React, { useState, useContext, useEffect } from 'react';
+// src/App.js
+import React, { useEffect, useContext } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import NavbarCard from './components/base/NavbarCard.jsx';
-import SalesCard from './components/base/SalesCard.jsx';
-import ProductSearchCard from './components/base/ProductSearchCard.jsx';
-import PinPage from './components/pages/PinPage.jsx';
-import LoginPage from './components/pages/LoginPage.jsx';
-import NotFoundPage from './components/pages/NotFoundPage.jsx';
-import { AuthContext } from './AuthContext';
-import PrivateRoute from './PrivateRoute.js';
-import ConfigLoader from './components/ConfigLoader.jsx';
+import NavbarCard from './components/Navbar/NavbarCard';
+import SalesCard from './components/Sales/SalesCard';
+import ProductSearchCard from './components/ProductSearch/ProductSearchCard';
+import PinPage from './components/pages/PinPage';
+import LoginPage from './components/pages/LoginPage';
+import NotFoundPage from './components/pages/NotFoundPage';
+import { AuthContext } from './contexts/AuthContext';
+import PrivateRoute from './components/base/PrivateRoute';
+import ConfigLoader from './components/ConfigLoader';
 import SessionExpiredModal from './components/modals/session/SessionExpiredModal';
-import { ConfigContext } from './ConfigContext';
+import { ConfigContext } from './contexts/ConfigContext';
+import useCart from './hooks/useCart';
 
 function App() {
-  const [cartItems, setCartItems] = useState([]);
-  const [lastAction, setLastAction] = useState(null);
-  const { isAuthenticated, setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
+  const { setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
   const { configData } = useContext(ConfigContext);
   const allowOutOfStockSales = configData ? configData.allow_out_of_stock_sales : false;
+  const {
+    cartItems,
+    setCartItems,
+    lastAction,
+    handleAddProduct,
+    handleRemoveProduct,
+    handleDecreaseProduct
+  } = useCart(allowOutOfStockSales);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,99 +50,6 @@ function App() {
     }
   }, [navigate]);
 
-  // Función para añadir productos al ticket, verificando la cantidad máxima disponible
-  const handleAddProduct = (
-    product,
-    stockQuantity,
-    exceedsStockCallback,
-    forceAdd = false
-  ) => {
-    const existingProduct = cartItems.find(
-      (item) => item.id_stock_available === product.id_stock_available
-    );
-
-    const maxQuantity =
-      stockQuantity !== null && stockQuantity !== undefined ? stockQuantity : Infinity;
-
-    let newQuantity = existingProduct ? existingProduct.quantity + 1 : 1;
-
-    if (newQuantity > maxQuantity && !forceAdd) {
-      if (!allowOutOfStockSales) {
-        alert('No puedes añadir más de la cantidad disponible');
-        return;
-      } else {
-        // Si se permite vender sin stock, llamamos al callback para mostrar el modal
-        if (exceedsStockCallback) exceedsStockCallback(true);
-        return;
-      }
-    }
-
-    // Obtener la tasa de impuestos del producto o usar un valor predeterminado
-    const tax_rate = product.tax_rate !== undefined ? product.tax_rate : 0.21; // 21% por defecto
-    const price_excl_tax = product.price_incl_tax / (1 + tax_rate);
-    const final_price_excl_tax = product.final_price_incl_tax / (1 + tax_rate);
-
-    // Ahora actualizamos el carrito
-    setCartItems((prevItems) => {
-      if (existingProduct) {
-        return prevItems.map((item) =>
-          item.id_stock_available === product.id_stock_available
-            ? { ...item, quantity: newQuantity }
-            : item
-        );
-      } else {
-        return [
-          ...prevItems,
-          {
-            ...product,
-            quantity: 1,
-            price_incl_tax: product.price_incl_tax,
-            final_price_incl_tax: product.final_price_incl_tax,
-            price_excl_tax: parseFloat(price_excl_tax.toFixed(2)),
-            final_price_excl_tax: parseFloat(final_price_excl_tax.toFixed(2)),
-            unit_price_tax_excl: parseFloat(final_price_excl_tax.toFixed(2)),
-            tax_rate: tax_rate,
-          },
-        ];
-      }
-    });
-
-    // Establecemos la última acción para la animación en SalesCard
-    setLastAction({
-      id: product.id_stock_available,
-      action: 'add',
-      timestamp: Date.now(),
-    });
-  };
-
-    /// Reducir la cantidad de un producto
-  const handleDecreaseProduct = (idStockAvailable) => {
-    setCartItems((prevItems) =>
-      prevItems
-        .map((item) =>
-          item.id_stock_available === idStockAvailable
-            ? { ...item, quantity: item.quantity - 1 }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
-
-    // Establecemos la última acción para la animación en SalesCard
-    setLastAction({
-      id: idStockAvailable,
-      action: 'decrease',
-      timestamp: Date.now(),
-    });
-  };
-
-  // Eliminar un producto completamente del ticket
-  const handleRemoveProduct = (idStockAvailable) => {
-    setCartItems((prevItems) =>
-      prevItems.filter((item) => item.id_stock_available !== idStockAvailable)
-    );
-  };
-
-
   return (
     <div className="bg-gray-light min-h-screen flex flex-col">
       <SessionExpiredModal />
@@ -146,9 +61,7 @@ function App() {
         <Route path="/bodega" element={<LoginPage shopRoute="bodega" />} />
         <Route path="/mayretmodacolombiana" element={<LoginPage shopRoute="mayretmodacolombiana" />} />
         <Route path="/pin" element={<PinPage />} />
-        {/* Ruta protegida para la aplicación principal */}
-        <Route
-          path="/:shopRoute/app"
+        <Route path="/:shopRoute/app"
           element={
             <PrivateRoute>
               <ConfigLoader />
@@ -170,7 +83,7 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* Ruta para manejar páginas no encontradas */}
+        <Route path="/:shopRoute" element={<LoginPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </div>

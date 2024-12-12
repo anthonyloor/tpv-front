@@ -1,6 +1,6 @@
 // LoginPage.jsx
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { AuthContext } from '../../AuthContext';
+import { AuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import LicenseModal from '../modals/license/LicenseModal'; // Importamos el LicenseModal
 import OpenPosModal from '../modals/pos/OpenPosModal'; // Importamos el OpenPosModal

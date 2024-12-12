@@ -1,7 +1,7 @@
 import React from 'react';
 import Modal from '../Modal'; // Asegúrate de ajustar la ruta si tu Modal está en otra ubicación
 import { useContext } from 'react';
-import { AuthContext } from '../../../AuthContext';
+import { AuthContext } from '../../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const SessionExpiredModal = () => {

@@ -1,6 +1,6 @@
 // src/ClientContext.js
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { useApiFetch } from './components/utils/useApiFetch';
+import { useApiFetch } from '../components/utils/useApiFetch';
 import { ConfigContext } from './ConfigContext';
 
 export const ClientContext = createContext();
