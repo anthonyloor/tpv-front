@@ -74,6 +74,7 @@ function App() {
                     onRemoveProduct={handleRemoveProduct}
                     onDecreaseProduct={handleDecreaseProduct}
                     lastAction={lastAction}
+                    handleAddProduct={handleAddProduct}
                   />
                 </div>
                 <div className="w-full md:w-2/3">

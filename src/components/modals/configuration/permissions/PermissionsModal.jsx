@@ -1,3 +1,4 @@
+// src/components/modals/configuration/permissions/PermissionsModal.jsx
 import React, { useState } from 'react';
 
 const PermissionsModal = ({ onClose, empleadoActual, setPermisosGlobal }) => {
@@ -7,7 +8,6 @@ const PermissionsModal = ({ onClose, empleadoActual, setPermisosGlobal }) => {
     "Admin": { "acceso_ejecutar": "Permitido" }
   });
 
-  // Manejar el cambio de permisos para botones o modales específicos
   const handlePermisoChange = (rol, accion, permiso) => {
     setPermisos((prevPermisos) => ({
       ...prevPermisos,
@@ -15,18 +15,17 @@ const PermissionsModal = ({ onClose, empleadoActual, setPermisosGlobal }) => {
     }));
   };
 
-  // Función para guardar los permisos en memoria
   const handleGuardarPermisos = () => {
-    setPermisosGlobal(permisos); // Actualizamos los permisos globales para la aplicación
+    setPermisosGlobal(permisos);
     alert('Permisos actualizados correctamente');
     onClose();
   };
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Configurar Permisos</h2>
+      {/* Título eliminado, ahora el título principal se maneja en el modal padre */}
       {empleadoActual?.nivel_permisos === 'Admin' ? (
-        <div>
+        <div className="space-y-4">
           {['Vendedor TPV', 'Encargado', 'Admin'].map((rol) => (
             <div key={rol} className="space-y-4">
               <h3 className="font-bold">{rol}</h3>

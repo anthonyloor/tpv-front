@@ -5,10 +5,10 @@ export default function useCart(allowOutOfStockSales) {
   const [cartItems, setCartItems] = useState([]);
   const [lastAction, setLastAction] = useState(null);
 
-  const handleAddProduct = (product, stockQuantity, exceedsStockCallback, forceAdd = false) => {
+  const handleAddProduct = (product, stockQuantity, exceedsStockCallback, forceAdd = false, quantity = 1) => {
     const existingProduct = cartItems.find((item) => item.id_stock_available === product.id_stock_available);
     const maxQuantity = stockQuantity ?? Infinity;
-    const newQuantity = existingProduct ? existingProduct.quantity + 1 : 1;
+    const newQuantity = existingProduct ? existingProduct.quantity + quantity : quantity;
 
     if (newQuantity > maxQuantity && !forceAdd) {
       if (!allowOutOfStockSales) {
@@ -36,7 +36,7 @@ export default function useCart(allowOutOfStockSales) {
           ...prevItems,
           {
             ...product,
-            quantity: 1,
+            quantity: quantity,
             price_excl_tax: parseFloat(price_excl_tax.toFixed(2)),
             final_price_excl_tax: parseFloat(final_price_excl_tax.toFixed(2)),
             unit_price_tax_excl: parseFloat(final_price_excl_tax.toFixed(2)),

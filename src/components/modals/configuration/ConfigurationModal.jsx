@@ -6,7 +6,6 @@ import TicketConfigModal from './printers/TicketConfigModal';
 
 const ConfigurationModal = ({ isOpen, onClose, empleadoActual, permisosGlobal, setPermisosGlobal }) => {
   const [currentView, setCurrentView] = useState('config'); 
-  // 'config', 'permisos', 'impresoras', 'ticketConfig', 'etiquetaPrecios', etc.
 
   const goBack = () => {
     if (currentView === 'permisos' || currentView === 'impresoras') {
@@ -18,11 +17,30 @@ const ConfigurationModal = ({ isOpen, onClose, empleadoActual, permisosGlobal, s
     }
   };
 
+  let title = 'Configuración';
+  let showBackButton = false;
+
+  if (currentView === 'permisos') {
+    title = 'Permisos';
+    showBackButton = true;
+  } else if (currentView === 'impresoras') {
+    title = 'Impresoras';
+    showBackButton = true;
+  } else if (currentView === 'ticketConfig') {
+    title = 'Configuración de Tickets';
+    showBackButton = true;
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      showBackButton={showBackButton}
+      onBack={goBack}
+      title={title}
+    >
       {currentView === 'config' && (
         <div>
-          <h2 className="text-xl font-bold mb-4">Configuración</h2>
           <div className="space-y-4">
             <button className="bg-gray-300 text-black px-4 py-2 rounded w-full" onClick={() => setCurrentView('permisos')}>
               Permisos
@@ -37,13 +55,7 @@ const ConfigurationModal = ({ isOpen, onClose, empleadoActual, permisosGlobal, s
 
       {currentView === 'permisos' && (
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <button className="bg-gray-300 text-black px-4 py-2 rounded" onClick={goBack}>
-              Atrás
-            </button>
-            <h2 className="text-xl font-bold">Permisos</h2>
-            <div className="invisible">Placeholder</div>
-          </div>
+          {/* Ya no tenemos la barra interna, solo el contenido de PermisosModal */}
           <PermisosModal
             onClose={onClose}
             empleadoActual={empleadoActual}
@@ -54,13 +66,6 @@ const ConfigurationModal = ({ isOpen, onClose, empleadoActual, permisosGlobal, s
 
       {currentView === 'impresoras' && (
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <button className="bg-gray-300 text-black px-4 py-2 rounded" onClick={goBack}>
-              Atrás
-            </button>
-            <h2 className="text-xl font-bold">Impresoras</h2>
-            <div className="invisible">Placeholder</div>
-          </div>
           <div className="space-y-4">
             <button className="bg-gray-300 text-black px-4 py-2 rounded w-full" onClick={() => setCurrentView('ticketConfig')}>
               Tickets al Cliente
@@ -74,13 +79,7 @@ const ConfigurationModal = ({ isOpen, onClose, empleadoActual, permisosGlobal, s
 
       {currentView === 'ticketConfig' && (
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <button className="bg-gray-300 text-black px-4 py-2 rounded" onClick={goBack}>
-              Atrás
-            </button>
-            <h2 className="text-xl font-bold">Configuración de Tickets</h2>
-            <div className="invisible">Placeholder</div>
-          </div>
+          {/* Solo el contenido de TicketConfigModal */}
           <TicketConfigModal onClose={onClose} goBack={goBack} />
         </div>
       )}

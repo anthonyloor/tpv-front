@@ -1,7 +1,7 @@
-// TransferForm.jsx
+// src/components/modals/transfers/TransferForm.jsx
 import React, { useState, useEffect } from 'react';
 import ProductSearchCardForTransfer from './ProductSearchCardForTransfer';
-import { useApiFetch } from '../../utils/useApiFetch'; // Ajusta la ruta a tu hook useApiFetch
+import { useApiFetch } from '../../utils/useApiFetch';
 
 const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal }) => {
   const [productsToTransfer, setProductsToTransfer] = useState([]);
@@ -25,7 +25,6 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal }) => {
     setPermisoEjecutar(permisosGlobal[permisosUsuario]?.acceso_ejecutar || 'Denegado');
   }, [permisosUsuario, permisosGlobal]);
 
-  // Cargamos las tiendas desde la API y filtramos para no mostrar id_shop = 1
   useEffect(() => {
     const loadShops = async () => {
       try {
@@ -33,7 +32,6 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal }) => {
         const data = await apiFetch('https://apitpv.anthonyloor.com/shops', {
           method: 'GET',
         });
-        // Filtrar las tiendas para excluir id_shop = 1
         const filteredData = data.filter((shop) => shop.id_shop !== 1);
         setShops(filteredData);
       } catch (error) {

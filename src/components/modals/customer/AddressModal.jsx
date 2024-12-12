@@ -1,4 +1,4 @@
-// AddressModal.jsx
+// src/components/modals/customer/AddressModal.jsx
 import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 
@@ -25,7 +25,6 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
             return response.json();
           })
           .then((data) => {
-            // Filtrar y ordenar direcciones
             const validAddresses = data
               .filter((address) => !address.deleted && address.active)
               .sort((a, b) => new Date(b.date_upd) - new Date(a.date_upd));
@@ -35,7 +34,6 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
             console.error('Error al obtener direcciones del cliente:', error);
           });
 
-        // Obtener la dirección de la tienda actual
         const storeAddressData = {
           id_address: 'store',
           alias: 'Vender en tienda',
@@ -52,18 +50,21 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
     }
   }, [isOpen, clientId, shop.name]);
 
-  // Función para manejar la selección de la dirección
   const handleAddressSelect = (address) => {
     handleSelectAddress(address);
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Seleccionar Dirección"
+      showBackButton={false}
+      showCloseButton={true}
+    >
       <div className="p-4">
-        <h2 className="text-lg font-bold mb-4">Seleccionar Dirección</h2>
         <div className="grid grid-cols-1 gap-4">
-          {/* Opción de vender en tienda */}
           <div
             className="border p-4 rounded cursor-pointer hover:bg-gray-100"
             onClick={() => handleAddressSelect(storeAddress)}
@@ -71,7 +72,6 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
             <h3 className="font-bold">{storeAddress?.alias}</h3>
             <p>{storeAddress?.address1}</p>
           </div>
-          {/* Direcciones del cliente */}
           {addresses.map((address) => (
             <div
               key={address.id_address}
@@ -79,12 +79,8 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
               onClick={() => handleAddressSelect(address)}
             >
               <h3 className="font-bold">{address.alias}</h3>
-              <p>
-                {address.address1} {address.address2}
-              </p>
-              <p>
-                {address.postcode} {address.city}
-              </p>
+              <p>{address.address1} {address.address2}</p>
+              <p>{address.postcode} {address.city}</p>
               <p>{address.phone}</p>
             </div>
           ))}

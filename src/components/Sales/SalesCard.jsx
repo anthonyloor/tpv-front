@@ -12,6 +12,7 @@ const SalesCard = ({
   onRemoveProduct,
   onDecreaseProduct,
   lastAction,
+  handleAddProduct,
 }) => {
   const { configData } = useContext(ConfigContext);
   const allowOutOfStockSales = configData ? configData.allow_out_of_stock_sales : false;
@@ -291,91 +292,96 @@ const SalesCard = ({
       </div>
 
       <ReturnsExchangesModal
-  isOpen={isReturnsModalOpen}
-  onClose={() => setIsReturnsModalOpen(false)}/>
+        isOpen={isReturnsModalOpen}
+        onClose={() => setIsReturnsModalOpen(false)}
+        onAddProduct={handleAddProduct} // <-- Aquí pasamos handleAddProduct al modal
+      />
 
 <ReprintModal
   isOpen={isReprintModalOpen}
   onClose={() => setIsReprintModalOpen(false)}/>
 
       {/* Modal para finalizar la venta */}
-      <Modal isOpen={isFinalSaleModalOpen} onClose={handleCloseModal}>
-        <div className="p-6">
-          <h2 className="text-lg font-bold mb-4">Finalizar Venta</h2>
+      <Modal
+  isOpen={isFinalSaleModalOpen}
+  onClose={handleCloseModal}
+  title="Finalizar Venta"
+  showCloseButton={true}
+  showBackButton={false}
+>
+  <div className="p-6">
+    {/* Ya no ponemos el h2 aquí, el título lo maneja el modal */}
+    <div className="flex justify-between mb-4">
+      <div className="flex items-center">
+        <label className="mr-2">Copias:</label>
+        <input
+          type="number"
+          min="1"
+          value={copies}
+          onChange={(e) => setCopies(e.target.value)}
+          className="border rounded p-2 w-16"
+        />
+      </div>
+      <div className="flex items-center">
+        <span className="mr-2">Ticket Regalo:</span>
+        <button
+          className={`px-4 py-2 rounded ${giftTicket ? 'bg-green-600 text-white' : 'bg-gray-300'}`}
+          onClick={() => setGiftTicket(true)}
+        >
+          Sí
+        </button>
+        <button
+          className={`ml-2 px-4 py-2 rounded ${!giftTicket ? 'bg-red-600 text-white' : 'bg-gray-300'}`}
+          onClick={() => setGiftTicket(false)}
+        >
+          No
+        </button>
+      </div>
+    </div>
 
-          {/* Opciones de copias y ticket regalo */}
-          <div className="flex justify-between mb-4">
-            <div className="flex items-center">
-              <label className="mr-2">Copias:</label>
-              <input
-                type="number"
-                min="1"
-                value={copies}
-                onChange={(e) => setCopies(e.target.value)}
-                className="border rounded p-2 w-16"
-              />
-            </div>
-            <div className="flex items-center">
-              <span className="mr-2">Ticket Regalo:</span>
-              <button
-                className={`px-4 py-2 rounded ${giftTicket ? 'bg-green-600 text-white' : 'bg-gray-300'}`}
-                onClick={() => setGiftTicket(true)}
-              >
-                Sí
-              </button>
-              <button
-                className={`ml-2 px-4 py-2 rounded ${!giftTicket ? 'bg-red-600 text-white' : 'bg-gray-300'}`}
-                onClick={() => setGiftTicket(false)}
-              >
-                No
-              </button>
-            </div>
-          </div>
+    <div className="mb-4">
+      <h3 className="text-3xl font-bold">Importe Total: {total.toFixed(2)} €</h3>
+      <p className="text-2xl font-bold">Cambio: {changeAmount.toFixed(2)} €</p>
+    </div>
 
-          <div className="mb-4">
-            <h3 className="text-3xl font-bold">Importe Total: {total.toFixed(2)} €</h3>
-            <p className="text-2xl font-bold">Cambio: {changeAmount.toFixed(2)} €</p>
-          </div>
-
-          {/* Métodos de pago */}
-          <div className="flex flex-col space-y-4 mb-4">
-            {['efectivo', 'tarjeta', 'bizum'].map((method) => (
-              <div key={method} className="flex items-center space-x-4">
-                <button
-                  className={`w-1/3 py-4 rounded ${
-                    selectedMethods.includes(method)
-                      ? method === 'efectivo'
-                        ? 'bg-green-500'
-                        : 'bg-blue-500'
-                      : 'bg-gray-400'
-                  } text-white`}
-                  onClick={() => togglePaymentMethod(method)}
-                >
-                  {method.charAt(0).toUpperCase() + method.slice(1)}
-                </button>
-                <input
-                  className="border rounded w-2/3 p-3"
-                  type="number"
-                  placeholder={`Importe en ${method.charAt(0).toUpperCase() + method.slice(1)}`}
-                  value={amounts[method]}
-                  onChange={(e) => handleAmountChange(method, e.target.value)}
-                  disabled={!selectedMethods.includes(method)}
-                />
-              </div>
-            ))}
-          </div>
-
+    <div className="flex flex-col space-y-4 mb-4">
+      {['efectivo', 'tarjeta', 'bizum'].map((method) => (
+        <div key={method} className="flex items-center space-x-4">
           <button
-            className={`w-full py-4 px-4 py-2 rounded text-white ${
-              isFinalizeDisabled || isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600'
-            }`}
-            onClick={handleConfirmSale}
-            disabled={isFinalizeDisabled || isLoading}
+            className={`w-1/3 py-4 rounded ${
+              selectedMethods.includes(method)
+                ? method === 'efectivo'
+                  ? 'bg-green-500'
+                  : 'bg-blue-500'
+                : 'bg-gray-400'
+            } text-white`}
+            onClick={() => togglePaymentMethod(method)}
           >
-            {isLoading ? 'Procesando...' : 'Confirmar Venta'}
+            {method.charAt(0).toUpperCase() + method.slice(1)}
           </button>
+          <input
+            className="border rounded w-2/3 p-3"
+            type="number"
+            placeholder={`Importe en ${method.charAt(0).toUpperCase() + method.slice(1)}`}
+            value={amounts[method]}
+            onChange={(e) => handleAmountChange(method, e.target.value)}
+            disabled={!selectedMethods.includes(method)}
+          />
         </div>
-      </Modal>
+      ))}
+    </div>
+
+    <button
+      className={`w-full py-4 px-4 py-2 rounded text-white ${
+        isFinalizeDisabled || isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600'
+      }`}
+      onClick={handleConfirmSale}
+      disabled={isFinalizeDisabled || isLoading}
+    >
+      {isLoading ? 'Procesando...' : 'Confirmar Venta'}
+    </button>
+  </div>
+</Modal>
     </div>
   );
 };
