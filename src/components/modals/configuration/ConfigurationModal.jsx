@@ -38,6 +38,8 @@ const ConfigurationModal = ({ isOpen, onClose, empleadoActual, permisosGlobal, s
       showBackButton={showBackButton}
       onBack={goBack}
       title={title}
+      size="md"
+      height="md"
     >
       {currentView === 'config' && (
         <div>

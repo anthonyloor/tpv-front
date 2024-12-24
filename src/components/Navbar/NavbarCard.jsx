@@ -1,14 +1,17 @@
 // src/components/Navbar/NavbarCard.jsx
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { ClientContext } from '../../contexts/ClientContext';
 import empleadosData from '../../data/empleados.json';
 
+// Importar los modales existentes
 import ClientModal from '../modals/customer/CustomerModal';
 import AddressModal from '../modals/customer/AddressModal';
 import TransfersModal from '../modals/transfers/TransfersModal';
 import ConfigurationModal from '../modals/configuration/ConfigurationModal';
+import SalesReportModal from '../reports/SalesReportModal';
+import CloseCashRegisterModal from '../modals/cashRegister/CloseCashRegisterModal'; // Importar el nuevo modal
 
 const permisosIniciales = {
   "Vendedor TPV": {
@@ -27,36 +30,30 @@ const NavbarCard = () => {
   const [isConfigurationModalOpen, setConfigurationModalOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [isSalesReportModalOpen, setIsSalesReportModalOpen] = useState(false);
+  const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
 
-  const [empleadoActual, setEmpleadoActual] = useState(null);
-  const [permisosGlobal, setPermisosGlobal] = useState(permisosIniciales);
-
-  const { setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setShopName } = useContext(AuthContext);
-  const { selectedClient, setSelectedClient, selectedAddress, setSelectedAddress, resetToDefaultClientAndAddress } = useContext(ClientContext);
+  const [currentEmployee, setCurrentEmployee] = useState(null);
+  const [globalPermissions, setGlobalPermissions] = useState(permisosIniciales);
 
   const navigate = useNavigate();
+
+  const { idProfile, handleLogout} = useContext(AuthContext);
+  const { selectedClient, setSelectedClient, selectedAddress, setSelectedAddress, resetToDefaultClientAndAddress } = useContext(ClientContext);
+
   const shop = JSON.parse(localStorage.getItem('shop'));
   const employee = JSON.parse(localStorage.getItem('employee'));
 
-  useEffect(() => {
-    // Simular que el empleado actual es Admin
-    const empleadoAdmin = empleadosData.find(emp => emp.nivel_permisos === 'Admin');
-    setEmpleadoActual(empleadoAdmin);
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('employee');
-    localStorage.removeItem('shop');
-    localStorage.removeItem('selectedClient');
-    localStorage.removeItem('selectedAddress');
-    setIsAuthenticated(false);
-    setShopId(null);
-    setEmployeeId(null);
-    setEmployeeName(null);
-    setShopName(null);
+  const handleLogoutClick = () => {
+    handleLogout();
     navigate(`/${shop.route}`);
   };
+
+  useEffect(() => {
+    // Simular que el empleado actual es Admin (puedes reemplazarlo con la lógica real)
+    const adminEmployee = empleadosData.find(emp => emp.nivel_permisos === 'Admin');
+    setCurrentEmployee(adminEmployee);
+  }, []);
 
   const handleSelectClientAndAddress = (client, address) => {
     const clientData = {
@@ -78,6 +75,14 @@ const NavbarCard = () => {
     setIsAddressModalOpen(false);
 
     localStorage.setItem('selectedAddress', JSON.stringify(address));
+  };
+
+  const handleOpenSalesReport = () => {
+    setIsSalesReportModalOpen(true);
+  };
+
+  const handleOpenCashRegister = () => {
+    setIsCashRegisterModalOpen(true);
   };
 
   return (
@@ -116,7 +121,7 @@ const NavbarCard = () => {
             >
               {/* Ícono de dirección */}
               <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
-                <path d="M12 2.25C7.168 2.25 3.25 6.168 3.25 11c0 6.1 7.034 10.993 8.377 11.78a.75.75 0 0 0 .746 0C13.716 21.993 20.75 17.1 20.75 11c0-4.832-3.918-8.75-8.75-8.75zm0 13a4.25 4.25 0 1 1 0-8.5 4.25 4.25 0 0 1 0 8.5z"/>
+                <path d="M12 2.25C7.168 2.25 3.25 6.168 3.25 11c0 6.1 7.034 10.993 8.377 11.78a.75.75 0 1 0 .746 0C13.716 21.993 20.75 17.1 20.75 11c0-4.832-3.918-8.75-8.75-8.75zm0 13a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5z"/>
               </svg>
             </button>
           </>
@@ -127,14 +132,24 @@ const NavbarCard = () => {
 
       {/* Opciones de navegación */}
       <div className="flex items-center space-x-4">
-        <button className="text-black hover:text-gray-600" onClick={() => setTransfersModalOpen(true)}>
-          Traspasos
-        </button>
-        <button className="text-black hover:text-gray-600">Etiquetas</button>
-        <button className="text-black hover:text-gray-600">Caja</button>
+        {/* Condicionalmente renderizar el botón "Transfers" solo si idProfile === 1 */}
+        {idProfile === 1 && (
+          <button className="text-black hover:text-gray-600" onClick={() => setTransfersModalOpen(true)}>
+            Transferencias
+          </button>
+        )}
+        <button className="text-black hover:text-gray-600">Labels</button>
+        <button className="text-black hover:text-gray-600" onClick={handleOpenCashRegister}>Caja</button>
         <button className="text-black hover:text-gray-600" onClick={() => setConfigurationModalOpen(true)}>
-          Configuración
+        Configuración
         </button>
+
+        {/* Botón para Sales Report - Solo para Administradores */}
+        {idProfile === 1 && (
+          <button className="text-black hover:text-gray-600" onClick={handleOpenSalesReport}>
+            Reportes de Ventas
+          </button>
+        )}
       </div>
 
       <div className="border-l h-6 mx-4"></div>
@@ -143,33 +158,33 @@ const NavbarCard = () => {
       <div className="flex items-center space-x-2">
         <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
           <path d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Z"/>
-          <path d="M8.5 9.75a1.25 1.25 0 1 1 2.5 0 1.25 1.25 0 0 1-2.5 0Z"/>
+          <path d="M8.5 9.75a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 0 0-2.5 0Z"/>
         </svg>
         <span className="font-semibold text-gray-700">
           {employee ? employee.employee_name : 'Empleado'}
         </span>
-        <button onClick={handleLogout} className="text-black hover:text-gray-600">
+        <button onClick={handleLogoutClick} className="text-black hover:text-gray-600">
           <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
             <path d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z"/>
           </svg>
         </button>
       </div>
 
-      {/* Modales */}
+      {/* Modales Existentes */}
       <TransfersModal
         isOpen={isTransfersModalOpen}
         onClose={() => setTransfersModalOpen(false)}
-        permisosUsuario={empleadoActual?.nivel_permisos}
-        permisosGlobal={permisosGlobal}
-        setPermisosGlobal={setPermisosGlobal}
+        permisosUsuario={currentEmployee?.nivel_permisos}
+        permisosGlobal={globalPermissions}
+        setPermisosGlobal={setGlobalPermissions}
       />
 
       <ConfigurationModal
         isOpen={isConfigurationModalOpen}
         onClose={() => setConfigurationModalOpen(false)}
-        empleadoActual={empleadoActual}
-        permisosGlobal={permisosGlobal}
-        setPermisosGlobal={setPermisosGlobal}
+        empleadoActual={currentEmployee}
+        permisosGlobal={globalPermissions}
+        setPermisosGlobal={setGlobalPermissions}
       />
 
       <ClientModal
@@ -184,6 +199,18 @@ const NavbarCard = () => {
         clientId={selectedClient.id_customer}
         handleSelectAddress={handleSelectAddress}
         shop={shop}
+      />
+
+      {/* Modal para Reporte de Ventas */}
+      <SalesReportModal
+        isOpen={isSalesReportModalOpen}
+        onClose={() => setIsSalesReportModalOpen(false)}
+      />
+
+      {/* Modal para Cierre de Caja */}
+      <CloseCashRegisterModal
+        isOpen={isCashRegisterModalOpen}
+        onClose={() => setIsCashRegisterModalOpen(false)}
       />
     </div>
   );

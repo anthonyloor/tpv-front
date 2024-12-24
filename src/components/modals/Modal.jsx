@@ -1,5 +1,5 @@
 // src/components/modals/Modal.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Modal = ({ 
   isOpen, 
@@ -8,16 +8,71 @@ const Modal = ({
   showCloseButton = true, 
   showBackButton = false, 
   onBack, 
-  title = ''
+  title = '',
+  size = 'sm', // Tamaño ancho predeterminado
+  height = 'small', // Tamaño altura predeterminado
+  showSeparator = true, // Mostrar barra separadora por defecto
 }) => {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(isOpen);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      setVisible(false);
+      const timeout = setTimeout(() => {
+        setVisible(true);
+      }, 10);
+      return () => clearTimeout(timeout);
+    } else {
+      setVisible(false);
+    }
+  }, [isOpen]);
+
+  const handleTransitionEnd = (e) => {
+    if (e.target === e.currentTarget && e.propertyName === 'opacity' && !isOpen) {
+      setMounted(false);
+    }
+  };
+
+  if (!mounted) return null;
+
+  const sizeClasses = {
+    xs: 'w-[20%]', // 20% del ancho de la pantalla
+    sm: 'w-[30%]',
+    md: 'w-[40%]',
+    lg: 'w-[50%]',
+    xl: 'w-[60%]',
+    '2xl': 'w-[70%]',
+    '3xl': 'w-[80%]',
+    full: 'w-[100%]', // Pantalla completa
+  };
+
+  const heightClasses = {
+    default: 'h-auto', // Altura predeterminada (depende del contenido)
+    small: 'h-1/4',
+    md: 'h-2/4',
+    tall: 'h-3/4', // Alto (3/4 de la pantalla)
+    full: 'h-full', // Pantalla completa (altura)
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 transition-opacity duration-500 ease-in-out">
-      <div className="bg-white rounded-lg shadow-lg w-1/2 h-1/2 relative transform transition-transform duration-500 ease-in-out overflow-auto p-6">
-        
+    <div
+      className={`
+        fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 
+        transition-opacity duration-300 ease-in-out
+        ${visible ? 'opacity-100' : 'opacity-0'}
+      `}
+      onTransitionEnd={handleTransitionEnd}
+    >
+      <div
+        className={`
+          bg-white rounded-lg shadow-lg p-6 ${sizeClasses[size]} ${heightClasses[height]} 
+          transition-transform duration-300 ease-in-out overflow-auto
+        `}
+      >
         {/* Barra superior */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           {showBackButton ? (
             <button
               onClick={onBack}
@@ -45,6 +100,9 @@ const Modal = ({
           )}
         </div>
 
+        {/* Línea separadora */}
+        {showSeparator && <hr className="my-2 border-gray-300" />}
+        
         {/* Contenido del modal */}
         <div>
           {children}

@@ -1,6 +1,6 @@
-import React from 'react';
-import Modal from '../Modal'; // Asegúrate de ajustar la ruta si tu Modal está en otra ubicación
-import { useContext } from 'react';
+// src/components/modals/session/SessionExpiredModal.jsx
+import React, { useContext } from 'react';
+import Modal from '../Modal';
 import { AuthContext } from '../../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,18 +12,20 @@ const SessionExpiredModal = () => {
   const shopRoute = shop ? shop.route : '';
 
   const handleRelogin = () => {
-    // Limpiamos los datos de autenticación
+    // Limpiar datos de autenticación
     localStorage.removeItem('token');
     localStorage.removeItem('employee');
     localStorage.removeItem('shop');
     localStorage.removeItem('selectedClient');
     localStorage.removeItem('selectedAddress');
     localStorage.removeItem('configData');
+    localStorage.removeItem('dailyPin');
+    localStorage.removeItem('pinExpiration');
 
     setIsAuthenticated(false);
-    setIsSessionExpired(false);
+    setIsSessionExpired(false); // Restablecer estado
 
-    // Redirigimos al inicio de sesión de la tienda actual
+    /// Redirigimos al inicio de sesión de la tienda actual
     navigate(`/${shopRoute}`);
   };
 
@@ -32,7 +34,7 @@ const SessionExpiredModal = () => {
   }
 
   return (
-    <Modal isOpen={true} onClose={() => {}} showCloseButton={false}>
+    <Modal isOpen={true} onClose={() => {}} showCloseButton={false} showSeparator={false} size="sm" height="default">
       <div className="text-center">
         <h2 className="text-xl font-semibold mb-4">Sesión Expirada</h2>
         <p className="mb-6">
@@ -42,7 +44,7 @@ const SessionExpiredModal = () => {
           onClick={handleRelogin}
           className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
         >
-          Iniciar Sesión
+          Aceptar
         </button>
       </div>
     </Modal>

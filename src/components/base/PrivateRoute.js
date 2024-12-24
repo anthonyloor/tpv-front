@@ -1,15 +1,18 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+// src/components/base/PrivateRoute.jsx
+import React, { useContext } from 'react';
+import { Navigate, useParams } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated } = React.useContext(AuthContext);
-  const location = useLocation();
+  const { isAuthenticated } = useContext(AuthContext);
+  const { shopRoute } = useParams();
 
+  // Si no está autenticado, redirigimos al login de la tienda actual
   if (!isAuthenticated) {
-    return <Navigate to={location.pathname} />;
+    return <Navigate to={`/${shopRoute}`} replace />;
   }
 
+  // Si está autenticado, mostramos el contenido
   return children;
 };
 

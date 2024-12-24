@@ -1,11 +1,12 @@
-// LoginPage.jsx
+// src/components/pages/LoginPage.jsx
+
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import LicenseModal from '../modals/license/LicenseModal'; // Importamos el LicenseModal
-import OpenPosModal from '../modals/pos/OpenPosModal'; // Importamos el OpenPosModal
+import LicenseModal from '../modals/license/LicenseModal';
+import OpenPosModal from '../modals/pos/OpenPosModal';
 
-
+// Mapeo de ruta a tienda
 const routeToShopInfo = {
   penaprieta8: { name: 'Peña Prieta', id_shop: 11 },
   bravomurillo205: { name: 'Bravo Murillo', id_shop: 9 },
@@ -14,7 +15,7 @@ const routeToShopInfo = {
   mayretmodacolombiana: { name: 'Mayret Moda Colombiana', id_shop: 1 },
 };
 
-// Crear un mapeo inverso de id_shop a shopRoute
+// Inverso: id_shop => shopRoute
 const idShopToRoute = {};
 for (const route in routeToShopInfo) {
   const shopData = routeToShopInfo[route];
@@ -26,23 +27,25 @@ function LoginPage({ shopRoute }) {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  
+  // Contexto de autenticación
   const {
     isAuthenticated,
     setIsAuthenticated,
+    setIsSessionExpired,
     setShopId,
     setEmployeeId,
     setEmployeeName,
+    setIdProfile,
     setShopName,
   } = useContext(AuthContext);
+
+  // Para navegación y tienda actual
   const navigate = useNavigate();
-  const [shopInfo, setShopInfo] = useState(null); // Inicializado como null
+  const [shopInfo, setShopInfo] = useState(null);
   const [isLoadingShopInfo, setIsLoadingShopInfo] = useState(false);
 
-  // Estados para manejar la sesión de POS
-  const [showOpenPosModal, setShowOpenPosModal] = useState(false);
-  const [posErrorMessage, setPosErrorMessage] = useState('');
-
-  // Estado para controlar la licencia
+  // Estado de licencia
   const [licenseData, setLicenseData] = useState(() => {
     const data = localStorage.getItem('licenseData');
     return data ? JSON.parse(data) : null;
@@ -50,9 +53,16 @@ function LoginPage({ shopRoute }) {
   const [hasLicense, setHasLicense] = useState(!!licenseData);
   const [showLicenseModal, setShowLicenseModal] = useState(!hasLicense);
   const [isValidatingLicense, setIsValidatingLicense] = useState(false);
-  const [licenseErrorMessage, setLicenseErrorMessage] = useState(''); // Estado para mensajes de error de licencia
+  const [licenseErrorMessage, setLicenseErrorMessage] = useState('');
 
-  // Función para cargar la tienda y empleados
+  // Estado para el modal de POS
+  const [showOpenPosModal, setShowOpenPosModal] = useState(false);
+  const [posErrorMessage, setPosErrorMessage] = useState('');
+
+  // **Estado para mostrar spinner en el botón de "Iniciar Sesión"**
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Cargar la tienda y la lista de empleados
   const proceedToLoadShopAndEmployees = useCallback(() => {
     setIsLoadingShopInfo(true);
     const shopData = routeToShopInfo[shopRoute];
@@ -62,12 +72,10 @@ function LoginPage({ shopRoute }) {
       return;
     }
 
-    // Establecer información de la tienda
     setShopInfo({ ...shopData, route: shopRoute });
     setShopId(shopData.id_shop);
     setShopName(shopData.name);
 
-    // Cargar empleados
     fetch('https://apitpv.anthonyloor.com/employees')
       .then((response) => response.json())
       .then((data) => {
@@ -79,11 +87,10 @@ function LoginPage({ shopRoute }) {
       });
   }, [shopRoute, setShopId, setShopName]);
 
-  // Función para validar la licencia
+  // Validar licencia
   const validateLicense = useCallback(
     (key, idShop) => {
       setIsValidatingLicense(true);
-
       const shopData = routeToShopInfo[shopRoute];
       if (!shopData) {
         setLicenseErrorMessage('La tienda no existe. Por favor, verifica la URL.');
@@ -114,7 +121,6 @@ function LoginPage({ shopRoute }) {
         })
         .then((data) => {
           if (data.status === 'OK' && data.message === 'License actived') {
-            // La licencia se activó correctamente
             const newLicenseData = {
               licenseKey: key,
               id_shop: shopData.id_shop,
@@ -122,25 +128,20 @@ function LoginPage({ shopRoute }) {
             localStorage.setItem('licenseData', JSON.stringify(newLicenseData));
             setLicenseData(newLicenseData);
             setHasLicense(true);
-            setShowLicenseModal(false); // Cerramos el modal
+            setShowLicenseModal(false);
             proceedToLoadShopAndEmployees();
           } else if (data.status === 'OK' && data.message === 'License already in use') {
-            // La licencia ya está en uso
             const storedLicenseData = JSON.parse(localStorage.getItem('licenseData'));
             if (storedLicenseData && storedLicenseData.licenseKey === key) {
-              // La licencia es la misma que tenemos, procedemos
-              // No actualizamos licenseData, ya que es el mismo
               setHasLicense(true);
-              setShowLicenseModal(false); // Cerramos el modal
+              setShowLicenseModal(false);
               proceedToLoadShopAndEmployees();
             } else {
-              // Licencia en uso y no es la misma, mostramos error
               setLicenseErrorMessage('La licencia ya está en uso en otro dispositivo.');
               setHasLicense(false);
               setShowLicenseModal(true);
             }
           } else {
-            // Respuesta inesperada
             const error = {
               status: 500,
               message: data.message || 'Respuesta inesperada del servidor',
@@ -151,7 +152,6 @@ function LoginPage({ shopRoute }) {
         .catch((error) => {
           console.error('Error al verificar la licencia:', error);
 
-          // Manejo de errores según el código de estado y mensaje
           if (error.status === 400) {
             setLicenseErrorMessage('La licencia es requerida. Por favor, ingresa una licencia válida.');
           } else if (error.status === 403) {
@@ -166,7 +166,6 @@ function LoginPage({ shopRoute }) {
             setLicenseErrorMessage('Error al verificar la licencia. Inténtalo de nuevo.');
           }
 
-          // Mostrar el LicenseModal con el mensaje de error
           setHasLicense(false);
           setShowLicenseModal(true);
         })
@@ -182,30 +181,23 @@ function LoginPage({ shopRoute }) {
       const storedIdShop = licenseData.id_shop;
       const currentShopData = routeToShopInfo[shopRoute];
       if (currentShopData && storedIdShop !== currentShopData.id_shop) {
-        // El id_shop no coincide, redirigir a la ruta correcta
-        // Encontrar el shopRoute correspondiente al storedIdShop
         const correctShopRoute = idShopToRoute[storedIdShop];
         if (correctShopRoute) {
           navigate(`/${correctShopRoute}`);
         } else {
-          // Si no encontramos la ruta correcta, manejar el error
-          console.error('No se encontró la ruta de la tienda correspondiente al id_shop almacenado.');
+          console.error('No se encontró la ruta correspondiente al id_shop almacenado.');
         }
       } else {
-        // El id_shop coincide, proceder
         setHasLicense(true);
         setShowLicenseModal(false);
         if (!shopInfo) {
-          // Validamos la licencia solo si no hemos cargado la shopInfo aún
           validateLicense(licenseData.licenseKey, licenseData.id_shop);
         }
       }
     } else {
-      // No hay licenseData, mostrar el modal de licencia
       setHasLicense(false);
       setShowLicenseModal(true);
     }
-    // Eliminamos validateLicense de las dependencias para evitar bucles
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [licenseData, shopRoute, navigate]);
 
@@ -215,18 +207,137 @@ function LoginPage({ shopRoute }) {
     }
   }, [isAuthenticated, navigate, shopRoute]);
 
-  const handleEmployeeSelect = (employee) => {
-    setSelectedEmployee(employee);
-  };
-
-  // Función que se llama cuando el usuario envía la licencia desde el modal
   const handleLicenseSubmit = (key) => {
-    // Validar la licencia
-    setLicenseErrorMessage(''); // Limpiamos cualquier mensaje de error anterior
+    setLicenseErrorMessage('');
     validateLicense(key);
   };
 
-  // Si no hay licencia o hay un error, mostramos el modal
+  // Verificar sesión POS
+  const checkPOSSession = () => {
+    const licenseData = JSON.parse(localStorage.getItem('licenseData'));
+    if (!licenseData || !licenseData.licenseKey) {
+      setErrorMessage('No se encontró la licencia. Por favor, inicie sesión de nuevo.');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    fetch(`https://apitpv.anthonyloor.com/check_pos_session?license=${licenseData.licenseKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === 'OK') {
+          setIsAuthenticated(true);
+          navigate(`/${shopRoute}/app`);
+        } else {
+          setShowOpenPosModal(true);
+        }
+      })
+      .catch((error) => {
+        console.error('Error al verificar la sesión de POS:', error);
+        setErrorMessage('Error al verificar la sesión de POS. Inténtalo de nuevo.');
+      });
+  };
+
+  // Abrir sesión POS
+  const openPosSession = (initCash) => {
+    const licenseData = JSON.parse(localStorage.getItem('licenseData'));
+    if (!licenseData || !licenseData.licenseKey) {
+      setPosErrorMessage('No se encontró la licencia. Por favor, inicie sesión de nuevo.');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    fetch('https://apitpv.anthonyloor.com/open_pos_session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        id_shop: shopInfo.id_shop,
+        id_employee: selectedEmployee.id_employee,
+        init_cash: initCash,
+        license: licenseData.licenseKey,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status === 'OK') {
+          setIsAuthenticated(true);
+          setShowOpenPosModal(false);
+          navigate(`/${shopRoute}/app`);
+        } else {
+          setPosErrorMessage(data.message || 'Error al abrir la sesión de POS.');
+        }
+      })
+      .catch((error) => {
+        console.error('Error al abrir la sesión de POS:', error);
+        setPosErrorMessage('Error al abrir la sesión de POS. Inténtalo de nuevo.');
+      });
+  };
+
+  const handleOpenPosSubmit = (initCash) => {
+    setPosErrorMessage('');
+    openPosSession(initCash);
+  };
+
+  // **Manejamos el login con spinner**
+  const handleLogin = () => {
+    setLoginLoading(true); // Activar spinner
+
+    fetch('https://apitpv.anthonyloor.com/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id_employee: selectedEmployee?.id_employee,
+        password: password,
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          if (response.status === 401) {
+            setErrorMessage('Contraseña incorrecta. Inténtalo de nuevo.');
+          } else {
+            setErrorMessage('Error al iniciar sesión. Inténtalo de nuevo.');
+          }
+          return Promise.reject(response);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.token) {
+          setEmployeeId(selectedEmployee.id_employee);
+          setEmployeeName(selectedEmployee.employee_name);
+          setIdProfile(selectedEmployee.id_profile);
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('employee', JSON.stringify(selectedEmployee));
+          localStorage.setItem('shop', JSON.stringify(shopInfo));
+          setIsSessionExpired(false);
+          // Verificamos la sesión de POS
+          checkPOSSession();
+        } else {
+          setErrorMessage('Error al iniciar sesión. Inténtalo de nuevo.');
+        }
+      })
+      .catch((error) => {
+        // Mostramos un error genérico si no es 401
+        if (error.status !== 401) {
+          console.error('Error al iniciar sesión:', error);
+          setErrorMessage('Error al iniciar sesión. Inténtalo de nuevo.');
+        }
+      })
+      .finally(() => {
+        // Aquí se ejecuta siempre, con éxito o error
+        setLoginLoading(false); // Desactivar spinner
+      });
+  };
+
+  // Manejo de estados de carga
   if (showLicenseModal) {
     return (
       <LicenseModal
@@ -235,7 +346,14 @@ function LoginPage({ shopRoute }) {
       />
     );
   }
-
+  if (showOpenPosModal) {
+    return (
+      <OpenPosModal
+        onSubmit={handleOpenPosSubmit}
+        errorMessage={posErrorMessage}
+      />
+    );
+  }
   if (isValidatingLicense || isLoadingShopInfo || !shopInfo) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -265,7 +383,6 @@ function LoginPage({ shopRoute }) {
       </div>
     );
   }
-
   if (shopInfo === null) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -274,154 +391,6 @@ function LoginPage({ shopRoute }) {
           <p>La tienda que estás buscando no existe.</p>
         </div>
       </div>
-    );
-  }
-
-  const handleLogin = () => {
-    fetch('https://apitpv.anthonyloor.com/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        id_employee: selectedEmployee.id_employee,
-        password: password,
-      }),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          // Manejar errores de autenticación
-          if (response.status === 401) {
-            setErrorMessage('Contraseña incorrecta. Inténtalo de nuevo.');
-          } else {
-            setErrorMessage('Error al iniciar sesión. Inténtalo de nuevo.');
-          }
-          // Rechazar la promesa para evitar continuar con el parsing de JSON
-          return Promise.reject(response);
-        }
-        // Si la respuesta es exitosa, parsear el JSON
-        return response.json();
-      })
-      .then((data) => {
-        // Manejar la respuesta exitosa
-        if (data.token) {
-          // Guardar datos del empleado y token
-          setEmployeeId(selectedEmployee.id_employee);
-          setEmployeeName(selectedEmployee.employee_name);
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('employee', JSON.stringify(selectedEmployee));
-          localStorage.setItem('shop', JSON.stringify(shopInfo));
-          // Después del login exitoso, verificar la sesión de POS
-          checkPOSSession();
-        } else {
-          setErrorMessage('Error al iniciar sesión. Inténtalo de nuevo.');
-        }
-      })
-      .catch((error) => {
-        if (error.status !== 401) {
-          console.error('Error al iniciar sesión:', error);
-          setErrorMessage('Error al iniciar sesión. Inténtalo de nuevo.');
-        }
-        // Ya manejamos el error 401 anteriormente
-      });
-  };
-
-  // Función para verificar la sesión de POS
-  const checkPOSSession = () => {
-    const licenseData = JSON.parse(localStorage.getItem('licenseData'));
-    if (!licenseData || !licenseData.licenseKey) {
-      setErrorMessage('No se encontró la licencia. Por favor, inicie sesión de nuevo.');
-      return;
-    }
-
-    const token = localStorage.getItem('token');
-
-    fetch(`https://apitpv.anthonyloor.com/check_pos_session?license=${licenseData.licenseKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.status === 'OK') {
-          // La sesión de POS está abierta, proceder a la app
-          setIsAuthenticated(true);
-          navigate(`/${shopRoute}/app`);
-        } else {
-          // La sesión de POS no está abierta, mostrar el modal para abrirla
-          setShowOpenPosModal(true);
-        }
-      })
-      .catch((error) => {
-        console.error('Error al verificar la sesión de POS:', error);
-        setErrorMessage('Error al verificar la sesión de POS. Inténtalo de nuevo.');
-      });
-  };
-
-  // Función para abrir la sesión de POS
-  const openPosSession = (initBalance) => {
-    const licenseData = JSON.parse(localStorage.getItem('licenseData'));
-    if (!licenseData || !licenseData.licenseKey) {
-      setPosErrorMessage('No se encontró la licencia. Por favor, inicie sesión de nuevo.');
-      return;
-    }
-
-    const token = localStorage.getItem('token');
-
-    fetch('https://apitpv.anthonyloor.com/open_pos_session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        id_shop: shopInfo.id_shop,
-        id_employee: selectedEmployee.id_employee,
-        init_balance: initBalance,
-        license: licenseData.licenseKey,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.status === 'OK') {
-          // La sesión de POS se abrió correctamente
-          setIsAuthenticated(true);
-          setShowOpenPosModal(false);
-          navigate(`/${shopRoute}/app`);
-        } else {
-          // Mostrar mensaje de error
-          setPosErrorMessage(data.message || 'Error al abrir la sesión de POS.');
-        }
-      })
-      .catch((error) => {
-        console.error('Error al abrir la sesión de POS:', error);
-        setPosErrorMessage('Error al abrir la sesión de POS. Inténtalo de nuevo.');
-      });
-  };
-
-  // Función que se llama al enviar el balance inicial desde el modal
-  const handleOpenPosSubmit = (initBalance) => {
-    setPosErrorMessage(''); // Limpiamos cualquier mensaje de error anterior
-    openPosSession(initBalance);
-  };
-
-  if (showLicenseModal) {
-    return (
-      <LicenseModal
-        onSubmit={handleLicenseSubmit}
-        errorMessage={licenseErrorMessage}
-      />
-    );
-  }
-
-  if (showOpenPosModal) {
-    return (
-      <OpenPosModal
-        onSubmit={handleOpenPosSubmit}
-        errorMessage={posErrorMessage}
-      />
     );
   }
 
@@ -438,7 +407,7 @@ function LoginPage({ shopRoute }) {
             {employees.map((employee) => (
               <button
                 key={employee.id_employee}
-                onClick={() => handleEmployeeSelect(employee)}
+                onClick={() => setSelectedEmployee(employee)}
                 className={`py-2 px-4 rounded-md border transition-colors duration-200 ${
                   selectedEmployee &&
                   selectedEmployee.id_employee === employee.id_employee
@@ -469,16 +438,43 @@ function LoginPage({ shopRoute }) {
           <div className="mb-4 text-red-500 text-center">{errorMessage}</div>
         )}
 
+        {/* Botón con spinner de carga */}
         <button
           onClick={handleLogin}
-          disabled={!selectedEmployee || !password}
+          disabled={!selectedEmployee || !password || loginLoading}
           className={`w-full py-2 px-4 rounded-md text-white font-semibold transition-colors duration-200 ${
-            !selectedEmployee || !password
+            (!selectedEmployee || !password || loginLoading)
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-indigo-600 hover:bg-indigo-700'
           }`}
         >
-          Iniciar Sesión
+          {loginLoading ? (
+            <>
+              <svg
+                className="animate-spin h-5 w-5 text-white inline-block mr-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                ></path>
+              </svg>
+              Iniciando...
+            </>
+          ) : (
+            'Iniciar Sesión'
+          )}
         </button>
       </div>
     </div>

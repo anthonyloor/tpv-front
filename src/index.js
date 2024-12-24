@@ -7,6 +7,7 @@ import AuthProvider from './contexts/AuthContext';
 import { ConfigProvider } from './contexts/ConfigContext';
 import { ClientProvider } from './contexts/ClientContext';
 import { BrowserRouter as Router } from 'react-router-dom';
+import PinProvider from './contexts/PinContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -15,7 +16,9 @@ root.render(
       <Router>
       <ConfigProvider>
       <ClientProvider>
+      <PinProvider>
         <App />
+        </PinProvider>
       </ClientProvider>
         </ConfigProvider>
       </Router>

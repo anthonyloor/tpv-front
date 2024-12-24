@@ -12,6 +12,8 @@ const ProductSelectionModal = ({ isOpen, onClose, products, onSelectProduct, ori
       title="Seleccionar Producto"
       showBackButton={false} // No se requiere botón atrás
       showCloseButton={true}
+      size="md"
+      height="md"
     >
       <div className="overflow-y-auto max-h-[70vh]">
         <table className="min-w-full bg-white border">

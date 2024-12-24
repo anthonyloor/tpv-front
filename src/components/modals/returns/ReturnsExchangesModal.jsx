@@ -106,6 +106,8 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       title="Devoluciones / Cambios"
       showCloseButton={true}
       showBackButton={false}
+      size="md"
+      height="md"
     >
       <div className="p-6 max-w-2xl">
         <div className="mb-4 flex space-x-2">

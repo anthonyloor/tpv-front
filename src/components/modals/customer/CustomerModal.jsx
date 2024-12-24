@@ -159,6 +159,8 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
         showCloseButton={true}
         showBackButton={showBackButton}
         onBack={goBack}
+        size="md"
+        height="md"
       >
         {step === 'selectClient' && (
           <div className="p-4">

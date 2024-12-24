@@ -1,12 +1,113 @@
 // src/hooks/useCart.js
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function useCart(allowOutOfStockSales) {
   const [cartItems, setCartItems] = useState([]);
   const [lastAction, setLastAction] = useState(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Bandera para la carga inicial
 
-  const handleAddProduct = (product, stockQuantity, exceedsStockCallback, forceAdd = false, quantity = 1) => {
-    const existingProduct = cartItems.find((item) => item.id_stock_available === product.id_stock_available);
+  // Función para generar una clave única para el carrito basado en la tienda
+  const getCartKey = (shopId) => `cart_shop_${shopId}`;
+  const getParkedCartsKey = (shopId) => `parked_carts_shop_${shopId}`;
+
+  // Cargar el carrito desde localStorage al montar el hook
+  useEffect(() => {
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+    if (storedShop) {
+      const storedCart = localStorage.getItem(getCartKey(storedShop.id_shop));
+      if (storedCart) {
+        setCartItems(JSON.parse(storedCart));
+      }
+    }
+    setIsInitialLoad(false); // Marca que la carga inicial ha finalizado
+  }, []);
+
+  // Guardar el carrito en localStorage cada vez que cartItems cambie, excepto durante la carga inicial
+  useEffect(() => {
+    if (isInitialLoad) return; // Evitar guardar durante la carga inicial
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+    if (storedShop) {
+      localStorage.setItem(getCartKey(storedShop.id_shop), JSON.stringify(cartItems));
+    }
+  }, [cartItems, isInitialLoad]);
+
+  // Función para guardar el carrito actual como un carrito aparcado
+  const saveCurrentCartAsParked = (name = null) => {
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+    if (!storedShop) {
+      alert('No se ha encontrado la tienda en la configuración.');
+      return;
+    }
+
+    const parkedCarts = JSON.parse(localStorage.getItem(getParkedCartsKey(storedShop.id_shop))) || [];
+
+    const timestamp = new Date().toISOString();
+    const cartName = name || `Ticket ${new Date().toLocaleString()}`;
+
+    const newParkedCart = {
+      id: `${storedShop.id_shop}_${Date.now()}`, // ID único
+      name: cartName,
+      items: cartItems,
+      savedAt: timestamp,
+    };
+
+    parkedCarts.push(newParkedCart);
+    localStorage.setItem(getParkedCartsKey(storedShop.id_shop), JSON.stringify(parkedCarts));
+
+    alert('Carrito aparcado exitosamente.');
+  };
+
+  // Función para obtener la lista de carritos aparcados
+  const getParkedCarts = () => {
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+    if (!storedShop) return [];
+    return JSON.parse(localStorage.getItem(getParkedCartsKey(storedShop.id_shop))) || [];
+  };
+
+  // Función para cargar un carrito aparcado
+  const loadParkedCart = (cartId) => {
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+    if (!storedShop) {
+      alert('No se ha encontrado la tienda en la configuración.');
+      return;
+    }
+
+    const parkedCarts = JSON.parse(localStorage.getItem(getParkedCartsKey(storedShop.id_shop))) || [];
+    const cartToLoad = parkedCarts.find((cart) => cart.id === cartId);
+
+    if (cartToLoad) {
+      setCartItems(cartToLoad.items);
+      alert(`Carrito "${cartToLoad.name}" cargado exitosamente.`);
+    } else {
+      alert('Carrito no encontrado.');
+    }
+  };
+
+  // Función para eliminar un carrito aparcado
+  const deleteParkedCart = (cartId) => {
+    const storedShop = JSON.parse(localStorage.getItem('shop'));
+    if (!storedShop) {
+      alert('No se ha encontrado la tienda en la configuración.');
+      return;
+    }
+
+    let parkedCarts = JSON.parse(localStorage.getItem(getParkedCartsKey(storedShop.id_shop))) || [];
+    parkedCarts = parkedCarts.filter((cart) => cart.id !== cartId);
+    localStorage.setItem(getParkedCartsKey(storedShop.id_shop), JSON.stringify(parkedCarts));
+
+    alert('Carrito aparcado eliminado.');
+  };
+
+  const handleAddProduct = (
+    product,
+    stockQuantity,
+    exceedsStockCallback,
+    forceAdd = false,
+    quantity = 1
+  ) => {
+    const existingProduct = cartItems.find(
+      (item) => item.id_stock_available === product.id_stock_available
+    );
     const maxQuantity = stockQuantity ?? Infinity;
     const newQuantity = existingProduct ? existingProduct.quantity + quantity : quantity;
 
@@ -64,7 +165,9 @@ export default function useCart(allowOutOfStockSales) {
   };
 
   const handleRemoveProduct = (idStockAvailable) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item.id_stock_available !== idStockAvailable));
+    setCartItems((prevItems) =>
+      prevItems.filter((item) => item.id_stock_available !== idStockAvailable)
+    );
   };
 
   return {
@@ -74,5 +177,9 @@ export default function useCart(allowOutOfStockSales) {
     handleAddProduct,
     handleRemoveProduct,
     handleDecreaseProduct,
+    saveCurrentCartAsParked,
+    getParkedCarts,
+    loadParkedCart,
+    deleteParkedCart,
   };
 }

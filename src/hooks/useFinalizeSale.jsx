@@ -1,12 +1,9 @@
-// src/hooks/useFinalizeSale.js
-import { useState, useContext } from 'react';
-import { ConfigContext } from '../contexts/ConfigContext';
+// src/hooks/useFinalizeSale.jsx
+import { useState } from 'react';
 import { useApiFetch } from '../components/utils/useApiFetch';
 import ticketConfigData from '../data/ticket.json';
 
 export default function useFinalizeSale() {
-  const { configData } = useContext(ConfigContext);
-  const allowOutOfStockSales = configData ? configData.allow_out_of_stock_sales : false;
 
   const [isLoading, setIsLoading] = useState(false);
   const apiFetch = useApiFetch();
@@ -29,6 +26,7 @@ export default function useFinalizeSale() {
       const employee = JSON.parse(localStorage.getItem('employee'));
       const client = JSON.parse(localStorage.getItem('selectedClient'));
       const address = JSON.parse(localStorage.getItem('selectedAddress'));
+      const licenseData = JSON.parse(localStorage.getItem('licenseData'));
 
       const id_customer = client ? client.id_customer : 0; 
       const id_address_delivery = address ? address.id_address : 0; 
@@ -40,6 +38,11 @@ export default function useFinalizeSale() {
       );
 
       const total_products = total_paid_tax_excl;
+
+      // Calcular totales por método de pago
+      const total_cash = selectedMethods.includes('efectivo') ? parseFloat(amounts.efectivo || 0) : 0;
+      const total_card = selectedMethods.includes('tarjeta') ? parseFloat(amounts.tarjeta || 0) : 0;
+      const total_bizum = selectedMethods.includes('bizum') ? parseFloat(amounts.bizum || 0) : 0;
 
       // Armar order_details
       const order_details = cartItems.map((item) => ({
@@ -66,6 +69,11 @@ export default function useFinalizeSale() {
         total_paid: parseFloat(total.toFixed(2)),
         total_paid_tax_excl: parseFloat(total_paid_tax_excl.toFixed(2)),
         total_products: parseFloat(total_products.toFixed(2)),
+        total_cash: parseFloat(total_cash.toFixed(2)),   // Nuevo campo
+        total_card: parseFloat(total_card.toFixed(2)),   // Nuevo campo
+        total_bizum: parseFloat(total_bizum.toFixed(2)), // Nuevo campo
+        license: licenseData.licenseKey,                            // Actualizado para usar licenseKey
+        id_employee: employee ? employee.id_employee : 0, // Nuevo campo
         order_details: order_details,
       };
 
@@ -89,6 +97,9 @@ export default function useFinalizeSale() {
         giftTicket: false, // Ticket normal
         date: new Date(),
         employeeName: employee ? employee.employee_name : 'Empleado',
+        total_cash, // Pasar nuevos campos al ticket
+        total_card,
+        total_bizum,
       });
 
       printHTMLTicket(normalTicketHTML);
@@ -104,6 +115,9 @@ export default function useFinalizeSale() {
           giftTicket: true,
           date: new Date(),
           employeeName: employee ? employee.employee_name : 'Empleado',
+          total_cash, // Pasar nuevos campos al ticket regalo (opcional, según necesidad)
+          total_card,
+          total_bizum,
         });
 
         printHTMLTicket(giftTicketHTML);
@@ -128,7 +142,10 @@ export default function useFinalizeSale() {
       changeAmount,
       giftTicket,
       date,
-      employeeName
+      employeeName,
+      total_cash,
+      total_card,
+      total_bizum
     } = saleData;
 
     const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${
@@ -156,7 +173,7 @@ export default function useFinalizeSale() {
       `;
     }).join('');
 
-    // Métodos de pago solo en el ticket normal
+    // Métodos de pago y nuevos totales solo en el ticket normal
     let paymentMethodsHTML = '';
     if (!giftTicket) {
       paymentMethodsHTML += '<div><strong>Métodos de Pago:</strong></div>';
@@ -168,6 +185,17 @@ export default function useFinalizeSale() {
       });
 
       paymentMethodsHTML += `<div><strong>Cambio:</strong> ${changeAmount.toFixed(2)} €</div>`;
+
+      // Añadir los nuevos totales
+      if (total_cash > 0) {
+        paymentMethodsHTML += `<div><strong>Total Efectivo:</strong> ${total_cash.toFixed(2)} €</div>`;
+      }
+      if (total_card > 0) {
+        paymentMethodsHTML += `<div><strong>Total Tarjeta:</strong> ${total_card.toFixed(2)} €</div>`;
+      }
+      if (total_bizum > 0) {
+        paymentMethodsHTML += `<div><strong>Total Bizum:</strong> ${total_bizum.toFixed(2)} €</div>`;
+      }
 
       const IVA_RATE = 0.21;
       const baseAmount = total / (1 + IVA_RATE);

@@ -195,6 +195,8 @@ const ReprintModal = ({ isOpen, onClose }) => {
       title="Reimprimir Ticket"
       showCloseButton={true}
       showBackButton={false}
+      size="md"
+      height="md"
     >
       <div className="bg-white rounded-lg p-6">
         <div className="mb-4 flex space-x-2">

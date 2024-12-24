@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.jsx
 import React, { createContext, useState } from 'react';
 
 export const AuthContext = createContext();
@@ -8,11 +9,31 @@ function AuthProvider({ children }) {
   const [shopName, setShopName] = useState('');
   const [employeeId, setEmployeeId] = useState(null);
   const [employeeName, setEmployeeName] = useState('');
-  // Nuevo estado para sesión expirada
+  const [idProfile, setIdProfile] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
-  // Función para manejar sesión expirada
+
   const handleSessionExpired = () => {
     setIsSessionExpired(true);
+  };
+
+  // La función cierra sesión limpiando storage y estados,
+  // pero NO llama a navigate
+  const handleLogout = () => {
+    // Lógica para limpiar datos de sesión
+    localStorage.removeItem('token');
+    localStorage.removeItem('employee');
+    localStorage.removeItem('shop');
+    localStorage.removeItem('selectedClient');
+    localStorage.removeItem('selectedAddress');
+
+    // Resetea los estados
+    setIsAuthenticated(false);
+    setShopId(null);
+    setShopName('');
+    setEmployeeId(null);
+    setEmployeeName('');
+    setIdProfile(null);
+    setIsSessionExpired(false);
   };
 
   return (
@@ -28,9 +49,13 @@ function AuthProvider({ children }) {
         setEmployeeId,
         employeeName,
         setEmployeeName,
+        idProfile,
+        setIdProfile,
         isSessionExpired,
         setIsSessionExpired,
         handleSessionExpired,
+        // Exportamos handleLogout sin navigate
+        handleLogout,
       }}
     >
       {children}

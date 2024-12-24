@@ -31,6 +31,8 @@ const TransfersModal = ({ isOpen, onClose, permisosUsuario, permisosGlobal, setP
       showBackButton={showBackButton}
       onBack={goBack}
       title={title}
+      size="md"
+      height="md"
     >
       {currentView === 'main' && (
         <div className="space-y-4">
