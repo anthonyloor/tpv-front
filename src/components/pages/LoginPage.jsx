@@ -5,6 +5,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import LicenseModal from '../modals/license/LicenseModal';
 import OpenPosModal from '../modals/pos/OpenPosModal';
+import PosSessionOpenModal from '../modals/pos/PosSessionOpenModal';
 
 // Mapeo de ruta a tienda
 const routeToShopInfo = {
@@ -27,6 +28,7 @@ function LoginPage({ shopRoute }) {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [pendingToken, setPendingToken] = useState(null);
   
   // Contexto de autenticación
   const {
@@ -38,6 +40,7 @@ function LoginPage({ shopRoute }) {
     setEmployeeName,
     setIdProfile,
     setShopName,
+    setOpenCloseCashModal,
   } = useContext(AuthContext);
 
   // Para navegación y tienda actual
@@ -55,14 +58,17 @@ function LoginPage({ shopRoute }) {
   const [isValidatingLicense, setIsValidatingLicense] = useState(false);
   const [licenseErrorMessage, setLicenseErrorMessage] = useState('');
 
-  // Estado para el modal de POS
+  // Estado para POS
   const [showOpenPosModal, setShowOpenPosModal] = useState(false);
   const [posErrorMessage, setPosErrorMessage] = useState('');
 
-  // **Estado para mostrar spinner en el botón de "Iniciar Sesión"**
+  // Spinner login
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Cargar la tienda y la lista de empleados
+  // Modal de "ya hay sesión de caja abierta"
+  const [showPosSessionOpenModal, setShowPosSessionOpenModal] = useState(false);
+
+  // Cargar la tienda y empleados
   const proceedToLoadShopAndEmployees = useCallback(() => {
     setIsLoadingShopInfo(true);
     const shopData = routeToShopInfo[shopRoute];
@@ -176,6 +182,25 @@ function LoginPage({ shopRoute }) {
     [shopRoute, proceedToLoadShopAndEmployees]
   );
 
+  // +++ El usuario pulsa “Continuar”
+  const handlePosSessionContinue = () => {
+    if (pendingToken) localStorage.setItem('token', pendingToken);
+    setIsSessionExpired(false);
+    setIsAuthenticated(true);
+    setShowPosSessionOpenModal(false);
+    navigate(`/${shopRoute}/app`);
+  };
+
+  // +++ El usuario pulsa “Cerrar Caja”
+  const handlePosSessionClose = () => {
+    if (pendingToken) localStorage.setItem('token', pendingToken);
+    setIsSessionExpired(false);
+    setIsAuthenticated(true);
+    setShowPosSessionOpenModal(false);
+    setOpenCloseCashModal(true); // Abre modal de cierre de caja
+    navigate(`/${shopRoute}/app`);
+  };
+
   useEffect(() => {
     if (licenseData) {
       const storedIdShop = licenseData.id_shop;
@@ -202,7 +227,8 @@ function LoginPage({ shopRoute }) {
   }, [licenseData, shopRoute, navigate]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    const token = localStorage.getItem('token');
+    if (isAuthenticated && token) {
       navigate(`/${shopRoute}/app`);
     }
   }, [isAuthenticated, navigate, shopRoute]);
@@ -213,27 +239,27 @@ function LoginPage({ shopRoute }) {
   };
 
   // Verificar sesión POS
-  const checkPOSSession = () => {
+  const checkPOSSession = (tokenParam) => {
     const licenseData = JSON.parse(localStorage.getItem('licenseData'));
     if (!licenseData || !licenseData.licenseKey) {
       setErrorMessage('No se encontró la licencia. Por favor, inicie sesión de nuevo.');
       return;
     }
 
-    const token = localStorage.getItem('token');
     fetch(`https://apitpv.anthonyloor.com/check_pos_session?license=${licenseData.licenseKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${tokenParam}`,
       },
     })
       .then((response) => response.json())
       .then((data) => {
         if (data.status === 'OK') {
-          setIsAuthenticated(true);
-          navigate(`/${shopRoute}/app`);
+          // +++ Mostrar modal indicando que ya hay sesión de caja abierta
+          setShowPosSessionOpenModal(true);
         } else {
+          // La sesión de POS no está abierta, mostrar el modal para abrirla
           setShowOpenPosModal(true);
         }
       })
@@ -244,19 +270,18 @@ function LoginPage({ shopRoute }) {
   };
 
   // Abrir sesión POS
-  const openPosSession = (initCash) => {
+  const openPosSession = (initCash, tokenParam) => {
     const licenseData = JSON.parse(localStorage.getItem('licenseData'));
     if (!licenseData || !licenseData.licenseKey) {
       setPosErrorMessage('No se encontró la licencia. Por favor, inicie sesión de nuevo.');
       return;
     }
 
-    const token = localStorage.getItem('token');
     fetch('https://apitpv.anthonyloor.com/open_pos_session', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${tokenParam}`,
       },
       body: JSON.stringify({
         id_shop: shopInfo.id_shop,
@@ -268,6 +293,8 @@ function LoginPage({ shopRoute }) {
       .then((response) => response.json())
       .then((data) => {
         if (data.status === 'OK') {
+          localStorage.setItem('token', tokenParam);
+          setIsSessionExpired(false);
           setIsAuthenticated(true);
           setShowOpenPosModal(false);
           navigate(`/${shopRoute}/app`);
@@ -281,9 +308,9 @@ function LoginPage({ shopRoute }) {
       });
   };
 
-  const handleOpenPosSubmit = (initCash) => {
+  const handleOpenPosSubmit = (initCash, tokenParam) => {
     setPosErrorMessage('');
-    openPosSession(initCash);
+    openPosSession(initCash, tokenParam);
   };
 
   // **Manejamos el login con spinner**
@@ -314,12 +341,10 @@ function LoginPage({ shopRoute }) {
           setEmployeeId(selectedEmployee.id_employee);
           setEmployeeName(selectedEmployee.employee_name);
           setIdProfile(selectedEmployee.id_profile);
-          localStorage.setItem('token', data.token);
+          setPendingToken(data.token);
           localStorage.setItem('employee', JSON.stringify(selectedEmployee));
           localStorage.setItem('shop', JSON.stringify(shopInfo));
-          setIsSessionExpired(false);
-          // Verificamos la sesión de POS
-          checkPOSSession();
+          checkPOSSession(data.token);
         } else {
           setErrorMessage('Error al iniciar sesión. Inténtalo de nuevo.');
         }
@@ -349,6 +374,7 @@ function LoginPage({ shopRoute }) {
   if (showOpenPosModal) {
     return (
       <OpenPosModal
+        tokenParam={pendingToken}
         onSubmit={handleOpenPosSubmit}
         errorMessage={posErrorMessage}
       />
@@ -477,6 +503,15 @@ function LoginPage({ shopRoute }) {
           )}
         </button>
       </div>
+    {/* Nuevo modal cuando POS Session = OK */}
+    {showPosSessionOpenModal && (
+        <PosSessionOpenModal
+          isOpen={showPosSessionOpenModal}
+          onClose={() => setShowPosSessionOpenModal(false)}
+          onContinue={handlePosSessionContinue}
+          onCloseCash={handlePosSessionClose}
+        />
+      )}
     </div>
   );
 }

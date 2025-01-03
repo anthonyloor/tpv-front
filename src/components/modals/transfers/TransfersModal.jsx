@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Modal from '../Modal'; 
 import TransferForm from './TransferForm';
 
-const TransfersModal = ({ isOpen, onClose, permisosUsuario, permisosGlobal, setPermisosGlobal }) => {
+const TransfersModal = ({ isOpen, onClose }) => {
   const [currentView, setCurrentView] = useState('main'); 
 
   const goBack = () => {
@@ -52,8 +52,6 @@ const TransfersModal = ({ isOpen, onClose, permisosUsuario, permisosGlobal, setP
         <TransferForm
           type={currentView}
           onSave={() => onClose()}
-          permisosUsuario={permisosUsuario}
-          permisosGlobal={permisosGlobal}
         />
       )}
     </Modal>

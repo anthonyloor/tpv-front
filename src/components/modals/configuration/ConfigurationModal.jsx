@@ -4,7 +4,7 @@ import Modal from '../Modal';
 import PermisosModal from './permissions/PermissionsModal';
 import TicketConfigModal from './printers/TicketConfigModal';
 
-const ConfigurationModal = ({ isOpen, onClose, empleadoActual, permisosGlobal, setPermisosGlobal }) => {
+const ConfigurationModal = ({ isOpen, onClose  }) => {
   const [currentView, setCurrentView] = useState('config'); 
 
   const goBack = () => {
@@ -60,8 +60,6 @@ const ConfigurationModal = ({ isOpen, onClose, empleadoActual, permisosGlobal, s
           {/* Ya no tenemos la barra interna, solo el contenido de PermisosModal */}
           <PermisosModal
             onClose={onClose}
-            empleadoActual={empleadoActual}
-            setPermisosGlobal={setPermisosGlobal}
           />
         </div>
       )}

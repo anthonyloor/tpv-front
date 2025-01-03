@@ -2,11 +2,11 @@
 import React, { useState } from 'react';
 import Modal from '../Modal'; // Importamos el componente Modal existente
 
-const OpenPosModal = ({ onSubmit, errorMessage }) => {
+const OpenPosModal = ({tokenParam, onSubmit, errorMessage }) => {
   const [initCash, setInitCash] = useState('');
 
   const handleOpenPos = () => {
-    onSubmit(initCash);
+    onSubmit(initCash, tokenParam);
   };
 
   return (

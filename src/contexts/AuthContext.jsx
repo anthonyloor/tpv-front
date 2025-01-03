@@ -11,13 +11,12 @@ function AuthProvider({ children }) {
   const [employeeName, setEmployeeName] = useState('');
   const [idProfile, setIdProfile] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const [openCloseCashModal, setOpenCloseCashModal] = useState(false);
 
   const handleSessionExpired = () => {
     setIsSessionExpired(true);
   };
 
-  // La función cierra sesión limpiando storage y estados,
-  // pero NO llama a navigate
   const handleLogout = () => {
     // Lógica para limpiar datos de sesión
     localStorage.removeItem('token');
@@ -34,6 +33,7 @@ function AuthProvider({ children }) {
     setEmployeeName('');
     setIdProfile(null);
     setIsSessionExpired(false);
+    setOpenCloseCashModal(false);
   };
 
   return (
@@ -54,8 +54,9 @@ function AuthProvider({ children }) {
         isSessionExpired,
         setIsSessionExpired,
         handleSessionExpired,
-        // Exportamos handleLogout sin navigate
         handleLogout,
+        openCloseCashModal,
+        setOpenCloseCashModal,
       }}
     >
       {children}

@@ -3,7 +3,6 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ClientContext } from '../../contexts/ClientContext';
-import empleadosData from '../../data/empleados.json';
 
 // Importar los modales existentes
 import ClientModal from '../modals/customer/CustomerModal';
@@ -13,18 +12,6 @@ import ConfigurationModal from '../modals/configuration/ConfigurationModal';
 import SalesReportModal from '../reports/SalesReportModal';
 import CloseCashRegisterModal from '../modals/cashRegister/CloseCashRegisterModal'; // Importar el nuevo modal
 
-const permisosIniciales = {
-  "Vendedor TPV": {
-    "acceso_ejecutar": "Denegado"
-  },
-  "Encargado": {
-    "acceso_ejecutar": "Permitido"
-  },
-  "Admin": {
-    "acceso_ejecutar": "Permitido"
-  }
-};
-
 const NavbarCard = () => {
   const [isTransfersModalOpen, setTransfersModalOpen] = useState(false);
   const [isConfigurationModalOpen, setConfigurationModalOpen] = useState(false);
@@ -33,12 +20,9 @@ const NavbarCard = () => {
   const [isSalesReportModalOpen, setIsSalesReportModalOpen] = useState(false);
   const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
 
-  const [currentEmployee, setCurrentEmployee] = useState(null);
-  const [globalPermissions, setGlobalPermissions] = useState(permisosIniciales);
-
   const navigate = useNavigate();
 
-  const { idProfile, handleLogout} = useContext(AuthContext);
+  const { idProfile, handleLogout, openCloseCashModal, setOpenCloseCashModal} = useContext(AuthContext);
   const { selectedClient, setSelectedClient, selectedAddress, setSelectedAddress, resetToDefaultClientAndAddress } = useContext(ClientContext);
 
   const shop = JSON.parse(localStorage.getItem('shop'));
@@ -50,10 +34,15 @@ const NavbarCard = () => {
   };
 
   useEffect(() => {
-    // Simular que el empleado actual es Admin (puedes reemplazarlo con la lógica real)
-    const adminEmployee = empleadosData.find(emp => emp.nivel_permisos === 'Admin');
-    setCurrentEmployee(adminEmployee);
-  }, []);
+    if (openCloseCashModal) {
+      setIsCashRegisterModalOpen(true);
+      setOpenCloseCashModal(false); // lo reseteamos para no abrirlo siempre
+    }
+  }, [openCloseCashModal, setOpenCloseCashModal]);
+
+  const handleCloseCashRegisterModal = () => {
+    setIsCashRegisterModalOpen(false);
+  };
 
   const handleSelectClientAndAddress = (client, address) => {
     const clientData = {
@@ -174,17 +163,11 @@ const NavbarCard = () => {
       <TransfersModal
         isOpen={isTransfersModalOpen}
         onClose={() => setTransfersModalOpen(false)}
-        permisosUsuario={currentEmployee?.nivel_permisos}
-        permisosGlobal={globalPermissions}
-        setPermisosGlobal={setGlobalPermissions}
       />
 
       <ConfigurationModal
         isOpen={isConfigurationModalOpen}
         onClose={() => setConfigurationModalOpen(false)}
-        empleadoActual={currentEmployee}
-        permisosGlobal={globalPermissions}
-        setPermisosGlobal={setGlobalPermissions}
       />
 
       <ClientModal
@@ -210,7 +193,7 @@ const NavbarCard = () => {
       {/* Modal para Cierre de Caja */}
       <CloseCashRegisterModal
         isOpen={isCashRegisterModalOpen}
-        onClose={() => setIsCashRegisterModalOpen(false)}
+        onClose={handleCloseCashRegisterModal}
       />
     </div>
   );
