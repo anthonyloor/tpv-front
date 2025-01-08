@@ -15,3 +15,50 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.expandable-row {
+  transition: background-color 0.3s ease-in-out;
+}
+
+/* Fondo resaltado cuando la venta está expandida */
+.expandable-row.expanded {
+  background-color: #f0f9ff; /* Azul claro */
+}
+
+/* Este contenedor engloba tanto la fila principal como su subtabla */
+.expanded-container {
+  border: 2px solid #b3dffa; /* Un borde azul pastel */
+  border-radius: 5px;
+  background-color: #f0f9ff; /* Mismo color de fondo que la fila expandida */
+  padding: 0.5rem;
+  margin-top: 0.5rem; /* Espacio sobre la subtabla */
+}
+
+/* Opcional: algún margen o sombra extra si deseas */
+
+/* Ejemplo usando primeflex classes o usando overrides en tu global CSS */
+
+/* Asegúrate de que la clase coincide con la generada por PrimeReact */
+.p-paginator .p-paginator-pages .p-highlight {
+  background-color: #4f46e5 !important; /* Indigo */
+  color: white !important;
+  border-radius: 0.25rem;  /* un leve radio */
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.p-checkbox-box {
+  border: 1px solid #999 !important;
+  background: #fafafa !important;
+}
+.p-checkbox-box .p-checkbox-icon {
+  color: #000 !important; /* Forzamos el check en negro, por ejemplo */
+}
+
+/* Ejemplo forzando sticky en la cabecera del DataTable */
+.p-datatable-scrollable-header table thead tr th {
+  position: sticky;
+  top: 0;
+  background: white; 
+  z-index: 1;
+}

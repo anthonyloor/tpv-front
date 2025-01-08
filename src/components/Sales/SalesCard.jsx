@@ -470,6 +470,8 @@ const SalesCard = ({
       {/* Modal de Reimpresión */}
       <ReprintModal
         isOpen={isReprintModalOpen}
+        size="lg"
+        height="tall"
         onClose={() => setIsReprintModalOpen(false)}
       />
 

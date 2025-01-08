@@ -46,7 +46,7 @@ export const ClientProvider = ({ children }) => {
       const validAddresses = addressesResponse.filter(
         (address) => !address.deleted && address.active
       );
-
+      
       const selectedAddressData = validAddresses.find(
         (address) => address.id_address === idAddressDefault
       );

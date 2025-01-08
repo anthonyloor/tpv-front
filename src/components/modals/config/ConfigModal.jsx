@@ -1,15 +1,33 @@
-// ConfigModal.jsx
-import React, { useState } from 'react';
-import Modal from '../Modal'; // Asegúrate de que la ruta es correcta
+// src/components/modals/ConfigModal.jsx
+import React, { useState, useContext } from 'react';
+import Modal from '../Modal'; 
+import { ConfigContext } from '../../../contexts/ConfigContext';
 
-function ConfigModal({ onSubmit, errorMessage }) {
-  const [idCustomerDefault, setIdCustomerDefault] = useState('');
-  const [idAddressDeliveryDefault, setIdAddressDeliveryDefault] = useState('');
-  const [allowOutOfStockSales, setAllowOutOfStockSales] = useState(false);
-  const [ticketTextHeader1, setTicketTextHeader1] = useState('');
-  const [ticketTextHeader2, setTicketTextHeader2] = useState('');
-  const [ticketTextFooter1, setTicketTextFooter1] = useState('');
-  const [ticketTextFooter2, setTicketTextFooter2] = useState('');
+function ConfigModal({ isOpen, onClose, errorMessage }) {
+  // Obtenemos el contexto para actualizar la config global
+  const { configData, setConfigData } = useContext(ConfigContext);
+  // Estados locales para cada campo (puedes inicializar con lo que haya en configData)
+  const [idCustomerDefault, setIdCustomerDefault] = useState(
+    configData?.id_customer_default || ''
+  );
+  const [idAddressDeliveryDefault, setIdAddressDeliveryDefault] = useState(
+    configData?.id_address_delivery_default || ''
+  );
+  const [allowOutOfStockSales, setAllowOutOfStockSales] = useState(
+    configData?.allow_out_of_stock_sales || false
+  );
+  const [ticketTextHeader1, setTicketTextHeader1] = useState(
+    configData?.ticket_text_header_1 || ''
+  );
+  const [ticketTextHeader2, setTicketTextHeader2] = useState(
+    configData?.ticket_text_header_2 || ''
+  );
+  const [ticketTextFooter1, setTicketTextFooter1] = useState(
+    configData?.ticket_text_footer_1 || ''
+  );
+  const [ticketTextFooter2, setTicketTextFooter2] = useState(
+    configData?.ticket_text_footer_2 || ''
+  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -19,7 +37,7 @@ function ConfigModal({ onSubmit, errorMessage }) {
       return;
     }
 
-    const config = {
+    const newConfig = {
       id_customer_default: parseInt(idCustomerDefault, 10),
       id_address_delivery_default: parseInt(idAddressDeliveryDefault, 10),
       allow_out_of_stock_sales: allowOutOfStockSales,
@@ -29,7 +47,8 @@ function ConfigModal({ onSubmit, errorMessage }) {
       ticket_text_footer_2: ticketTextFooter2 || null,
     };
 
-    onSubmit(config);
+    // Guardamos en el contexto
+    setConfigData(newConfig);
   };
 
   return (
@@ -74,7 +93,7 @@ function ConfigModal({ onSubmit, errorMessage }) {
             <label className="font-medium">Permitir ventas sin stock</label>
           </div>
 
-          {/* Campos opcionales */}
+          {/* Campos opcionales para ticket */}
           <div>
             <label className="block font-medium mb-1">Texto de encabezado del ticket 1</label>
             <input

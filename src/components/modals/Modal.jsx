@@ -9,9 +9,9 @@ const Modal = ({
   showBackButton = false, 
   onBack, 
   title = '',
-  size = 'sm', // Tamaño ancho predeterminado
-  height = 'small', // Tamaño altura predeterminado
-  showSeparator = true, // Mostrar barra separadora por defecto
+  size = 'sm',  // controla el ancho
+  height = 'small',  // controla el alto
+  showSeparator = true,
 }) => {
   const [mounted, setMounted] = useState(isOpen);
   const [visible, setVisible] = useState(false);
@@ -30,30 +30,38 @@ const Modal = ({
   }, [isOpen]);
 
   const handleTransitionEnd = (e) => {
+    // Cuando termina la transición de opacidad y el modal está cerrado, desmontamos
     if (e.target === e.currentTarget && e.propertyName === 'opacity' && !isOpen) {
       setMounted(false);
     }
   };
 
+  // Si no debe montarse, no renderizamos nada
   if (!mounted) return null;
 
+  // Clases de Tailwind para el ancho
   const sizeClasses = {
-    xs: 'w-[20%]', // 20% del ancho de la pantalla
-    sm: 'w-[30%]',
-    md: 'w-[40%]',
-    lg: 'w-[50%]',
-    xl: 'w-[60%]',
-    '2xl': 'w-[70%]',
-    '3xl': 'w-[80%]',
-    full: 'w-[100%]', // Pantalla completa
+    xs: 'w-full max-w-xs',   
+    sm: 'w-full max-w-sm',   
+    md: 'w-full max-w-md',   
+    lg: 'w-full max-w-xl',   // ~1280px
+    xl: 'w-full max-w-2xl',
+    '2xl': 'w-full max-w-3xl',
+    '3xl': 'w-full max-w-4xl',
+    '4xl': 'w-full max-w-5xl',
+    '5xl': 'w-full max-w-6xl',
+    '6xl': 'w-full max-w-7xl',
+    full: 'w-full max-w-none',
   };
 
+  // Clases de Tailwind para el alto
+  // Por ejemplo, puedes usar fracciones de la pantalla (vh) o 'max-h' con un valor
   const heightClasses = {
-    default: 'h-auto', // Altura predeterminada (depende del contenido)
-    small: 'h-1/4',
-    md: 'h-2/4',
-    tall: 'h-3/4', // Alto (3/4 de la pantalla)
-    full: 'h-full', // Pantalla completa (altura)
+    default: 'h-auto',          // Se ajusta al contenido
+    sm: 'max-h-[50vh]',         // Máximo 50% del alto de la pantalla
+    md: 'max-h-[70vh]',         // Máximo ~70% 
+    tall: 'max-h-[80vh]',       // 
+    full: 'h-full max-h-none',  // Toma todo el alto
   };
 
   return (
@@ -67,11 +75,13 @@ const Modal = ({
     >
       <div
         className={`
-          bg-white rounded-lg shadow-lg p-6 ${sizeClasses[size]} ${heightClasses[height]} 
-          transition-transform duration-300 ease-in-out overflow-auto
+          bg-white rounded-lg shadow-lg p-6 overflow-auto
+          ${sizeClasses[size] || sizeClasses.lg}
+          ${heightClasses[height] || heightClasses.default}
+          transition-transform duration-300 ease-in-out
         `}
       >
-        {/* Barra superior */}
+        {/* Barra superior con título y botones */}
         <div className="flex items-center justify-between mb-2">
           {showBackButton ? (
             <button
@@ -101,9 +111,9 @@ const Modal = ({
         </div>
 
         {/* Línea separadora */}
-        {showSeparator && <hr className="my-2 border-gray-300" />}
+        {showSeparator && <hr className="my-2 border-gray-300 mb-5" />}
         
-        {/* Contenido del modal */}
+        {/* Contenido */}
         <div>
           {children}
         </div>

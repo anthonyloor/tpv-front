@@ -8,6 +8,8 @@
     "@testing-library/user-event": "^13.5.0",
     "jsbarcode": "^3.11.6",
     "jspdf": "^2.5.2",
+    "primeicons": "^7.0.0",
+    "primereact": "^10.9.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",

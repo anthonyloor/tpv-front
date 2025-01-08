@@ -1,84 +1,135 @@
 // src/components/modals/reprint/ReprintModal.jsx
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import Modal from '../Modal'; 
 import { useApiFetch } from '../../../components/utils/useApiFetch';
-import ticketConfigData from '../../../data/ticket.json';
+//import ticketConfigData from '../../../data/ticket.json'; // si lo usas
+
+import { ConfigContext } from '../../../contexts/ConfigContext'; // ajusta la ruta real
+
+// PrimeReact
+import { DataTable } from 'primereact/datatable';
+import { Column } from 'primereact/column';
+import { Button } from 'primereact/button';
 
 const ReprintModal = ({ isOpen, onClose }) => {
+  // Modo: "recent" o "search"
+  const { configData } = useContext(ConfigContext);
+  const [mode, setMode] = useState('recent');
   const [orderId, setOrderId] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [orderData, setOrderData] = useState(null);
   const [error, setError] = useState(null);
 
-  const [allOrders, setAllOrders] = useState([]); 
-  const [visibleCount, setVisibleCount] = useState(25); 
+  // Ventas recientes o buscada
+  const [allOrders, setAllOrders] = useState([]);
+  const [searchedOrder, setSearchedOrder] = useState(null);
+
+  // Loading y selección
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+
+  // Paginación
+  const rows = 4;
 
   const apiFetch = useApiFetch();
 
-  useEffect(() => {
-    if (isOpen) {
-      loadRecentOrders();
-    } else {
-      setAllOrders([]);
-      setVisibleCount(25);
-      setOrderData(null);
-      setError(null);
-      setOrderId('');
-      setClientName('');
-    }
-  }, [isOpen]);
-
-  const loadRecentOrders = async () => {
+  // Cargar ventas recientes
+  const loadRecentOrders = useCallback(async () => {
     try {
       setError(null);
-      const data = await apiFetch('https://apitpv.anthonyloor.com/get_orders', {
-        method: 'GET',
-      });
-      setAllOrders(data);
-    } catch (e) {
-      console.error('Error fetching orders:', e);
+      setIsLoading(true);
+      setMode('recent');
+      const data = await apiFetch('https://apitpv.anthonyloor.com/get_orders', { method: 'GET' });
+      setAllOrders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error cargando ventas recientes:', err);
       setError('No se pudo obtener la lista de ventas recientes.');
+      setAllOrders([]);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [apiFetch]);
 
+  // Búsqueda puntual
   const handleSearchOrder = async () => {
     if (!orderId.trim()) return;
     try {
       setError(null);
+      setIsLoading(true);
+      setMode('search');
       const data = await apiFetch(
         `https://apitpv.anthonyloor.com/get_order?id_order=${encodeURIComponent(orderId)}`,
-        {
-          method: 'GET',
-        }
+        { method: 'GET' }
       );
-      setOrderData(data);
-    } catch (e) {
-      console.error('Error fetching order:', e);
-      setError('No se pudo encontrar la orden o ocurrió un error al buscarla.');
-      setOrderData(null);
+      setSearchedOrder(data);
+    } catch (err) {
+      console.error('Error buscando la orden:', err);
+      setError('No se encontró la orden con ese ID o ocurrió un error.');
+      setSearchedOrder(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Al abrir/cerrar
+  useEffect(() => {
+    if (isOpen) {
+      loadRecentOrders();
+    } else {
+      // Reset
+      setAllOrders([]);
+      setSearchedOrder(null);
+      setOrderId('');
+      setError(null);
+      setSelectedOrderId(null);
+      setIsLoading(false);
+      setMode('recent');
+    }
+  }, [isOpen, loadRecentOrders]);
+
+  // Reimprimir
   const handleReprint = (giftTicket = false) => {
-    if (!orderData) return;
+    if (!selectedOrderId) {
+      alert('Selecciona una venta para reimprimir.');
+      return;
+    }
+    let saleToReprint = null;
+
+    if (mode === 'recent') {
+      saleToReprint = allOrders.find(o => o.id_order === selectedOrderId);
+    } else {
+      // mode = search
+      saleToReprint = searchedOrder && searchedOrder.id_order === selectedOrderId 
+        ? searchedOrder 
+        : null;
+    }
+    if (!saleToReprint) {
+      alert('No se encontró la venta seleccionada.');
+      return;
+    }
+
+    // Lógica real
     const employee = JSON.parse(localStorage.getItem('employee'));
     const employeeName = employee ? employee.employee_name : 'Empleado';
 
-    const html = generateTicketHTMLFromOrder(orderData, giftTicket, employeeName);
-    printHTMLTicket(html);
+    const htmlContent = generateTicketHTMLFromOrder(saleToReprint, giftTicket, employeeName);
+    printHTMLTicket(htmlContent);
   };
 
+  // Generar Ticket en HTML
   const generateTicketHTMLFromOrder = (orderData, giftTicket, employeeName) => {
+    const header1 = configData?.ticket_text_header_1 || '';
+    const header2 = configData?.ticket_text_header_2 || '';
+    const footer1 = configData?.ticket_text_footer_1 || '';
+    const footer2 = configData?.ticket_text_footer_2 || '';
     const date = new Date();
-    const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${
-      (date.getMonth() + 1).toString().padStart(2, '0')
-    }/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${
-      date.getMinutes().toString().padStart(2, '0')
+    const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${
+      String(date.getMonth() + 1).padStart(2, '0')
+    }/${date.getFullYear()} ${String(date.getHours()).padStart(2, '0')}:${
+      String(date.getMinutes()).padStart(2, '0')
     }`;
 
     const ticketTypeText = giftTicket ? 'Ticket regalo' : 'Ticket compra';
-
-    const productRows = orderData.order_details
+    const productRows = (orderData.order_details ?? [])
       .map((item) => {
         return `
           <tr>
@@ -97,7 +148,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
 
     let paymentMethodsHTML = '';
     if (!giftTicket) {
-      const IVA_RATE = 0.21;
+      const IVA_RATE = 0.21; 
       const baseAmount = orderData.total_paid / (1 + IVA_RATE);
       const ivaAmount = orderData.total_paid - baseAmount;
       paymentMethodsHTML += '<div><strong>Método de Pago:</strong></div>';
@@ -105,7 +156,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
       paymentMethodsHTML += `<div><strong>IVA (${(IVA_RATE * 100).toFixed(0)}%):</strong> ${ivaAmount.toFixed(2)} €</div>`;
     }
 
-    const html = `
+    return `
       <html>
       <head>
         <meta charset="UTF-8" />
@@ -141,9 +192,8 @@ const ReprintModal = ({ isOpen, onClose }) => {
         </style>
       </head>
       <body>
-        ${ticketConfigData.logo ? `<div style="text-align:center;"><img src="${ticketConfigData.logo}" alt="Logo" style="max-width:100px;"></div>` : ''}
-        ${ticketConfigData.headerText1 ? `<h3>${ticketConfigData.headerText1}</h3>` : ''}
-        ${ticketConfigData.headerText2 ? `<h3>${ticketConfigData.headerText2}</h3>` : ''}
+        ${header1 ? `<h3>${header1}</h3>` : ''}
+        ${header2 ? `<h3>${header2}</h3>` : ''}
         <hr/>
         <h2>${ticketTypeText}</h2>
         <div>Fecha: ${formattedDate}</div>
@@ -154,24 +204,40 @@ const ReprintModal = ({ isOpen, onClose }) => {
             <tr>
               <th style="text-align:left;">Cant.</th>
               <th style="text-align:left;">Producto</th>
-              ${!giftTicket ? '<th style="text-align:right;">P/U</th><th style="text-align:right;">Total</th>' : ''}
+              ${
+                !giftTicket 
+                  ? '<th style="text-align:right;">P/U</th><th style="text-align:right;">Total</th>' 
+                  : ''
+              }
             </tr>
           </thead>
           <tbody>
             ${productRows}
           </tbody>
         </table>
-        ${!giftTicket ? `<hr/><div><strong>Total:</strong> ${orderData.total_paid.toFixed(2)} €</div>` : ''}
+        ${
+          !giftTicket 
+            ? `<hr/><div><strong>Total:</strong> ${orderData.total_paid.toFixed(2)} €</div>` 
+            : ''
+        }
         ${!giftTicket ? paymentMethodsHTML : ''}
 
-        ${ticketConfigData.footerText1 ? `<div class="footer-text">${ticketConfigData.footerText1}</div>` : ''}
-        ${ticketConfigData.footerText2 ? `<div class="footer-text">${ticketConfigData.footerText2}</div>` : ''}
+        ${
+          footer1 
+            ? `<div class="footer-text">${footer1}</div>` 
+            : ''
+        }
+        ${
+          footer2 
+            ? `<div class="footer-text">${footer2}</div>` 
+            : ''
+        }
       </body>
       </html>
     `;
-    return html;
   };
 
+  // Imprimir el ticket
   const printHTMLTicket = (htmlContent) => {
     const printWindow = window.open('', '_blank', 'width=300,height=600');
     printWindow.document.open();
@@ -182,130 +248,258 @@ const ReprintModal = ({ isOpen, onClose }) => {
     printWindow.close();
   };
 
-  const visibleOrders = allOrders.slice(0, visibleCount);
+  /***********************************************************
+   * CustomRow: Renderiza la "fila" + detalles con animación
+   ***********************************************************/
+  const CustomRow = ({ sale }) => {
+    const [expanded, setExpanded] = useState(false);
+    const contentRef = useRef(null);
+    const [maxHeight, setMaxHeight] = useState('0px');
 
-  const handleShowMore = () => {
-    setVisibleCount((prev) => Math.min(prev + 25, 100));
+    const toggleExpand = () => {
+      if (!isLoading && sale.order_details?.length > 0) {
+        setExpanded(prev => !prev);
+      }
+    };
+
+    useEffect(() => {
+      if (expanded && contentRef.current) {
+        const scrollHeight = contentRef.current.scrollHeight;
+        setMaxHeight(`${scrollHeight}px`);
+      } else {
+        setMaxHeight('0px');
+      }
+    }, [expanded, sale.order_details]);
+
+    const isSelected = sale.id_order === selectedOrderId;
+    const handleSelect = () => {
+      if (!isLoading) {
+        setSelectedOrderId(sale.id_order);
+      }
+    };
+
+    return (
+      <div className="border rounded mb-2 p-2 bg-white shadow-sm transition-colors">
+        <div className="flex flex-wrap items-center justify-between space-y-1 md:space-y-0">
+          <div className="mr-2">
+            {isLoading ? (
+              // Skeleton
+              <div className="animate-pulse">
+                <div className="bg-gray-200 h-4 w-32 rounded mb-1" />
+                <div className="bg-gray-200 h-3 w-24 rounded" />
+              </div>
+            ) : (
+              <>
+                <div className="font-semibold">
+                  ID Venta: {sale.id_order}
+                </div>
+                <div className="text-gray-600">
+                  ID Cliente: {sale.id_customer}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-4">
+            {isLoading ? (
+              // Skeleton
+              <div className="animate-pulse flex space-x-2">
+                <div className="bg-gray-200 h-4 w-16 rounded" />
+                <div className="bg-gray-200 h-4 w-16 rounded" />
+              </div>
+            ) : (
+              <>
+                <div className="text-right">
+                  <div className="text-gray-500 text-xs">Método Pago</div>
+                  <div className="font-semibold">{sale.payment}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-gray-500 text-xs">Total (€)</div>
+                  <div className="font-semibold">
+                    {sale.total_paid?.toFixed(2)}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Radio */}
+            <div>
+              <input
+                type="radio"
+                checked={isSelected}
+                onChange={handleSelect}
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Botón ver detalles */}
+            {(!isLoading && sale.order_details?.length > 0) && (
+              <Button
+                label={expanded ? 'Ocultar' : 'Ver Detalles'}
+                icon={`pi ${expanded ? 'pi-chevron-up' : 'pi-chevron-down'}`}
+                className="p-button-text p-button-sm"
+                onClick={toggleExpand}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Subtabla con transición de altura */}
+        <div
+          ref={contentRef}
+          className="overflow-hidden transition-all duration-300"
+          style={{
+            maxHeight,
+            marginTop: expanded ? '0.5rem' : '0',
+          }}
+        >
+          <div className="border rounded p-2 bg-gray-50">
+            {isLoading ? (
+              // Skeleton en la subtabla
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded mb-1 w-3/4" />
+                <div className="h-4 bg-gray-200 rounded mb-1 w-2/3" />
+                <div className="h-4 bg-gray-200 rounded mb-1 w-1/2" />
+              </div>
+            ) : (
+              <table className="min-w-full text-xs md:text-sm">
+                <thead className="bg-white text-gray-700">
+                  <tr>
+                    <th className="py-1 px-2 text-left">Producto</th>
+                    <th className="py-1 px-2 text-right">Unid.</th>
+                    <th className="py-1 px-2 text-right">P/U (€)</th>
+                    <th className="py-1 px-2 text-right">Total (€)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sale.order_details?.map((item, idx) => {
+                    const total = item.unit_price_tax_incl * item.product_quantity;
+                    return (
+                      <tr key={idx} className="border-b last:border-b-0">
+                        <td className="py-1 px-2">{item.product_name}</td>
+                        <td className="py-1 px-2 text-right">
+                          {item.product_quantity}
+                        </td>
+                        <td className="py-1 px-2 text-right">
+                          {item.unit_price_tax_incl.toFixed(2)}
+                        </td>
+                        <td className="py-1 px-2 text-right">
+                          {total.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
+  /***********************************************************
+   * singleColumnBodyTemplate => Renderiza CADA "fila"
+   * Si isLoading => en lugar de data real, pon placeholders
+   ***********************************************************/
+  const singleColumnBodyTemplate = (sale) => {
+    return <CustomRow sale={sale} isLoading={isLoading} />;
+  };
+
+  /***********************************************************
+   * Generar "dummy" array con 6 elementos para skeleton
+   ***********************************************************/
+  const skeletonData = new Array(rows).fill(null).map((_, idx) => ({
+    id_order: `skeleton-${idx}`,
+    id_customer: '',
+    payment: '',
+    total_paid: 0,
+    order_details: []
+  }));
+
+  /***********************************************************
+   * Determinar qué data mostrar en la tabla:
+   * si isLoading => 6 placeholders
+   * else => modo "recent" => allOrders
+   *      => modo "search" => [searchedOrder] o vacio
+   ***********************************************************/
+  let displayData = [];
+  if (isLoading) {
+    displayData = skeletonData; // 6 placeholders
+  } else {
+    if (mode === 'recent') {
+      displayData = allOrders;
+    } else {
+      // mode = search
+      displayData = searchedOrder ? [searchedOrder] : [];
+    }
+  }
+
+  /***********************************************************
+   * Render
+   ***********************************************************/
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Reimprimir Ticket"
-      showCloseButton={true}
+      showCloseButton
       showBackButton={false}
-      size="md"
+      size="xl"
       height="md"
     >
-      <div className="bg-white rounded-lg p-6">
-        <div className="mb-4 flex space-x-2">
-          <input
-            type="text"
-            className="border rounded p-2 w-full"
-            placeholder="ID de la Venta (id_order)"
-            value={orderId}
-            onChange={(e) => setOrderId(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSearchOrder();
-            }}
-          />
-          <input
-            type="text"
-            className="border rounded p-2 w-full"
-            placeholder="Nombre de cliente (futuro)"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-          />
+      <div className="w-full mx-auto space-y-4">
+        {/* Búsqueda ID */}
+        <div className="flex space-x-2 items-end">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Número de ticket"
+              value={orderId}
+              onChange={(e) => setOrderId(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearchOrder();
+              }}
+              className="border rounded p-2 w-full"
+            />
+          </div>
         </div>
 
-        {error && <p className="text-red-500 mb-4">{error}</p>}
+        {error && <div className="text-red-500 font-semibold">{error}</div>}
 
-        {visibleOrders.length > 0 && (
-          <div className="max-h-64 overflow-auto border">
-            <table className="min-w-full bg-white border">
-              <thead className="sticky top-0 bg-gray-100">
-                <tr>
-                  <th className="py-2 px-4 border-b text-left">ID Orden</th>
-                  <th className="py-2 px-4 border-b text-left">Tienda</th>
-                  <th className="py-2 px-4 border-b text-left">Cliente</th>
-                  <th className="py-2 px-4 border-b text-left">Total</th>
-                  <th className="py-2 px-4 border-b text-left">Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleOrders.map((o, idx) => (
-                  <tr key={idx} className="cursor-pointer hover:bg-gray-200" onClick={() => setOrderData(o)}>
-                    <td className="py-2 px-4 border-b">{o.id_order}</td>
-                    <td className="py-2 px-4 border-b">{o.shop_name}</td>
-                    <td className="py-2 px-4 border-b">{o.customer_name}</td>
-                    <td className="py-2 px-4 border-b">{o.total_paid.toFixed(2)} €</td>
-                    <td className="py-2 px-4 border-b">{o.date_add}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/* Tabla: Si isLoading => 6 placeholders, sino => mode "recent" o "search" */}
+        <DataTable
+          value={displayData}
+          className="p-datatable-sm"
+          paginator
+          rows={rows}
+          dataKey="id_order"
+          emptyMessage={
+            isLoading
+              ? '' /* no texto "Cargando..." */
+              : mode === 'recent'
+              ? 'No hay ventas recientes.'
+              : 'No se encontró esa venta.'
+          }
+        >
+          <Column body={singleColumnBodyTemplate} />
+        </DataTable>
 
-        {allOrders.length > visibleCount && (
-          <div className="mt-2">
-            <button className="text-blue-600 hover:underline" onClick={handleShowMore}>
-              Mostrar más ventas
-            </button>
-          </div>
-        )}
-
-        {orderData && (
-          <div className="mt-4">
-            <h3 className="font-semibold mb-2">Información de la Venta</h3>
-            <p><strong>ID Tienda:</strong> {orderData.id_shop}</p>
-            <p><strong>ID Cliente:</strong> {orderData.id_customer}</p>
-            <p><strong>Método de Pago:</strong> {orderData.payment}</p>
-            <p><strong>Total:</strong> {orderData.total_paid.toFixed(2)} €</p>
-
-            <h3 className="font-semibold mt-4 mb-2">Productos de la venta</h3>
-            <table className="min-w-full bg-white border">
-              <thead>
-                <tr>
-                  <th className="py-2 px-4 border-b text-left">Producto</th>
-                  <th className="py-2 px-4 border-b text-left">Cant.</th>
-                  <th className="py-2 px-4 border-b text-right">P/U</th>
-                  <th className="py-2 px-4 border-b text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderData.order_details.map((prod, idx) => (
-                  <tr key={idx}>
-                    <td className="py-2 px-4 border-b">{prod.product_name}</td>
-                    <td className="py-2 px-4 border-b">{prod.product_quantity}</td>
-                    <td className="py-2 px-4 border-b text-right">
-                      {prod.unit_price_tax_incl.toFixed(2)} €
-                    </td>
-                    <td className="py-2 px-4 border-b text-right">
-                      {(prod.unit_price_tax_incl * prod.product_quantity).toFixed(2)} €
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="mt-4 space-x-2">
-              <button
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                onClick={() => handleReprint(false)}
-              >
-                Generar Ticket Normal
-              </button>
-              <button
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
-                onClick={() => handleReprint(true)}
-              >
-                Generar Ticket Regalo
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Botones de acción */}
+        <div className="flex justify-end space-x-2">
+          <Button
+            label="Ticket Normal"
+            icon="pi pi-print"
+            onClick={() => handleReprint(false)}
+            className="p-button-success p-button-sm"
+          />
+          <Button
+            label="Ticket Regalo"
+            icon="pi pi-gift"
+            onClick={() => handleReprint(true)}
+            className="p-button-help p-button-sm"
+          />
+        </div>
       </div>
     </Modal>
   );

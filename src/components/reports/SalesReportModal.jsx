@@ -5,7 +5,7 @@ import SalesReportSearch from './SalesReportSearch';
 
 const SalesReportModal = ({ isOpen, onClose }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Reporte de Ventas" size="2xl" height="tall">
+    <Modal isOpen={isOpen} onClose={onClose} title="Reporte de Ventas" size="6xl" height="default">
       <SalesReportSearch />
     </Modal>
   );

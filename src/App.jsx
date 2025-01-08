@@ -13,6 +13,10 @@ import ConfigLoader from './components/ConfigLoader';
 import SessionExpiredModal from './components/modals/session/SessionExpiredModal';
 import { ConfigContext } from './contexts/ConfigContext';
 import useCart from './hooks/useCart';
+// PrimeReact
+import 'primereact/resources/themes/md-light-indigo/theme.css'; // Tema Material
+import 'primereact/resources/primereact.min.css';
+import 'primeicons/primeicons.css';
 
 function App() {
   const { setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setIdProfile, setShopName } = useContext(AuthContext);

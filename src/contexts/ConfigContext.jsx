@@ -1,5 +1,4 @@
 // src/ConfigContext.js
-
 import React, { createContext, useState } from 'react';
 
 export const ConfigContext = createContext();
