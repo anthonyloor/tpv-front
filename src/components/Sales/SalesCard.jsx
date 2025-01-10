@@ -6,6 +6,7 @@ import ReprintModal from '../modals/reprint/ReprintModal';
 import ParkedCartsModal from '../modals/parked/ParkedCartsModal'; // Importamos el nuevo modal
 import useFinalizeSale from '../../hooks/useFinalizeSale';
 import DiscountModal from '../modals/discount/DiscountModal';
+import TicketViewModal from '../modals/ticket/TicketViewModal';
 import PinValidationModal from '../modals/pin/PinValidationModal';
 import { AuthContext } from '../../contexts/AuthContext'; // Importar AuthContext
 
@@ -31,7 +32,6 @@ const SalesCard = ({
     bizum: '',
   });
   const [changeAmount, setChangeAmount] = useState(0);
-  const [copies, setCopies] = useState(1);
   const [giftTicket, setGiftTicket] = useState(false);
   const [highlightedItems, setHighlightedItems] = useState({});
   const [isReturnsModalOpen, setIsReturnsModalOpen] = useState(false);
@@ -42,6 +42,13 @@ const SalesCard = ({
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [ticketName, setTicketName] = useState('');
 
+  // Constantes para el modal de visualziación de ticket
+
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [ticketOrderId, setTicketOrderId] = useState(null);
+  const [printOnOpen, setPrintOnOpen] = useState(false);
+  const [changeAmountTM, setChangeAmountTM] = useState(0);
+  const [giftTicketTM, setGiftTicketTM] = useState(false);
   const { isLoading, finalizeSale } = useFinalizeSale();
 
   const { idProfile } = useContext(AuthContext);
@@ -167,10 +174,13 @@ const SalesCard = ({
       selectedMethods,
       amounts,
       changeAmount,
-      copies,
       giftTicket,
-      onSuccess: () => {
-        alert('Venta finalizada con éxito');
+      onSuccess: ({ orderId, imprimir = true, giftTicket, changeAmount }) => {
+        setTicketOrderId(orderId);
+        setGiftTicketTM(giftTicket);
+        setChangeAmountTM(changeAmount);
+        setTicketModalOpen(true);
+        setPrintOnOpen(imprimir);
         // Vaciar el carrito y restaurar el estado inicial
         setCartItems([]);
         // Limpiar el carrito de localStorage
@@ -182,7 +192,6 @@ const SalesCard = ({
         setSelectedMethods([]);
         setAmounts({ efectivo: '', tarjeta: '', bizum: '' });
         setChangeAmount(0);
-        setCopies(1);
         setGiftTicket(false);
         setFinalSaleModalOpen(false);
       },
@@ -415,6 +424,21 @@ const SalesCard = ({
               'Finalizar Venta'
             )}
           </button>
+
+          {ticketModalOpen && ticketOrderId && (
+        <TicketViewModal
+          isOpen={ticketModalOpen}
+          onClose={() => setTicketModalOpen(false)}
+          orderId={ticketOrderId}
+          printOnOpen={printOnOpen}
+          giftTicket={giftTicketTM}            // Asumiendo que giftTicketTM es el estado actualizado
+          changeAmount={changeAmountTM}
+          showCloseButton
+          showBackButton={false}
+          size="lg"
+          height="tall"
+        />
+      )}
         </div>
       </div>
 
@@ -501,16 +525,6 @@ const SalesCard = ({
         <div className="p-6">
           {/* Ya no ponemos el h2 aquí, el título lo maneja el modal */}
           <div className="flex justify-between mb-4">
-            <div className="flex items-center">
-              <label className="mr-2">Copias:</label>
-              <input
-                type="number"
-                min="1"
-                value={copies}
-                onChange={(e) => setCopies(e.target.value)}
-                className="border rounded p-2 w-16"
-              />
-            </div>
             <div className="flex items-center">
               <span className="mr-2">Ticket Regalo:</span>
               <button
