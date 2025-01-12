@@ -1,11 +1,12 @@
 // src/components/modals/configuration/ConfigurationModal.jsx
+
 import React, { useState } from 'react';
 import Modal from '../Modal';
 import PermisosModal from './permissions/PermissionsModal';
 import TicketConfigModal from './printers/TicketConfigModal';
 
-const ConfigurationModal = ({ isOpen, onClose  }) => {
-  const [currentView, setCurrentView] = useState('config'); 
+const ConfigurationModal = ({ isOpen, onClose }) => {
+  const [currentView, setCurrentView] = useState('config');
 
   const goBack = () => {
     if (currentView === 'permisos' || currentView === 'impresoras') {
@@ -44,30 +45,38 @@ const ConfigurationModal = ({ isOpen, onClose  }) => {
       {currentView === 'config' && (
         <div>
           <div className="space-y-4">
-            <button className="bg-gray-300 text-black px-4 py-2 rounded w-full" onClick={() => setCurrentView('permisos')}>
+            <button
+              className="bg-gray-300 text-black px-4 py-2 rounded w-full"
+              onClick={() => setCurrentView('permisos')}
+            >
               Permisos
             </button>
-            <button className="bg-gray-300 text-black px-4 py-2 rounded w-full" onClick={() => setCurrentView('impresoras')}>
+            <button
+              className="bg-gray-300 text-black px-4 py-2 rounded w-full"
+              onClick={() => setCurrentView('impresoras')}
+            >
               Impresoras
             </button>
-            <button className="bg-gray-300 text-black px-4 py-2 rounded w-full">Inventario</button>
+            <button className="bg-gray-300 text-black px-4 py-2 rounded w-full">
+              Inventario
+            </button>
           </div>
         </div>
       )}
 
       {currentView === 'permisos' && (
         <div>
-          {/* Ya no tenemos la barra interna, solo el contenido de PermisosModal */}
-          <PermisosModal
-            onClose={onClose}
-          />
+          <PermisosModal onClose={onClose} />
         </div>
       )}
 
       {currentView === 'impresoras' && (
         <div>
           <div className="space-y-4">
-            <button className="bg-gray-300 text-black px-4 py-2 rounded w-full" onClick={() => setCurrentView('ticketConfig')}>
+            <button
+              className="bg-gray-300 text-black px-4 py-2 rounded w-full"
+              onClick={() => setCurrentView('ticketConfig')}
+            >
               Tickets al Cliente
             </button>
             <button className="bg-gray-300 text-black px-4 py-2 rounded w-full">
@@ -79,7 +88,6 @@ const ConfigurationModal = ({ isOpen, onClose  }) => {
 
       {currentView === 'ticketConfig' && (
         <div>
-          {/* Solo el contenido de TicketConfigModal */}
           <TicketConfigModal onClose={onClose} goBack={goBack} />
         </div>
       )}

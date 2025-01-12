@@ -14,12 +14,12 @@ root.render(
   <React.StrictMode>
     <AuthProvider>
       <Router>
-      <ConfigProvider>
-      <ClientProvider>
-      <PinProvider>
-        <App />
-        </PinProvider>
-      </ClientProvider>
+        <ConfigProvider>
+          <ClientProvider>
+            <PinProvider>
+              <App />
+            </PinProvider>
+          </ClientProvider>
         </ConfigProvider>
       </Router>
     </AuthProvider>

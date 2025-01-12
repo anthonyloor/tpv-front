@@ -1,5 +1,6 @@
 // src/components/modals/ticket/TicketViewModal.jsx
-import React, { useEffect, useState, useContext } from 'react';
+
+import React, { useEffect, useState, useContext, useCallback } from 'react';
 import Modal from '../Modal';
 import { useApiFetch } from '../../utils/useApiFetch';
 import { ConfigContext } from '../../../contexts/ConfigContext';
@@ -7,12 +8,12 @@ import { ConfigContext } from '../../../contexts/ConfigContext';
 const TicketViewModal = ({
   isOpen,
   onClose,
-  mode = 'ticket',   // "ticket" (pedido) o "cart_rule" (vale)
-  orderId = null,     // si mode="ticket", usaremos id_order
-  cartRuleCode = null, // si mode="cart_rule", usaremos code del vale
+  mode = 'ticket',
+  orderId = null,
+  cartRuleCode = null,
   printOnOpen = false,
   giftTicket = false,
-  changeAmount = 0
+  changeAmount = 0,
 }) => {
   const { configData } = useContext(ConfigContext);
   const [fetchedData, setFetchedData] = useState(null);
@@ -20,55 +21,8 @@ const TicketViewModal = ({
   const [previewHtml, setPreviewHtml] = useState('');
   const apiFetch = useApiFetch();
 
-  useEffect(() => {
-    if (!isOpen) return;
-    if (mode === 'ticket' && orderId) {
-      loadOrder();
-    } else if (mode === 'cart_rule' && cartRuleCode) {
-      loadCartRule();
-    }
-  }, [isOpen, mode, orderId, cartRuleCode]);
-
-  // ─────────────────────────────────────────────
-  // ── Cargar pedido (modo = "ticket") ─────────
-  // ─────────────────────────────────────────────
-  const loadOrder = async () => {
-    try {
-      setError(null);
-      const data = await apiFetch(`https://apitpv.anthonyloor.com/get_order?id_order=${orderId}`, {
-        method: 'GET'
-      });
-      setFetchedData(data);
-      buildPreviewHtmlForTicket(data, giftTicket);
-    } catch (err) {
-      setError('No se pudo cargar el ticket de la venta.');
-      console.error('[TicketViewModal] Error loadOrder:', err);
-    }
-  };
-
-  // ─────────────────────────────────────────────────
-  // ── Cargar vale descuento (modo = "cart_rule") ──
-  // ─────────────────────────────────────────────────
-  const loadCartRule = async () => {
-    try {
-      setError(null);
-      const data = await apiFetch(`https://apitpv.anthonyloor.com/get_cart_rule?code=${cartRuleCode}`, {
-        method: 'GET'
-      });
-      setFetchedData(data);
-      buildPreviewHtmlForCartRule(data);
-    } catch (err) {
-      setError('No se pudo cargar la información del vale descuento.');
-      console.error('[TicketViewModal] Error loadCartRule:', err);
-    }
-  };
-
-  // ─────────────────────────────────────────
-  // ── Generar preview para un "ticket"  ───
-  // ─────────────────────────────────────────
-  const buildPreviewHtmlForTicket = (orderData, isGiftTicket) => {
+  const buildPreviewHtmlForTicket = useCallback((orderData, isGiftTicket) => {
     if (!orderData) return;
-
     const {
       id_order,
       id_customer,
@@ -76,16 +30,12 @@ const TicketViewModal = ({
       date_add,
       total_paid,
       order_details = [],
-      order_cart_rules = []
+      order_cart_rules = [],
     } = orderData;
-
-    // 1) Textos de config
     const header1 = configData?.ticket_text_header_1 || '';
     const header2 = configData?.ticket_text_header_2 || '';
     const footer1 = configData?.ticket_text_footer_1 || '';
     const footer2 = configData?.ticket_text_footer_2 || '';
-
-    // 2) Cliente: “Cliente: TPV” si coincide
     let customerLine = `Cliente: ${id_customer}`;
     if (
       configData?.id_customer_default &&
@@ -93,17 +43,13 @@ const TicketViewModal = ({
     ) {
       customerLine = 'Cliente: TPV';
     }
-
-    // 3) Dirección: no mostrar si coincide
     let addressLine = `Dirección: ${id_address_delivery}`;
     if (
       configData?.id_address_delivery_default &&
       id_address_delivery === configData.id_address_delivery_default
     ) {
-      addressLine = ''; 
+      addressLine = '';
     }
-
-    // 4) Lista de productos
     let productRows = '';
     order_details.forEach((item) => {
       const productName = item.product_name.trim();
@@ -126,8 +72,6 @@ const TicketViewModal = ({
         `;
       }
     });
-
-    // 5) Descuentos
     let discountsHtml = '';
     if (order_cart_rules?.length > 0) {
       discountsHtml = `
@@ -140,21 +84,22 @@ const TicketViewModal = ({
             </tr>
           </thead>
           <tbody>
-            ${order_cart_rules.map(rule => `
+            ${order_cart_rules
+              .map(
+                (rule) => `
               <tr>
                 <td style="padding: 4px;">${rule.code}</td>
                 <td style="padding: 4px;">${rule.name}</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join('')}
           </tbody>
         </table>
       `;
     }
-
-    // 6) Construir preview interno (SIN <html> <head> <body>)
     const date = new Date(date_add || Date.now());
     const formattedDate = date.toLocaleString('es-ES');
-
     let preview = `
       <div>
         ${header1 ? `<h3>${header1}</h3>` : ''}
@@ -165,26 +110,31 @@ const TicketViewModal = ({
         <div>${customerLine}</div>
         ${addressLine ? `<div>${addressLine}</div>` : ''}
         <hr/>
-
         <table style="width:100%; border-collapse:collapse; margin-top:5px;">
           <thead>
             <tr>
               <th>Cant.</th>
               <th>Producto</th>
-              ${!isGiftTicket ? '<th style="text-align:right;">P/U (€)</th><th style="text-align:right;">Total (€)</th>' : ''}
+              ${
+                !isGiftTicket
+                  ? '<th style="text-align:right;">P/U (€)</th><th style="text-align:right;">Total (€)</th>'
+                  : ''
+              }
             </tr>
           </thead>
           <tbody>
             ${productRows}
           </tbody>
         </table>
-
         ${discountsHtml}
-        ${!isGiftTicket ? `
+        ${
+          !isGiftTicket
+            ? `
           <hr />
           <div><strong>Total Pagado:</strong> ${total_paid.toFixed(2)} €</div>
-        ` : ''}
-
+        `
+            : ''
+        }
         <hr/>
         <div style="text-align:center;">
           ${footer1 ? `<p>${footer1}</p>` : ''}
@@ -193,39 +143,24 @@ const TicketViewModal = ({
       </div>
     `;
     setPreviewHtml(preview);
-  };
+  }, [configData]);
 
-  // ─────────────────────────────────────────────
-  // ── Generar preview para un “cart_rule”  ─────
-  // ─────────────────────────────────────────────
-  const buildPreviewHtmlForCartRule = (cartRuleData) => {
+  const buildPreviewHtmlForCartRule = useCallback((cartRuleData) => {
     if (!cartRuleData) return;
-
-    // { date_from, date_to, code, description, reduction_percent, reduction_amount, ... }
-    const {
-      code,
-      description,
-      date_from,
-      date_to,
-      reduction_percent,
-      reduction_amount
-    } = cartRuleData;
-
+    const { code, description, date_from, date_to, reduction_percent, reduction_amount } =
+      cartRuleData;
     const header1 = configData?.ticket_text_header_1 || '';
     const header2 = configData?.ticket_text_header_2 || '';
     const footer1 = configData?.ticket_text_footer_1 || '';
     const footer2 = configData?.ticket_text_footer_2 || '';
-
     const fromStr = new Date(date_from).toLocaleString('es-ES');
     const toStr = new Date(date_to).toLocaleString('es-ES');
-
     let discountLine = '';
     if (reduction_percent > 0) {
       discountLine = `Descuento: ${reduction_percent}%`;
     } else if (reduction_amount > 0) {
       discountLine = `Descuento: ${reduction_amount.toFixed(2)} €`;
     }
-
     const preview = `
       <div>
         ${header1 ? `<h3>${header1}</h3>` : ''}
@@ -246,14 +181,48 @@ const TicketViewModal = ({
       </div>
     `;
     setPreviewHtml(preview);
-  };
+  }, [configData]);
 
-  // ─────────────────────────────────────────────
-  // ── Efecto para imprimir con <html> <body> ──
-  // ─────────────────────────────────────────────
+  const loadOrder = useCallback(async () => {
+    try {
+      setError(null);
+      const data = await apiFetch(`https://apitpv.anthonyloor.com/get_order?id_order=${orderId}`, {
+        method: 'GET',
+      });
+      setFetchedData(data);
+      buildPreviewHtmlForTicket(data, giftTicket);
+    } catch (err) {
+      setError('No se pudo cargar el ticket de la venta.');
+      console.error('[TicketViewModal] Error loadOrder:', err);
+    }
+  }, [apiFetch, orderId, giftTicket, buildPreviewHtmlForTicket]); 
+
+  const loadCartRule = useCallback(async () => {
+    try {
+      setError(null);
+      const data = await apiFetch(
+        `https://apitpv.anthonyloor.com/get_cart_rule?code=${cartRuleCode}`,
+        { method: 'GET' }
+      );
+      setFetchedData(data);
+      buildPreviewHtmlForCartRule(data);
+    } catch (err) {
+      setError('No se pudo cargar la información del vale descuento.');
+      console.error('[TicketViewModal] Error loadCartRule:', err);
+    }
+  }, [apiFetch, cartRuleCode, buildPreviewHtmlForCartRule]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (mode === 'ticket' && orderId) {
+      loadOrder();
+    } else if (mode === 'cart_rule' && cartRuleCode) {
+      loadCartRule();
+    }
+  }, [isOpen, mode, orderId, cartRuleCode, loadOrder, loadCartRule]);
+
   useEffect(() => {
     if (printOnOpen && previewHtml) {
-      // Generar HTML completo (añadir <html> <head> <body>)
       const fullHtml = `
         <html>
         <head>
@@ -285,15 +254,17 @@ const TicketViewModal = ({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={mode === 'ticket' ? `Ticket #${orderId}` : `Vale: ${cartRuleCode}`} size="md" height="auto">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={mode === 'ticket' ? `Ticket #${orderId}` : `Vale: ${cartRuleCode}`}
+      size="md"
+      height="auto"
+    >
       <div className="p-4">
         {error && <p className="text-red-500">{error}</p>}
         {!error && !fetchedData && <p>Cargando datos...</p>}
-
-        {/* Vista previa local (SÓLO el contenedor <div>), sin <html> <head> <body> */}
-        {fetchedData && (
-          <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-        )}
+        {fetchedData && <div dangerouslySetInnerHTML={{ __html: previewHtml }} />}
       </div>
     </Modal>
   );

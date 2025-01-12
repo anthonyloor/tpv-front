@@ -5,7 +5,7 @@ import Modal from '../Modal';
 import { useApiFetch } from '../../utils/useApiFetch';
 
 const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
-  const [discountType, setDiscountType] = useState('percentage'); // 'percentage' o 'amount'
+  const [discountType, setDiscountType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const apiFetch = useApiFetch();
@@ -17,34 +17,25 @@ const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
       return;
     }
 
-    // Generar fechas (un año por defecto)
     const now = new Date();
     const oneYearLater = new Date(now);
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
-
     const date_from = now.toISOString().split('T')[0] + ' 00:00:00';
     const date_to = oneYearLater.toISOString().split('T')[0] + ' 23:59:59';
 
-    // Obtener info para descripción
     const employee = JSON.parse(localStorage.getItem('employee')) || {};
     const shop = JSON.parse(localStorage.getItem('shop')) || {};
     const client = JSON.parse(localStorage.getItem('selectedClient'));
-
     const employeeName = employee.employee_name || 'Empleado';
     const shopName = shop.name || 'Tienda';
-
-    // Construir descripción y name
     const description = `Descuento generado por ${employeeName} en ${shopName}`;
     const name =
       discountType === 'percentage'
         ? `Descuento de ${value}%`
         : `Descuento de ${value}€`;
-
-    // Determinar valores de reduction
     const reduction_percent = discountType === 'percentage' ? value : 0;
     const reduction_amount = discountType === 'amount' ? value : 0;
 
-    // Construir el objeto para la API
     const discountData = {
       name,
       date_from,
@@ -52,7 +43,7 @@ const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
       description,
       id_customer: client ? client.id_customer : null,
       reduction_percent,
-      reduction_amount
+      reduction_amount,
     };
 
     try {
@@ -61,32 +52,19 @@ const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(discountData)
+          body: JSON.stringify(discountData),
         }
       );
 
       if (result) {
-        const finalName = name || '';
-        const finalDescription = description || '';
-        const finalCode = result.code || '';
-        const finalReductionAmount = result.reduction_amount || 0;
-        const finalReductionPercent = result.reduction_percent || 0;
-
-        // Notificamos al padre la info exacta generada por la API
         const discObj = {
-          name: finalName,
-          description: finalDescription,
-          code: finalCode,
-          reduction_amount: finalReductionAmount,
-          reduction_percent: finalReductionPercent
+          name: name || '',
+          description: description || '',
+          code: result.code || '',
+          reduction_amount: result.reduction_amount || 0,
+          reduction_percent: result.reduction_percent || 0,
         };
-
-        console.log('Descuento creado:', discObj);
-
-        if (onDiscountApplied) {
-          onDiscountApplied(discObj);
-        }
-
+        if (onDiscountApplied) onDiscountApplied(discObj);
         setDiscountValue('');
         setErrorMessage('');
         onClose();
@@ -108,7 +86,6 @@ const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
       title="Descuento"
     >
       <div>
-        {/* Tipo de Descuento */}
         <div className="mb-4">
           <label className="block font-medium mb-1">Tipo de Descuento:</label>
           <select
@@ -121,7 +98,6 @@ const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
           </select>
         </div>
 
-        {/* Valor del Descuento */}
         <div className="mb-4">
           <label className="block font-medium mb-1">
             {discountType === 'percentage'

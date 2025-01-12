@@ -1,4 +1,5 @@
 // src/components/modals/configuration/printers/TicketConfigModal.jsx
+
 import React, { useState, useEffect } from 'react';
 import ticketConfigData from '../../../../data/ticket.json';
 
@@ -17,15 +18,12 @@ const TicketConfigModal = ({ onClose, goBack }) => {
 
   return (
     <div className="transition-opacity duration-300 ease-in-out space-y-4">
-      {/* Barra interna eliminada, ya no es necesaria */}
-
       {ticketConfig.logo && (
         <div>
           <p className="font-bold">Logo Actual:</p>
-          <img src={ticketConfig.logo} alt="Logo del Ticket" className="w-32 h-auto" />
+          <img src={ticketConfig.logo} alt="Logo Ticket" className="w-32 h-auto" />
         </div>
       )}
-
       <div>
         <label className="font-bold">Logo de Cabecera:</label>
         <input
@@ -34,9 +32,8 @@ const TicketConfigModal = ({ onClose, goBack }) => {
           className="border rounded p-2 w-full"
           disabled
         />
-        <p className="text-sm text-gray-500">*Esta funcionalidad estará disponible próximamente.</p>
+        <p className="text-sm text-gray-500">*Funcionalidad disponible pronto</p>
       </div>
-
       <div>
         <label className="font-bold">Texto Cabecera 1:</label>
         <input
@@ -73,7 +70,6 @@ const TicketConfigModal = ({ onClose, goBack }) => {
           disabled
         />
       </div>
-
       <div className="mt-4 flex justify-end space-x-2">
         <button className="bg-blue-500 text-white px-4 py-2 rounded" disabled>
           Guardar Cambios

@@ -1,4 +1,5 @@
-// src/components/modals/ParkedCartsModal.jsx
+// src/components/modals/parked/ParkedCartsModal.jsx
+
 import React from 'react';
 import Modal from '../Modal';
 

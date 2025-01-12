@@ -1,16 +1,17 @@
 // src/components/modals/Modal.jsx
+
 import React, { useState, useEffect } from 'react';
 
-const Modal = ({ 
-  isOpen, 
-  onClose, 
-  children, 
-  showCloseButton = true, 
-  showBackButton = false, 
-  onBack, 
+const Modal = ({
+  isOpen,
+  onClose,
+  children,
+  showCloseButton = true,
+  showBackButton = false,
+  onBack,
   title = '',
-  size = 'sm',  // controla el ancho
-  height = 'small',  // controla el alto
+  size = 'sm',
+  height = 'small',
   showSeparator = true,
 }) => {
   const [mounted, setMounted] = useState(isOpen);
@@ -30,21 +31,18 @@ const Modal = ({
   }, [isOpen]);
 
   const handleTransitionEnd = (e) => {
-    // Cuando termina la transición de opacidad y el modal está cerrado, desmontamos
     if (e.target === e.currentTarget && e.propertyName === 'opacity' && !isOpen) {
       setMounted(false);
     }
   };
 
-  // Si no debe montarse, no renderizamos nada
   if (!mounted) return null;
 
-  // Clases de Tailwind para el ancho
   const sizeClasses = {
-    xs: 'w-full max-w-xs',   
-    sm: 'w-full max-w-sm',   
-    md: 'w-full max-w-md',   
-    lg: 'w-full max-w-xl',   // ~1280px
+    xs: 'w-full max-w-xs',
+    sm: 'w-full max-w-sm',
+    md: 'w-full max-w-md',
+    lg: 'w-full max-w-xl',
     xl: 'w-full max-w-2xl',
     '2xl': 'w-full max-w-3xl',
     '3xl': 'w-full max-w-4xl',
@@ -54,20 +52,18 @@ const Modal = ({
     full: 'w-full max-w-none',
   };
 
-  // Clases de Tailwind para el alto
-  // Por ejemplo, puedes usar fracciones de la pantalla (vh) o 'max-h' con un valor
   const heightClasses = {
-    default: 'h-auto',          // Se ajusta al contenido
-    sm: 'max-h-[50vh]',         // Máximo 50% del alto de la pantalla
-    md: 'max-h-[70vh]',         // Máximo ~70% 
-    tall: 'max-h-[80vh]',       // 
-    full: 'h-full max-h-none',  // Toma todo el alto
+    default: 'h-auto',
+    sm: 'max-h-[50vh]',
+    md: 'max-h-[70vh]',
+    tall: 'max-h-[80vh]',
+    full: 'h-full max-h-none',
   };
 
   return (
     <div
       className={`
-        fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 
+        fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50
         transition-opacity duration-300 ease-in-out
         ${visible ? 'opacity-100' : 'opacity-0'}
       `}
@@ -81,7 +77,6 @@ const Modal = ({
           transition-transform duration-300 ease-in-out
         `}
       >
-        {/* Barra superior con título y botones */}
         <div className="flex items-center justify-between mb-2">
           {showBackButton ? (
             <button
@@ -94,9 +89,7 @@ const Modal = ({
             <div className="w-12"></div>
           )}
 
-          <h2 className="font-bold text-xl text-center flex-grow text-black">
-            {title}
-          </h2>
+          <h2 className="font-bold text-xl text-center flex-grow text-black">{title}</h2>
 
           {showCloseButton ? (
             <button
@@ -110,13 +103,9 @@ const Modal = ({
           )}
         </div>
 
-        {/* Línea separadora */}
         {showSeparator && <hr className="my-2 border-gray-300 mb-5" />}
-        
-        {/* Contenido */}
-        <div>
-          {children}
-        </div>
+
+        <div>{children}</div>
       </div>
     </div>
   );

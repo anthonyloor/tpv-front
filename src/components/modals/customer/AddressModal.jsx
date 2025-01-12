@@ -1,4 +1,5 @@
 // src/components/modals/customer/AddressModal.jsx
+
 import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 
@@ -14,14 +15,12 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({}),
         })
           .then((response) => {
-            if (!response.ok) {
-              throw new Error('Error al obtener direcciones del cliente');
-            }
+            if (!response.ok) throw new Error('Error al obtener direcciones');
             return response.json();
           })
           .then((data) => {
@@ -31,7 +30,7 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
             setAddresses(validAddresses);
           })
           .catch((error) => {
-            console.error('Error al obtener direcciones del cliente:', error);
+            console.error('Error direcciones:', error);
           });
 
         const storeAddressData = {
@@ -45,7 +44,6 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
         };
         setStoreAddress(storeAddressData);
       };
-
       fetchClientAddresses(clientId);
     }
   }, [isOpen, clientId, shop.name]);
@@ -60,10 +58,8 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
       isOpen={isOpen}
       onClose={onClose}
       title="Seleccionar Dirección"
-      showBackButton={false}
-      showCloseButton={true}
       size="lg"
-      height="tall" 
+      height="tall"
     >
       <div className="p-4">
         <div className="grid grid-cols-1 gap-4">

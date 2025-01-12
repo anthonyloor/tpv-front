@@ -1,8 +1,9 @@
-// OpenPosModal.jsx
-import React, { useState } from 'react';
-import Modal from '../Modal'; // Importamos el componente Modal existente
+// src/components/modals/pos/OpenPosModal.jsx
 
-const OpenPosModal = ({tokenParam, onSubmit, errorMessage }) => {
+import React, { useState } from 'react';
+import Modal from '../Modal';
+
+const OpenPosModal = ({ tokenParam, onSubmit, errorMessage }) => {
   const [initCash, setInitCash] = useState('');
 
   const handleOpenPos = () => {

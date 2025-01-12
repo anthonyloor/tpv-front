@@ -1,4 +1,5 @@
-// LicenseModal.jsx
+// src/components/modals/license/LicenseModal.jsx
+
 import React, { useState } from 'react';
 
 function LicenseModal({ onSubmit, errorMessage }) {

@@ -1,29 +1,29 @@
-// src/components/modals/configuration/permissions/PermissionsModal.jsx
+// src/components/modals/configuration/printers/TicketConfigModal.jsx
+
 import React, { useState } from 'react';
 
 const PermissionsModal = ({ onClose, empleadoActual, setPermisosGlobal }) => {
   const [permisos, setPermisos] = useState({
-    "Vendedor TPV": { "acceso_ejecutar": "Denegado" },
-    "Encargado": { "acceso_ejecutar": "Permitido" },
-    "Admin": { "acceso_ejecutar": "Permitido" }
+    'Vendedor TPV': { acceso_ejecutar: 'Denegado' },
+    Encargado: { acceso_ejecutar: 'Permitido' },
+    Admin: { acceso_ejecutar: 'Permitido' },
   });
 
   const handlePermisoChange = (rol, accion, permiso) => {
-    setPermisos((prevPermisos) => ({
-      ...prevPermisos,
-      [rol]: { ...prevPermisos[rol], [accion]: permiso }
+    setPermisos((prev) => ({
+      ...prev,
+      [rol]: { ...prev[rol], [accion]: permiso },
     }));
   };
 
   const handleGuardarPermisos = () => {
-    setPermisosGlobal(permisos);
+    if (setPermisosGlobal) setPermisosGlobal(permisos);
     alert('Permisos actualizados correctamente');
     onClose();
   };
 
   return (
     <div>
-      {/* Título eliminado, ahora el título principal se maneja en el modal padre */}
       {empleadoActual?.nivel_permisos === 'Admin' ? (
         <div className="space-y-4">
           {['Vendedor TPV', 'Encargado', 'Admin'].map((rol) => (
@@ -42,7 +42,10 @@ const PermissionsModal = ({ onClose, empleadoActual, setPermisosGlobal }) => {
               </div>
             </div>
           ))}
-          <button className="bg-blue-500 text-white px-4 py-2 rounded mt-4" onClick={handleGuardarPermisos}>
+          <button
+            className="bg-blue-500 text-white px-4 py-2 rounded mt-4"
+            onClick={handleGuardarPermisos}
+          >
             Guardar Permisos
           </button>
         </div>

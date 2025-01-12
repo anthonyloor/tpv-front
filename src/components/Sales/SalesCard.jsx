@@ -7,18 +7,15 @@ import ParkedCartsModal from '../modals/parked/ParkedCartsModal';
 import PinValidationModal from '../modals/pin/PinValidationModal';
 import DiscountModal from '../modals/discount/DiscountModal';
 import TicketViewModal from '../modals/ticket/TicketViewModal';
-
 import useFinalizeSale from '../../hooks/useFinalizeSale';
 import useDiscounts from '../../hooks/useDiscounts';
 import { AuthContext } from '../../contexts/AuthContext';
 
 function simulateDiscountConsumption(cartItems, appliedDiscounts) {
-  // 1) Calcular subtotal con impuestos
   const subtotalInclTax = cartItems.reduce(
-    (acc, item) => acc + item.final_price_incl_tax * item.quantity, 
+    (acc, item) => acc + item.final_price_incl_tax * item.quantity,
     0
   );
-
   let remaining = subtotalInclTax;
   const leftoverArray = [];
   let totalDiscounts = 0;
@@ -27,7 +24,6 @@ function simulateDiscountConsumption(cartItems, appliedDiscounts) {
     const { reduction_amount = 0, reduction_percent = 0 } = disc;
     let discountValue = 0;
     let leftoverValue = 0;
-
     if (reduction_percent > 0) {
       discountValue = (remaining * reduction_percent) / 100;
     } else if (reduction_amount > 0) {
@@ -40,19 +36,15 @@ function simulateDiscountConsumption(cartItems, appliedDiscounts) {
     }
     remaining -= discountValue;
     if (remaining < 0) remaining = 0;
-
     totalDiscounts += discountValue;
-
     if (leftoverValue > 0) {
       leftoverArray.push({
         code: disc.code,
-        leftover: leftoverValue
+        leftover: leftoverValue,
       });
     }
   });
 
-  // finalTotal => remaining
-  // leftoverArray => la parte no usada de cada vale
   return { leftoverArray, finalTotal: remaining };
 }
 
@@ -71,10 +63,6 @@ function SalesCard({
   const { isLoading, finalizeSale } = useFinalizeSale();
   const { idProfile } = useContext(AuthContext);
   const [leftoverPreview, setLeftoverPreview] = useState([]);
-
-  // ─────────────────────────────────
-  // ── Estados de modales ───────────
-  // ─────────────────────────────────
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isReturnsModalOpen, setIsReturnsModalOpen] = useState(false);
@@ -82,27 +70,11 @@ function SalesCard({
   const [isParkedCartsModalOpen, setIsParkedCartsModalOpen] = useState(false);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [isFinalSaleModalOpen, setFinalSaleModalOpen] = useState(false);
-
-  // ──────────────────────────────────
-  // ── Estados para aparcar ticket ──
-  // ──────────────────────────────────
   const [ticketName, setTicketName] = useState('');
-
-  // ─────────────────────────────────
-  // ── Métodos de pago, cambio etc ──
-  // ─────────────────────────────────
   const [selectedMethods, setSelectedMethods] = useState([]);
-  const [amounts, setAmounts] = useState({
-    efectivo: '',
-    tarjeta: '',
-    bizum: '',
-  });
+  const [amounts, setAmounts] = useState({ efectivo: '', tarjeta: '', bizum: '' });
   const [changeAmount, setChangeAmount] = useState(0);
   const [giftTicket, setGiftTicket] = useState(false);
-
-  // ─────────────────────────────────
-  // ── Modal Ticket al finalizar ───
-  // ─────────────────────────────────
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketOrderId, setTicketOrderId] = useState(null);
   const [printOnOpen, setPrintOnOpen] = useState(false);
@@ -110,47 +82,25 @@ function SalesCard({
   const [giftTicketTM, setGiftTicketTM] = useState(false);
   const [cartRuleModalOpen, setCartRuleModalOpen] = useState(false);
   const [newCartRuleCode, setNewCartRuleCode] = useState(null);
+  const { appliedDiscounts, addDiscount, removeDiscountByIndex, clearDiscounts } = useDiscounts();
 
-  // ─────────────────────────────────────────────
-  // ── HOOK DE DESCUENTOS (useDiscounts) ───────
-  // ─────────────────────────────────────────────
-  const {
-    appliedDiscounts,
-    addDiscount,
-    removeDiscountByIndex,
-    clearDiscounts,
-  } = useDiscounts();
-
-  // ─────────────────────────────
-  // ── Calcular Subtotal ───────
-  // ─────────────────────────────
   const subtotalProducts = cartItems.reduce(
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
     0
   );
 
-  // ────────────────────────────────────────────
-  // ── Calcular total de descuentos ───────────
-  // ────────────────────────────────────────────
   let totalDiscounts = 0;
   appliedDiscounts.forEach((disc) => {
     const { reduction_amount = 0, reduction_percent = 0 } = disc;
     if (reduction_percent > 0) {
       totalDiscounts += (subtotalProducts * reduction_percent) / 100;
     } else if (reduction_amount > 0) {
-      // No exceder subtotal
       totalDiscounts += Math.min(subtotalProducts, reduction_amount);
     }
   });
 
-  // ─────────────────────────────
-  // ── Total Final ─────────────
-  // ─────────────────────────────
   const total = subtotalProducts - totalDiscounts;
 
-  // ─────────────────────────────
-  // ── Aparcar Carrito ─────────
-  // ─────────────────────────────
   const handleParkCart = () => {
     if (cartItems.length === 0) {
       alert('No hay productos en el carrito para aparcar.');
@@ -167,31 +117,25 @@ function SalesCard({
     saveCurrentCartAsParked(ticketName.trim());
     setTicketName('');
     setIsNameModalOpen(false);
-    // Limpiar el carrito y los descuentos
     handleClearCart();
   };
 
-  // Limpia carrito + descuentos
   const handleClearCart = () => {
     setCartItems([]);
-    clearDiscounts(); // hook useDiscounts => limpia en estado y localStorage
+    clearDiscounts();
   };
 
-  // Parked carts
   const parkedCarts = getParkedCarts();
   const handleLoadCart = (cartId) => {
     loadParkedCart(cartId);
     setIsParkedCartsModalOpen(false);
   };
   const handleDeleteCart = (cartId) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este carrito aparcado?')) {
+    if (window.confirm('¿Estás seguro de eliminar este ticket aparcado?')) {
       deleteParkedCart(cartId);
     }
   };
 
-  // ───────────────────────────────────────────
-  // ── Manejo de Métodos de Pago y Cambios ───
-  // ───────────────────────────────────────────
   const togglePaymentMethod = (method) => {
     if (selectedMethods.includes(method)) {
       const updatedAmounts = { ...amounts, [method]: '' };
@@ -205,9 +149,7 @@ function SalesCard({
           (sum, val) => sum + (parseFloat(val) || 0),
           0
         );
-        const remain = (total - totalEntered) > 0
-          ? (total - totalEntered).toFixed(2)
-          : '';
+        const remain = total - totalEntered > 0 ? (total - totalEntered).toFixed(2) : '';
         const updated = { ...amounts, [method]: remain };
         setAmounts(updated);
         updateChangeAmount(updated);
@@ -233,15 +175,10 @@ function SalesCard({
     setChangeAmount(totalEnteredAmount - total);
   };
 
-  // ─────────────────────────────
-  // ── Finalizar Venta ─────────
-  // ─────────────────────────────
   const [leftoverInfo, setLeftoverInfo] = useState([]);
-
   const handleFinalSale = () => {
     if (cartItems.length === 0) return;
-    // 1) Calcular la simulación:
-    const { leftoverArray, finalTotal } = simulateDiscountConsumption(cartItems, appliedDiscounts);
+    const { leftoverArray } = simulateDiscountConsumption(cartItems, appliedDiscounts);
     setLeftoverPreview(leftoverArray);
     setFinalSaleModalOpen(true);
   };
@@ -251,13 +188,10 @@ function SalesCard({
   };
 
   const handleConfirmSale = () => {
-    console.log('%c[SalesCard] handleConfirmSale => Llamando finalizeSale...', 'color: blue; font-weight: bold');
-    console.log('%c[SalesCard] => appliedDiscounts:', 'color:blue', appliedDiscounts);
-
     finalizeSale(
       {
         cartItems,
-        appliedDiscounts, 
+        appliedDiscounts,
         total,
         selectedMethods,
         amounts,
@@ -269,32 +203,22 @@ function SalesCard({
           giftTicket,
           changeAmount,
           leftoverArray,
-          newCartRuleCode
+          newCartRuleCode,
         }) => {
-          console.log('%c[SalesCard] onSuccess => leftoverArray', 'color: green', leftoverArray);
-
-          // Manejo de ticket
           setTicketOrderId(orderId);
           setGiftTicketTM(giftTicket);
           setChangeAmountTM(changeAmount);
           setTicketModalOpen(true);
           setPrintOnOpen(print);
-
-          // 2) Guardar el newCartRuleCode en un estado para luego llamar al TicketViewModal con mode="cart_rule"
           if (newCartRuleCode) {
-            setNewCartRuleCode(newCartRuleCode); 
+            setNewCartRuleCode(newCartRuleCode);
           }
-
-          // leftover => ver si hay sobrante
           setLeftoverInfo(leftoverArray);
-          console.log('[SalesCard] leftoverInfo set =>', leftoverArray);
           leftoverArray.forEach((l) => {
             if (l.leftover > 0) {
               alert(`Importe restante del vale ${l.code}: ${l.leftover.toFixed(2)} €`);
             }
           });
-
-          // Limpiar
           setCartItems([]);
           const storedShop = JSON.parse(localStorage.getItem('shop'));
           if (storedShop) {
@@ -305,35 +229,28 @@ function SalesCard({
           setChangeAmount(0);
           setGiftTicket(false);
           setFinalSaleModalOpen(false);
-
-          // Borrar descuentos
           clearDiscounts();
         },
-        onError: (error) => {
-          alert('Error al finalizar la venta. Por favor, intenta nuevamente.');
+        onError: () => {
+          alert('Error al finalizar la venta. Intenta nuevamente.');
         },
       },
       true
     );
   };
 
-   // Al cerrar el ticket normal => si hay newCartRuleCode => abrir TicketViewModal modo cart_rule
-   const handleCloseTicketNormal = () => {
+  const handleCloseTicketNormal = () => {
     setTicketModalOpen(false);
     if (newCartRuleCode) {
       setCartRuleModalOpen(true);
     }
   };
 
-  // Botón deshabilitado si no hay fondos
   const totalEntered = Object.values(amounts).reduce(
     (sum, val) => sum + (parseFloat(val) || 0),
     0
   );
 
-  // ─────────────────────────────
-  // ── Manejo de Descuento ─────
-  // ─────────────────────────────
   const handleDescuentoClick = () => {
     if (idProfile === 1) {
       setIsDiscountModalOpen(true);
@@ -346,12 +263,10 @@ function SalesCard({
     setIsDiscountModalOpen(true);
   };
 
-  // Cantidad total de items
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="bg-white rounded-lg shadow p-4 h-full flex flex-col relative">
-      {/* Sección superior */}
       <div className="mb-4 flex items-center justify-between">
         <div className="bg-orange-500 text-white px-3 py-1 rounded-full">
           {totalItems}
@@ -363,22 +278,15 @@ function SalesCard({
           >
             Tickets Aparcados
           </button>
-          <button
-            className="bg-gray-200 p-2 rounded"
-            onClick={handleParkCart}
-          >
+          <button className="bg-gray-200 p-2 rounded" onClick={handleParkCart}>
             Guardar Ticket
           </button>
-          <button
-            className="bg-gray-200 p-2 rounded"
-            onClick={handleClearCart}
-          >
+          <button className="bg-gray-200 p-2 rounded" onClick={handleClearCart}>
             Borrar Ticket
           </button>
         </div>
       </div>
 
-      {/* Lista de productos */}
       <div className="relative z-10 flex-grow overflow-auto">
         <h4 className="font-bold text-lg mb-2">Productos en el Ticket</h4>
         {cartItems.length > 0 ? (
@@ -423,28 +331,23 @@ function SalesCard({
         )}
       </div>
 
-      {/* Sección de descuentos */}
       {appliedDiscounts.length > 0 && (
         <div className="mt-4 bg-green-50 p-3 rounded">
           <h4 className="font-bold text-lg mb-2">Descuentos Aplicados</h4>
           <ul className="space-y-2">
             {appliedDiscounts.map((disc, index) => {
-              // disc = { code, name, reduction_amount, reduction_percent, leftover? }
               const label = disc.reduction_percent > 0
                 ? `${disc.reduction_percent}%`
                 : `${disc.reduction_amount?.toFixed(2) || '0.00'} €`;
-
               return (
                 <li
                   key={index}
                   className="p-2 border rounded flex flex-col md:flex-row md:justify-between md:items-center"
                 >
                   <div>
-                    {/* Mostrar code y name */}
                     <div className="font-bold">
                       {disc.name || disc.code}
                     </div>
-                    {/* También podemos mostrar el code debajo, si name y code difieren */}
                     {disc.code && disc.name && (
                       <div className="text-xs text-gray-600">({disc.code})</div>
                     )}
@@ -467,13 +370,10 @@ function SalesCard({
         </div>
       )}
 
-      {/* Totales */}
       <div className="mt-4 border-t pt-4">
         <div className="flex justify-between items-center">
           <span className="text-xl font-medium">Subtotal Productos:</span>
-          <span className="text-xl font-bold">
-            {subtotalProducts.toFixed(2)} €
-          </span>
+          <span className="text-xl font-bold">{subtotalProducts.toFixed(2)} €</span>
         </div>
         {appliedDiscounts.length > 0 && (
           <div className="flex justify-between items-center mt-2">
@@ -491,17 +391,16 @@ function SalesCard({
         </div>
       </div>
 
-      {/* Botones */}
       <div className="mt-4 flex flex-col space-y-2">
         <div className="flex justify-between space-x-2">
           <button
-            className="bg-gray-300 text-black px-2 py-2 rounded w-1/2 flex items-center justify-center"
+            className="bg-gray-300 text-black px-2 py-2 rounded w-1/2"
             onClick={() => setIsReturnsModalOpen(true)}
           >
             Devoluciones
           </button>
           <button
-            className="bg-gray-300 text-black px-2 py-2 rounded w-1/2 flex items-center justify-center"
+            className="bg-gray-300 text-black px-2 py-2 rounded w-1/2"
             onClick={() => setIsReprintModalOpen(true)}
           >
             Reimprimir
@@ -509,13 +408,13 @@ function SalesCard({
         </div>
         <div className="flex justify-between space-x-2">
           <button
-            className="bg-green-500 text-white px-2 py-2 rounded w-1/2 flex items-center justify-center"
+            className="bg-green-500 text-white px-2 py-2 rounded w-1/2"
             onClick={() => alert('Añadir Manualmente')}
           >
             Añadir Manual
           </button>
           <button
-            className="bg-purple-500 text-white px-2 py-2 rounded w-1/2 flex items-center justify-center"
+            className="bg-purple-500 text-white px-2 py-2 rounded w-1/2"
             onClick={handleDescuentoClick}
           >
             Descuento
@@ -537,7 +436,6 @@ function SalesCard({
         </button>
       </div>
 
-      {/* Modales */}
       <ParkedCartsModal
         isOpen={isParkedCartsModalOpen}
         onClose={() => setIsParkedCartsModalOpen(false)}
@@ -562,16 +460,10 @@ function SalesCard({
             placeholder="Introduce un nombre para el ticket"
           />
           <div className="flex justify-end space-x-2">
-            <button
-              className="bg-gray-300 text-black px-4 py-2 rounded"
-              onClick={() => setIsNameModalOpen(false)}
-            >
+            <button className="bg-gray-300 text-black px-4 py-2 rounded" onClick={() => setIsNameModalOpen(false)}>
               Cancelar
             </button>
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded"
-              onClick={handleSaveParkedCart}
-            >
+            <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleSaveParkedCart}>
               Guardar
             </button>
           </div>
@@ -601,7 +493,6 @@ function SalesCard({
         isOpen={isDiscountModalOpen}
         onClose={() => setIsDiscountModalOpen(false)}
         onDiscountApplied={(discObj) => {
-          // discObj => { code, name, reduction_amount, reduction_percent, leftover? }
           addDiscount(discObj);
           setIsDiscountModalOpen(false);
         }}
@@ -612,7 +503,6 @@ function SalesCard({
         onClose={handleCloseModal}
         title="Finalizar Venta"
         showCloseButton
-        showBackButton={false}
         size="lg"
         height="tall"
       >
@@ -632,8 +522,6 @@ function SalesCard({
                 </span>
               </div>
             )}
-
-            {/* leftover => leftoverInfo antes de finalizar */}
             {leftoverPreview?.length > 0 && (
               <div className="mt-2">
                 {leftoverPreview.map((left, idx) => (
@@ -648,7 +536,6 @@ function SalesCard({
                 ))}
               </div>
             )}
-
             <div className="flex justify-between mt-2">
               <span className="text-xl font-bold">Total:</span>
               <span className="text-xl font-extrabold">
@@ -666,7 +553,6 @@ function SalesCard({
             </p>
           </div>
 
-          {/* Métodos de pago */}
           <div className="flex flex-col space-y-4 mb-4">
             {['efectivo', 'tarjeta', 'bizum'].map((method) => (
               <div key={method} className="flex items-center space-x-4">
@@ -696,12 +582,12 @@ function SalesCard({
 
           <button
             className={`w-full py-4 px-4 py-2 rounded text-white ${
-              (totalEntered < total) || isLoading
+              totalEntered < total || isLoading
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-600'
             }`}
             onClick={handleConfirmSale}
-            disabled={(totalEntered < total) || isLoading}
+            disabled={totalEntered < total || isLoading}
           >
             {isLoading ? 'Procesando...' : 'Confirmar Venta'}
           </button>
@@ -722,14 +608,13 @@ function SalesCard({
           height="tall"
         />
       )}
-      {/* Segundo modal => vale descuento */}
       {cartRuleModalOpen && newCartRuleCode && (
         <TicketViewModal
           isOpen={cartRuleModalOpen}
           onClose={() => setCartRuleModalOpen(false)}
           mode="cart_rule"
           cartRuleCode={newCartRuleCode}
-          printOnOpen={true}
+          printOnOpen
           showCloseButton
           size="lg"
           height="tall"

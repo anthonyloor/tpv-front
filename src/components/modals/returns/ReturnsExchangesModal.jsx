@@ -1,9 +1,9 @@
+// src/components/modals/returns/ReturnsExchangesModal.jsx
+
 import React, { useState } from "react";
 import Modal from "../Modal";
-import TicketViewModal from "../ticket/TicketViewModal"; // Ajusta la ruta según tu estructura
+import TicketViewModal from "../ticket/TicketViewModal";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
-
-// PrimeReact
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 
@@ -16,9 +16,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [returnedProductMap, setReturnedProductMap] = useState({});
   const [viewTicketId, setViewTicketId] = useState(null);
-
   const apiFetch = useApiFetch();
-
   const skeletonData = new Array(6).fill(null).map((_, idx) => ({
     uniqueLineId: `skeleton-${idx}`,
     product_name: "Cargando...",
@@ -32,22 +30,17 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       setError(null);
       setIsLoading(true);
       setReturnedProductMap({});
-
-      // 1. Buscar el pedido original por ID
       const data = await apiFetch(
         `https://apitpv.anthonyloor.com/get_order?id_order=${encodeURIComponent(
           orderId
         )}`,
         { method: "GET" }
       );
-
       if (!data || !data.order_details) {
         setError("No se encontró la venta o no tiene detalles.");
         setOrderData(null);
         return;
       }
-
-      // Asignar uniqueLineId a cada detalle del pedido original
       const details = data.order_details.map((item) => ({
         ...item,
         uniqueLineId: `${item.product_id}-${item.product_attribute_id}`,
@@ -58,15 +51,10 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       setSelectedRows([]);
       setReturnQuantities({});
 
-      // 2. Obtener todas las órdenes recientes
       const allOrdersData = await apiFetch(
         "https://apitpv.anthonyloor.com/get_orders",
-        {
-          method: "GET",
-        }
+        { method: "GET" }
       );
-
-      // 3. Filtrar órdenes que contienen una rectificación del ticket buscado
       const rectificationOrders = [];
       if (allOrdersData && Array.isArray(allOrdersData)) {
         for (let order of allOrdersData) {
@@ -83,8 +71,6 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
           }
         }
       }
-
-      // 4. Determinar qué productos del pedido original ya fueron devueltos
       const returnedMap = {};
       if (rectificationOrders.length > 0 && data.order_details) {
         for (let prod of data.order_details) {
@@ -95,15 +81,12 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                 detail.product_id === prod.product_id &&
                 detail.product_attribute_id === prod.product_attribute_id
               ) {
-                // Asociar el uniqueLineId con el id_order de rectificación
                 returnedMap[prod.uniqueLineId] = rectOrder.id_order;
               }
             }
           }
         }
       }
-
-      console.log("Returned Product Map:", returnedMap);
       setReturnedProductMap(returnedMap);
     } catch (e) {
       console.error("Error al buscar la venta:", e);
@@ -115,12 +98,10 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   };
 
   const handleSelectionChange = (e) => {
-    // Filtrar para excluir productos ya devueltos
     const filtered = e.value.filter(
       (prod) => !returnedProductMap[prod.uniqueLineId]
     );
     setSelectedRows(filtered);
-
     filtered.forEach((prod) => {
       const key = prod.uniqueLineId;
       if (!returnQuantities[key]) {
@@ -179,7 +160,6 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
 
   const handleAceptar = () => {
     if (!orderData || selectedRows.length === 0) return;
-
     const rectificacionProduct = {
       id_product: 0,
       id_product_attribute: 0,
@@ -219,7 +199,6 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     });
 
     alert("Rectificación añadida y productos devueltos al carrito.");
-
     setOrderId("");
     setOrderData(null);
     setError(null);
@@ -230,7 +209,6 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   };
 
   const canProceed = !!orderData && selectedRows.length > 0;
-
   const displayData = isLoading ? skeletonData : orderData?.order_details || [];
 
   if (!isOpen) return null;
@@ -259,9 +237,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               className="border rounded p-2 w-full"
             />
           </div>
-
           {error && <p className="text-red-500 text-sm">{error}</p>}
-
           <div className="border border-gray-300 rounded-md p-2 bg-white shadow-sm">
             <DataTable
               value={displayData}
@@ -337,17 +313,14 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               <Column
                 header="Devolver"
                 body={
-                  isLoading
-                    ? () => (
-                        <div className="animate-pulse bg-gray-200 h-3 w-8 ml-auto rounded" />
-                      )
-                    : devolverBodyTemplate
+                  isLoading ? () => (
+                    <div className="animate-pulse bg-gray-200 h-3 w-8 ml-auto rounded" />
+                  ) : devolverBodyTemplate
                 }
                 style={{ width: "90px", textAlign: "center" }}
               />
             </DataTable>
           </div>
-
           <div className="flex justify-end">
             <button
               className={`px-4 py-2 rounded text-white font-semibold transition-colors ${

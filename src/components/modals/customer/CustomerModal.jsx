@@ -1,4 +1,5 @@
 // src/components/modals/customer/CustomerModal.jsx
+
 import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 
@@ -10,59 +11,6 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [addresses, setAddresses] = useState([]);
   const [storeAddress, setStoreAddress] = useState(null);
-  const [selectedClientInfo, setSelectedClientInfo] = useState(null);
-
-  const fetchAllClients = () => {
-    const token = localStorage.getItem('token');
-    fetch('https://apitpv.anthonyloor.com/get_all_customers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Error al obtener clientes');
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setClients(data);
-        setErrorMessage('');
-      })
-      .catch((error) => {
-        console.error('Error al obtener clientes:', error);
-        setErrorMessage('Error al obtener clientes. Inténtalo de nuevo.');
-      });
-  };
-
-  const fetchFilteredClients = (filter) => {
-    const token = localStorage.getItem('token');
-    fetch(`https://apitpv.anthonyloor.com/get_customers_filtered?filter=${encodeURIComponent(filter)}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Error al buscar clientes');
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setClients(data);
-        setErrorMessage('');
-      })
-      .catch((error) => {
-        console.error('Error al buscar clientes:', error);
-        setErrorMessage('Error al buscar clientes. Inténtalo de nuevo.');
-      });
-  };
 
   useEffect(() => {
     if (isOpen) {
@@ -74,10 +22,57 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
     }
   }, [isOpen]);
 
+  const fetchAllClients = () => {
+    const token = localStorage.getItem('token');
+    fetch('https://apitpv.anthonyloor.com/get_all_customers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Error al obtener clientes');
+        return res.json();
+      })
+      .then((data) => {
+        setClients(data);
+        setErrorMessage('');
+      })
+      .catch((error) => {
+        console.error('Error obtener clientes:', error);
+        setErrorMessage('Error al obtener clientes. Inténtalo de nuevo.');
+      });
+  };
+
+  const fetchFilteredClients = (filter) => {
+    const token = localStorage.getItem('token');
+    fetch(`https://apitpv.anthonyloor.com/get_customers_filtered?filter=${encodeURIComponent(filter)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Error al buscar clientes');
+        return res.json();
+      })
+      .then((data) => {
+        setClients(data);
+        setErrorMessage('');
+      })
+      .catch((error) => {
+        console.error('Error al buscar clientes:', error);
+        setErrorMessage('Error al buscar clientes.');
+      });
+  };
+
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-
     if (value.trim() === '') {
       fetchAllClients();
     } else if (value.length >= 3) {
@@ -97,15 +92,13 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({}),
     })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Error al obtener direcciones del cliente');
-        }
-        return response.json();
+      .then((res) => {
+        if (!res.ok) throw new Error('Error al obtener direcciones del cliente');
+        return res.json();
       })
       .then((data) => {
         const validAddresses = data
@@ -114,11 +107,11 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
         setAddresses(validAddresses);
       })
       .catch((error) => {
-        console.error('Error al obtener direcciones del cliente:', error);
+        console.error('Error direcciones cliente:', error);
       });
 
     const shop = JSON.parse(localStorage.getItem('shop'));
-    const storeAddr = {
+    setStoreAddress({
       id_address: 'store',
       alias: 'Vender en tienda',
       address1: `Calle ${shop.name}`,
@@ -126,8 +119,7 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
       postcode: '',
       city: '',
       phone: '',
-    };
-    setStoreAddress(storeAddr);
+    });
   };
 
   const handleAddressSelect = (address) => {
@@ -136,11 +128,8 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
   };
 
   const goBack = () => {
-    if (step === 'selectAddress') {
-      setStep('selectClient');
-    } else {
-      onClose();
-    }
+    if (step === 'selectAddress') setStep('selectClient');
+    else onClose();
   };
 
   let title = 'Seleccionar Cliente';
@@ -156,7 +145,7 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
         isOpen={isOpen}
         onClose={onClose}
         title={title}
-        showCloseButton={true}
+        showCloseButton
         showBackButton={showBackButton}
         onBack={goBack}
         size="lg"
@@ -171,11 +160,7 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
               onChange={handleSearchChange}
               className="w-full p-2 border border-gray-300 rounded mb-4"
             />
-            {errorMessage && (
-              <div className="mb-4 text-red-600">
-                {errorMessage}
-              </div>
-            )}
+            {errorMessage && <div className="mb-4 text-red-600">{errorMessage}</div>}
             <div className="overflow-y-auto max-h-64">
               <table className="w-full text-left">
                 <thead>
@@ -243,15 +228,6 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
           </div>
         )}
       </Modal>
-
-      {selectedClientInfo && (
-        <Modal
-        isOpen={true}
-        onClose={() => setSelectedClientInfo(null)}
-        title="Detalles del Cliente">
-          {/* Aquí el contenido del modal de detalles del cliente */}
-        </Modal>
-      )}
     </>
   );
 };

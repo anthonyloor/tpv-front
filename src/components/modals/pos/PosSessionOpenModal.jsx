@@ -1,12 +1,13 @@
 // src/components/modals/pos/PosSessionOpenModal.jsx
+
 import React from 'react';
-import Modal from '../../modals/Modal'; // tu componente base de modal
+import Modal from '../../modals/Modal';
 
 const PosSessionOpenModal = ({ isOpen, onClose, onContinue, onCloseCash }) => {
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose} 
+      onClose={onClose}
       title="Sesión de Caja Abierta"
       size="sm"
       height="auto"

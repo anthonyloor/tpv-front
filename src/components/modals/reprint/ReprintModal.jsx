@@ -1,34 +1,23 @@
 // src/components/modals/reprint/ReprintModal.jsx
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Modal from '../Modal'; 
+import Modal from '../Modal';
 import { useApiFetch } from '../../../components/utils/useApiFetch';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
-// Nuestro TicketViewModal con mode="ticket"
 import TicketViewModal from '../ticket/TicketViewModal';
 
-const ReprintModal = ({ isOpen, onClose }) => {
+const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
   const apiFetch = useApiFetch();
-
-  const [mode, setMode] = useState('recent');     // "recent" o "search"
+  const [mode, setMode] = useState('recent');
   const [orderId, setOrderId] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Ventas recientes
   const [allOrders, setAllOrders] = useState([]);
-  // Venta buscada
   const [searchedOrder, setSearchedOrder] = useState(null);
-
-  // Paginación
   const rows = 4;
-
-  // Selección del pedido a reimprimir
   const [selectedOrderId, setSelectedOrderId] = useState(null);
-
-  // Para abrir el modal de ticket
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketGift, setTicketGift] = useState(false);
   const [viewTicketOrderId, setViewTicketOrderId] = useState(null);
@@ -70,10 +59,8 @@ const ReprintModal = ({ isOpen, onClose }) => {
   };
 
   useEffect(() => {
-    if (isOpen) {
-      loadRecentOrders();
-    } else {
-      // Reset
+    if (isOpen) loadRecentOrders();
+    else {
       setAllOrders([]);
       setSearchedOrder(null);
       setOrderId('');
@@ -89,12 +76,10 @@ const ReprintModal = ({ isOpen, onClose }) => {
       alert('Selecciona una venta para reimprimir.');
       return;
     }
-
     let saleToReprint = null;
     if (mode === 'recent') {
-      saleToReprint = allOrders.find(o => o.id_order === selectedOrderId);
+      saleToReprint = allOrders.find((o) => o.id_order === selectedOrderId);
     } else {
-      // mode=search
       if (searchedOrder && searchedOrder.id_order === selectedOrderId) {
         saleToReprint = searchedOrder;
       }
@@ -103,8 +88,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
       alert('No se encontró la venta seleccionada.');
       return;
     }
-
-    // Actualizamos estados para abrir TicketViewModal
     setTicketModalOpen(true);
     setViewTicketOrderId(saleToReprint.id_order);
     setTicketGift(gift);
@@ -117,7 +100,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
 
     const toggleExpand = () => {
       if (!isLoading && sale.order_details?.length > 0) {
-        setExpanded(prev => !prev);
+        setExpanded((prev) => !prev);
       }
     };
 
@@ -130,12 +113,9 @@ const ReprintModal = ({ isOpen, onClose }) => {
       }
     }, [expanded, sale.order_details]);
 
-    // Seleccionar
     const isSelected = sale.id_order === selectedOrderId;
     const handleSelect = () => {
-      if (!isLoading) {
-        setSelectedOrderId(sale.id_order);
-      }
+      if (!isLoading) setSelectedOrderId(sale.id_order);
     };
 
     return (
@@ -143,19 +123,14 @@ const ReprintModal = ({ isOpen, onClose }) => {
         <div className="flex flex-wrap items-center justify-between space-y-1 md:space-y-0">
           <div className="mr-2">
             {isLoading ? (
-              // Skeleton
               <div className="animate-pulse">
                 <div className="bg-gray-200 h-4 w-32 rounded mb-1" />
                 <div className="bg-gray-200 h-3 w-24 rounded" />
               </div>
             ) : (
               <>
-                <div className="font-semibold">
-                  ID Venta: {sale.id_order}
-                </div>
-                <div className="text-gray-600">
-                  ID Cliente: {sale.id_customer}
-                </div>
+                <div className="font-semibold">ID Venta: {sale.id_order}</div>
+                <div className="text-gray-600">ID Cliente: {sale.id_customer}</div>
               </>
             )}
           </div>
@@ -181,7 +156,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
               </>
             )}
 
-            {/* Radio de selección */}
             <div>
               <input
                 type="radio"
@@ -191,7 +165,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
               />
             </div>
 
-            {/* Botón expandir */}
             {(!isLoading && sale.order_details?.length > 0) && (
               <Button
                 label={expanded ? 'Ocultar' : 'Ver Detalles'}
@@ -202,8 +175,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
             )}
           </div>
         </div>
-
-        {/* Subtabla con transición */}
         <div
           ref={contentRef}
           className="overflow-hidden transition-all duration-300"
@@ -256,21 +227,18 @@ const ReprintModal = ({ isOpen, onClose }) => {
     );
   };
 
-  // Skeleton
   const skeletonData = new Array(rows).fill(null).map((_, idx) => ({
     id_order: `skeleton-${idx}`,
     id_customer: '',
     payment: '',
     total_paid: 0,
-    order_details: []
+    order_details: [],
   }));
 
-  // Cuerpo de la columna (primera y única) que renderiza CustomRow
   const singleColumnBodyTemplate = (sale) => {
     return <CustomRow sale={sale} isLoading={isLoading} />;
   };
 
-  // Determinar qué data mostrar
   let displayData = [];
   if (isLoading) {
     displayData = skeletonData;
@@ -278,7 +246,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
     if (mode === 'recent') {
       displayData = allOrders;
     } else {
-      // mode=search
       displayData = searchedOrder ? [searchedOrder] : [];
     }
   }
@@ -293,11 +260,10 @@ const ReprintModal = ({ isOpen, onClose }) => {
         title="Reimprimir Ticket"
         showCloseButton
         showBackButton={false}
-        size="xl"
-        height="md"
+        size={size}
+        height={height}
       >
         <div className="w-full mx-auto space-y-4">
-          {/* Barra de búsqueda */}
           <div className="flex space-x-2 items-end">
             <div className="flex-1">
               <input
@@ -315,7 +281,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
 
           {error && <div className="text-red-500 font-semibold">{error}</div>}
 
-          {/* Tabla */}
           <DataTable
             value={displayData}
             className="p-datatable-sm"
@@ -324,7 +289,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
             dataKey="id_order"
             emptyMessage={
               isLoading
-                ? '' 
+                ? ''
                 : mode === 'recent'
                 ? 'No hay ventas recientes.'
                 : 'No se encontró esa venta.'
@@ -333,7 +298,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
             <Column body={singleColumnBodyTemplate} />
           </DataTable>
 
-          {/* Botones de acción */}
           <div className="flex justify-end space-x-2">
             <Button
               label="Ticket Normal"
@@ -351,15 +315,14 @@ const ReprintModal = ({ isOpen, onClose }) => {
         </div>
       </Modal>
 
-      {/* TicketViewModal con mode="ticket" */}
       {ticketModalOpen && viewTicketOrderId && (
         <TicketViewModal
           isOpen={ticketModalOpen}
           onClose={() => setTicketModalOpen(false)}
-          mode="ticket"         // <-- Aquí indicamos el modo "ticket"
+          mode="ticket"
           orderId={viewTicketOrderId}
           giftTicket={ticketGift}
-          printOnOpen={true}   // Si deseas que abra la impresión automáticamente, pon true
+          printOnOpen
         />
       )}
     </>

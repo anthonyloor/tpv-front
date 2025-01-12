@@ -1,4 +1,5 @@
 // src/components/modals/pin/PinValidationModal.jsx
+
 import React, { useState, useContext } from 'react';
 import Modal from '../Modal';
 import { PinContext } from '../../../contexts/PinContext';
@@ -9,25 +10,19 @@ const PinValidationModal = ({ isOpen, onClose, onSuccess }) => {
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleVerifyPin = () => {
-    console.log('PIN ingresado:', enteredPin);
-    console.log('PIN diario:', dailyPin);
     if (enteredPin === dailyPin) {
       setErrorMessage('');
-      regeneratePin(); // Regenerar el PIN después de verificarlo
-      setEnteredPin(''); // Limpiar el campo de PIN
-      onSuccess(); // Ejecutar la acción de éxito (abrir DiscountModal)
-      onClose(); // Cerrar el modal de validación del PIN
-      console.log('PIN verificado correctamente.');
+      regeneratePin();
+      setEnteredPin('');
+      onSuccess();
+      onClose();
     } else {
       setErrorMessage('PIN incorrecto. Intenta nuevamente.');
-      console.log('PIN incorrecto.');
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleVerifyPin();
-    }
+    if (e.key === 'Enter') handleVerifyPin();
   };
 
   const handleClose = () => {
