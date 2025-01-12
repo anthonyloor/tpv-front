@@ -367,6 +367,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         <TicketViewModal
           isOpen={true}
           onClose={() => setViewTicketId(null)}
+          mode="ticket"
           orderId={viewTicketId}
           showCloseButton
           showBackButton={false}

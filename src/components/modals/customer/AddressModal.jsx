@@ -62,8 +62,8 @@ const AddressModal = ({ isOpen, onClose, clientId, handleSelectAddress, shop }) 
       title="Seleccionar Dirección"
       showBackButton={false}
       showCloseButton={true}
-      size="md"
-      height="md" 
+      size="lg"
+      height="tall" 
     >
       <div className="p-4">
         <div className="grid grid-cols-1 gap-4">

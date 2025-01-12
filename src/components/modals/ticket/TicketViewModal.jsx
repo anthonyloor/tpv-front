@@ -1,157 +1,298 @@
-// src/components/modals/TicketViewModal.jsx
-import React, { useState, useEffect } from 'react';
+// src/components/modals/ticket/TicketViewModal.jsx
+import React, { useEffect, useState, useContext } from 'react';
 import Modal from '../Modal';
 import { useApiFetch } from '../../utils/useApiFetch';
+import { ConfigContext } from '../../../contexts/ConfigContext';
 
-const TicketViewModal = ({ 
-  isOpen, 
-  onClose, 
-  orderId, 
-  printOnOpen = false, 
-  giftTicket = false, 
-  changeAmount = 0 
+const TicketViewModal = ({
+  isOpen,
+  onClose,
+  mode = 'ticket',   // "ticket" (pedido) o "cart_rule" (vale)
+  orderId = null,     // si mode="ticket", usaremos id_order
+  cartRuleCode = null, // si mode="cart_rule", usaremos code del vale
+  printOnOpen = false,
+  giftTicket = false,
+  changeAmount = 0
 }) => {
-  const [ticketHtml, setTicketHtml] = useState('');
-  const [loading, setLoading] = useState(true);
+  const { configData } = useContext(ConfigContext);
+  const [fetchedData, setFetchedData] = useState(null);
   const [error, setError] = useState(null);
+  const [previewHtml, setPreviewHtml] = useState('');
   const apiFetch = useApiFetch();
 
-  // Función para generar el HTML del ticket según si es regalo o no
-  const generateTicketHtml = (orderData, gift, changeAmt) => {
-    if (!orderData) return '';
-    const date = new Date(orderData.date_add || Date.now());
-    const formattedDate = `${String(date.getDate()).padStart(2, '0')}-${String(
-      date.getMonth() + 1
-    ).padStart(2, '0')}-${date.getFullYear()} ${String(date.getHours()).padStart(2, '0')}:${String(
-      date.getMinutes()
-    ).padStart(2, '0')}`;
-    // Obtener ID de empleado desde orderData o localStorage, según disponibilidad
-    const employeeId = orderData.id_employee || localStorage.getItem('employeeId') || 'N/A';
-    const clientId = orderData.id_customer || 'N/A';
-    const paymentMethod = orderData.payment || '';
-    const totalPaid = orderData.total_paid?.toFixed(2) || '0.00';
-    const change = changeAmt ? changeAmt.toFixed(2) : '0.00';
-  
-    const productRows = orderData.order_details.map(item => {
-      const productName = `${item.product_name} ${item.combination_name || ''}`.trim();
-      if (gift) {
-        return `
+  useEffect(() => {
+    if (!isOpen) return;
+    if (mode === 'ticket' && orderId) {
+      loadOrder();
+    } else if (mode === 'cart_rule' && cartRuleCode) {
+      loadCartRule();
+    }
+  }, [isOpen, mode, orderId, cartRuleCode]);
+
+  // ─────────────────────────────────────────────
+  // ── Cargar pedido (modo = "ticket") ─────────
+  // ─────────────────────────────────────────────
+  const loadOrder = async () => {
+    try {
+      setError(null);
+      const data = await apiFetch(`https://apitpv.anthonyloor.com/get_order?id_order=${orderId}`, {
+        method: 'GET'
+      });
+      setFetchedData(data);
+      buildPreviewHtmlForTicket(data, giftTicket);
+    } catch (err) {
+      setError('No se pudo cargar el ticket de la venta.');
+      console.error('[TicketViewModal] Error loadOrder:', err);
+    }
+  };
+
+  // ─────────────────────────────────────────────────
+  // ── Cargar vale descuento (modo = "cart_rule") ──
+  // ─────────────────────────────────────────────────
+  const loadCartRule = async () => {
+    try {
+      setError(null);
+      const data = await apiFetch(`https://apitpv.anthonyloor.com/get_cart_rule?code=${cartRuleCode}`, {
+        method: 'GET'
+      });
+      setFetchedData(data);
+      buildPreviewHtmlForCartRule(data);
+    } catch (err) {
+      setError('No se pudo cargar la información del vale descuento.');
+      console.error('[TicketViewModal] Error loadCartRule:', err);
+    }
+  };
+
+  // ─────────────────────────────────────────
+  // ── Generar preview para un "ticket"  ───
+  // ─────────────────────────────────────────
+  const buildPreviewHtmlForTicket = (orderData, isGiftTicket) => {
+    if (!orderData) return;
+
+    const {
+      id_order,
+      id_customer,
+      id_address_delivery,
+      date_add,
+      total_paid,
+      order_details = [],
+      order_cart_rules = []
+    } = orderData;
+
+    // 1) Textos de config
+    const header1 = configData?.ticket_text_header_1 || '';
+    const header2 = configData?.ticket_text_header_2 || '';
+    const footer1 = configData?.ticket_text_footer_1 || '';
+    const footer2 = configData?.ticket_text_footer_2 || '';
+
+    // 2) Cliente: “Cliente: TPV” si coincide
+    let customerLine = `Cliente: ${id_customer}`;
+    if (
+      configData?.id_customer_default &&
+      id_customer === configData.id_customer_default
+    ) {
+      customerLine = 'Cliente: TPV';
+    }
+
+    // 3) Dirección: no mostrar si coincide
+    let addressLine = `Dirección: ${id_address_delivery}`;
+    if (
+      configData?.id_address_delivery_default &&
+      id_address_delivery === configData.id_address_delivery_default
+    ) {
+      addressLine = ''; 
+    }
+
+    // 4) Lista de productos
+    let productRows = '';
+    order_details.forEach((item) => {
+      const productName = item.product_name.trim();
+      if (isGiftTicket) {
+        productRows += `
           <tr>
-            <td style="text-align:left;">${item.product_quantity}</td>
-            <td style="text-align:left;">${productName}</td>
+            <td>${item.product_quantity}</td>
+            <td>${productName}</td>
           </tr>
         `;
       } else {
-        return `
+        const lineTotal = (item.unit_price_tax_incl * item.product_quantity).toFixed(2);
+        productRows += `
           <tr>
-            <td style="text-align:left;">${item.product_quantity}</td>
-            <td style="text-align:left;">${productName}</td>
+            <td>${item.product_quantity}</td>
+            <td>${productName}</td>
             <td style="text-align:right;">${item.unit_price_tax_incl.toFixed(2)} €</td>
-            <td style="text-align:right;">${(item.unit_price_tax_incl * item.product_quantity).toFixed(2)} €</td>
+            <td style="text-align:right;">${lineTotal} €</td>
           </tr>
         `;
       }
-    }).join('');
-  
-    let paymentMethodsHTML = '';
-    if (!gift) {
-      paymentMethodsHTML = `
-        <div><strong>Método de pago:</strong> ${paymentMethod}</div>
-        <div><strong>Total Pagado:</strong> ${totalPaid} €</div>
-        <div><strong>Cambio:</strong> ${change} €</div>
-      `;
-    }
-  
-    return `
-      <div>
-        <h2>${gift ? 'Ticket Regalo' : 'Ticket Compra'} #${orderData.id_order}</h2>
-        <div>Fecha: ${formattedDate}</div>
-        <div>Empleado ID: ${employeeId}</div>
-        <div>Cliente ID: ${clientId}</div>
-        <hr/>
-        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+    });
+
+    // 5) Descuentos
+    let discountsHtml = '';
+    if (order_cart_rules?.length > 0) {
+      discountsHtml = `
+        <h4 style="margin-top: 10px;">Descuentos aplicados</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
           <thead>
             <tr>
-              <th style="padding:5px; border-bottom:1px solid #ccc;">Cant.</th>
-              <th style="padding:5px; border-bottom:1px solid #ccc;">Producto</th>
-              ${
-                !gift 
-                  ? '<th style="padding:5px; border-bottom:1px solid #ccc; text-align:right;">P/U (€)</th><th style="padding:5px; border-bottom:1px solid #ccc; text-align:right;">Total (€)</th>'
-                  : ''
-              }
+              <th style="text-align:left;">Código</th>
+              <th style="text-align:left;">Nombre</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order_cart_rules.map(rule => `
+              <tr>
+                <td style="padding: 4px;">${rule.code}</td>
+                <td style="padding: 4px;">${rule.name}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // 6) Construir preview interno (SIN <html> <head> <body>)
+    const date = new Date(date_add || Date.now());
+    const formattedDate = date.toLocaleString('es-ES');
+
+    let preview = `
+      <div>
+        ${header1 ? `<h3>${header1}</h3>` : ''}
+        ${header2 ? `<h3>${header2}</h3>` : ''}
+        <hr/>
+        <h2>${isGiftTicket ? 'Ticket Regalo' : 'Ticket Compra'} #${id_order}</h2>
+        <div>Fecha: ${formattedDate}</div>
+        <div>${customerLine}</div>
+        ${addressLine ? `<div>${addressLine}</div>` : ''}
+        <hr/>
+
+        <table style="width:100%; border-collapse:collapse; margin-top:5px;">
+          <thead>
+            <tr>
+              <th>Cant.</th>
+              <th>Producto</th>
+              ${!isGiftTicket ? '<th style="text-align:right;">P/U (€)</th><th style="text-align:right;">Total (€)</th>' : ''}
             </tr>
           </thead>
           <tbody>
             ${productRows}
           </tbody>
         </table>
-        ${!gift ? paymentMethodsHTML : ''}
+
+        ${discountsHtml}
+        ${!isGiftTicket ? `
+          <hr />
+          <div><strong>Total Pagado:</strong> ${total_paid.toFixed(2)} €</div>
+        ` : ''}
+
+        <hr/>
+        <div style="text-align:center;">
+          ${footer1 ? `<p>${footer1}</p>` : ''}
+          ${footer2 ? `<p>${footer2}</p>` : ''}
+        </div>
       </div>
     `;
+    setPreviewHtml(preview);
   };
 
-  useEffect(() => {
-    const fetchTicket = async () => {
-      setLoading(true);
-      try {
-        const orderData = await apiFetch(`https://apitpv.anthonyloor.com/get_order?id_order=${orderId}`, { method: 'GET' });
-        // Generar HTML del ticket normal para visualización
-        const htmlContent = generateTicketHtml(orderData, false, changeAmount);
-        setTicketHtml(htmlContent);
-      } catch (err) {
-        setError('Error al cargar el ticket.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // ─────────────────────────────────────────────
+  // ── Generar preview para un “cart_rule”  ─────
+  // ─────────────────────────────────────────────
+  const buildPreviewHtmlForCartRule = (cartRuleData) => {
+    if (!cartRuleData) return;
 
-    if (orderId && isOpen) {
-      fetchTicket();
+    // { date_from, date_to, code, description, reduction_percent, reduction_amount, ... }
+    const {
+      code,
+      description,
+      date_from,
+      date_to,
+      reduction_percent,
+      reduction_amount
+    } = cartRuleData;
+
+    const header1 = configData?.ticket_text_header_1 || '';
+    const header2 = configData?.ticket_text_header_2 || '';
+    const footer1 = configData?.ticket_text_footer_1 || '';
+    const footer2 = configData?.ticket_text_footer_2 || '';
+
+    const fromStr = new Date(date_from).toLocaleString('es-ES');
+    const toStr = new Date(date_to).toLocaleString('es-ES');
+
+    let discountLine = '';
+    if (reduction_percent > 0) {
+      discountLine = `Descuento: ${reduction_percent}%`;
+    } else if (reduction_amount > 0) {
+      discountLine = `Descuento: ${reduction_amount.toFixed(2)} €`;
     }
-  }, [orderId, isOpen, changeAmount, apiFetch]);
 
+    const preview = `
+      <div>
+        ${header1 ? `<h3>${header1}</h3>` : ''}
+        ${header2 ? `<h3>${header2}</h3>` : ''}
+        <hr/>
+        <h2>Vale Descuento: ${code}</h2>
+        <div>${description}</div>
+        <hr/>
+        <div>Válido desde: ${fromStr}</div>
+        <div>Hasta: ${toStr}</div>
+        <hr/>
+        <div><strong>${discountLine}</strong></div>
+        <hr/>
+        <div style="text-align:center;">
+          ${footer1 ? `<p>${footer1}</p>` : ''}
+          ${footer2 ? `<p>${footer2}</p>` : ''}
+        </div>
+      </div>
+    `;
+    setPreviewHtml(preview);
+  };
+
+  // ─────────────────────────────────────────────
+  // ── Efecto para imprimir con <html> <body> ──
+  // ─────────────────────────────────────────────
   useEffect(() => {
-    const printTicket = async () => {
-      if (printOnOpen && ticketHtml) {
-        // Construir un documento completo para impresión usando el contenido generado
-        const fullHtml = `
-          <html>
-            <head>
-              <meta charset="UTF-8" />
-              <style>
-                body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 20px; }
-                h2 { text-align: center; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                th, td { padding: 5px; border-bottom: 1px solid #ccc; }
-                hr { border: none; border-top: 1px solid #000; margin: 10px 0; }
-              </style>
-            </head>
-            <body>
-              ${ticketHtml}
-            </body>
-          </html>
-        `;
-        const printWindow = window.open('', '_blank', 'width=600,height=1200');
-        printWindow.document.open();
-        printWindow.document.write(fullHtml);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-        console.log('Ticket impreso');
-      }
-      
-    };
-    printTicket();
-  }, [printOnOpen, ticketHtml, giftTicket, orderId, changeAmount, apiFetch]);
+    if (printOnOpen && previewHtml) {
+      // Generar HTML completo (añadir <html> <head> <body>)
+      const fullHtml = `
+        <html>
+        <head>
+          <meta charset="UTF-8"/>
+          <style>
+            body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 20px; }
+            h2, h3, h4 { margin: 0 0 10px; text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+            td, th { padding: 4px; border-bottom: 1px solid #ccc; }
+            .footer-text { text-align: center; margin-top: 10px; }
+            hr { border: none; border-top: 1px solid #000; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          ${previewHtml}
+        </body>
+        </html>
+      `;
+      const printWindow = window.open('', '_blank', 'width=300,height=600');
+      printWindow.document.open();
+      printWindow.document.write(fullHtml);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+  }, [printOnOpen, previewHtml]);
+
+  if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Ticket #${orderId}`} size="lg" height="tall">
+    <Modal isOpen={isOpen} onClose={onClose} title={mode === 'ticket' ? `Ticket #${orderId}` : `Vale: ${cartRuleCode}`} size="md" height="auto">
       <div className="p-4">
-        {loading && <p>Cargando ticket...</p>}
         {error && <p className="text-red-500">{error}</p>}
-        {!loading && !error && (
-          <div dangerouslySetInnerHTML={{ __html: ticketHtml }} />
+        {!error && !fetchedData && <p>Cargando datos...</p>}
+
+        {/* Vista previa local (SÓLO el contenedor <div>), sin <html> <head> <body> */}
+        {fetchedData && (
+          <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
         )}
       </div>
     </Modal>

@@ -1,38 +1,38 @@
 // src/components/modals/reprint/ReprintModal.jsx
 
-import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Modal from '../Modal'; 
 import { useApiFetch } from '../../../components/utils/useApiFetch';
-//import ticketConfigData from '../../../data/ticket.json'; // si lo usas
-
-import { ConfigContext } from '../../../contexts/ConfigContext'; // ajusta la ruta real
-
-// PrimeReact
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
+// Nuestro TicketViewModal con mode="ticket"
+import TicketViewModal from '../ticket/TicketViewModal';
 
 const ReprintModal = ({ isOpen, onClose }) => {
-  // Modo: "recent" o "search"
-  const { configData } = useContext(ConfigContext);
-  const [mode, setMode] = useState('recent');
+  const apiFetch = useApiFetch();
+
+  const [mode, setMode] = useState('recent');     // "recent" o "search"
   const [orderId, setOrderId] = useState('');
   const [error, setError] = useState(null);
-
-  // Ventas recientes o buscada
-  const [allOrders, setAllOrders] = useState([]);
-  const [searchedOrder, setSearchedOrder] = useState(null);
-
-  // Loading y selección
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState(null);
+
+  // Ventas recientes
+  const [allOrders, setAllOrders] = useState([]);
+  // Venta buscada
+  const [searchedOrder, setSearchedOrder] = useState(null);
 
   // Paginación
   const rows = 4;
 
-  const apiFetch = useApiFetch();
+  // Selección del pedido a reimprimir
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
 
-  // Cargar ventas recientes
+  // Para abrir el modal de ticket
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [ticketGift, setTicketGift] = useState(false);
+  const [viewTicketOrderId, setViewTicketOrderId] = useState(null);
+
   const loadRecentOrders = useCallback(async () => {
     try {
       setError(null);
@@ -49,7 +49,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
     }
   }, [apiFetch]);
 
-  // Búsqueda puntual
   const handleSearchOrder = async () => {
     if (!orderId.trim()) return;
     try {
@@ -70,7 +69,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // Al abrir/cerrar
   useEffect(() => {
     if (isOpen) {
       loadRecentOrders();
@@ -86,175 +84,36 @@ const ReprintModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, loadRecentOrders]);
 
-  // Reimprimir
-  const handleReprint = (giftTicket = false) => {
+  const handleReprintClick = (gift = false) => {
     if (!selectedOrderId) {
       alert('Selecciona una venta para reimprimir.');
       return;
     }
-    let saleToReprint = null;
 
+    let saleToReprint = null;
     if (mode === 'recent') {
       saleToReprint = allOrders.find(o => o.id_order === selectedOrderId);
     } else {
-      // mode = search
-      saleToReprint = searchedOrder && searchedOrder.id_order === selectedOrderId 
-        ? searchedOrder 
-        : null;
+      // mode=search
+      if (searchedOrder && searchedOrder.id_order === selectedOrderId) {
+        saleToReprint = searchedOrder;
+      }
     }
     if (!saleToReprint) {
       alert('No se encontró la venta seleccionada.');
       return;
     }
 
-    // Lógica real
-    const employee = JSON.parse(localStorage.getItem('employee'));
-    const employeeName = employee ? employee.employee_name : 'Empleado';
-
-    const htmlContent = generateTicketHTMLFromOrder(saleToReprint, giftTicket, employeeName);
-    printHTMLTicket(htmlContent);
+    // Actualizamos estados para abrir TicketViewModal
+    setTicketModalOpen(true);
+    setViewTicketOrderId(saleToReprint.id_order);
+    setTicketGift(gift);
   };
 
-  // Generar Ticket en HTML
-  const generateTicketHTMLFromOrder = (orderData, giftTicket, employeeName) => {
-    const header1 = configData?.ticket_text_header_1 || '';
-    const header2 = configData?.ticket_text_header_2 || '';
-    const footer1 = configData?.ticket_text_footer_1 || '';
-    const footer2 = configData?.ticket_text_footer_2 || '';
-    const date = new Date();
-    const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${
-      String(date.getMonth() + 1).padStart(2, '0')
-    }/${date.getFullYear()} ${String(date.getHours()).padStart(2, '0')}:${
-      String(date.getMinutes()).padStart(2, '0')
-    }`;
-
-    const ticketTypeText = giftTicket ? 'Ticket regalo' : 'Ticket compra';
-    const productRows = (orderData.order_details ?? [])
-      .map((item) => {
-        return `
-          <tr>
-            <td style="text-align:left;">${item.product_quantity}</td>
-            <td style="text-align:left;">${item.product_name}</td>
-            ${
-              !giftTicket
-                ? `<td style="text-align:right;">${item.unit_price_tax_incl.toFixed(2)} €</td>
-                   <td style="text-align:right;">${(item.unit_price_tax_incl * item.product_quantity).toFixed(2)} €</td>`
-                : ''
-            }
-          </tr>
-        `;
-      })
-      .join('');
-
-    let paymentMethodsHTML = '';
-    if (!giftTicket) {
-      const IVA_RATE = 0.21; 
-      const baseAmount = orderData.total_paid / (1 + IVA_RATE);
-      const ivaAmount = orderData.total_paid - baseAmount;
-      paymentMethodsHTML += '<div><strong>Método de Pago:</strong></div>';
-      paymentMethodsHTML += `<div>${orderData.payment.charAt(0).toUpperCase() + orderData.payment.slice(1)}: ${orderData.total_paid.toFixed(2)} €</div>`;
-      paymentMethodsHTML += `<div><strong>IVA (${(IVA_RATE * 100).toFixed(0)}%):</strong> ${ivaAmount.toFixed(2)} €</div>`;
-    }
-
-    return `
-      <html>
-      <head>
-        <meta charset="UTF-8" />
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            margin: 0;
-            padding: 20px;
-          }
-          h1, h2, h3 {
-            margin: 0 0 10px;
-            text-align: center;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-          }
-          td, th {
-            padding: 5px;
-            border-bottom: 1px solid #ccc;
-          }
-          .footer-text {
-            text-align: center;
-            margin-top: 10px;
-          }
-          hr {
-            border: none;
-            border-top: 1px solid #000;
-            margin: 10px 0;
-          }
-        </style>
-      </head>
-      <body>
-        ${header1 ? `<h3>${header1}</h3>` : ''}
-        ${header2 ? `<h3>${header2}</h3>` : ''}
-        <hr/>
-        <h2>${ticketTypeText}</h2>
-        <div>Fecha: ${formattedDate}</div>
-        <div>Atendido por: ${employeeName}</div>
-        <hr/>
-        <table>
-          <thead>
-            <tr>
-              <th style="text-align:left;">Cant.</th>
-              <th style="text-align:left;">Producto</th>
-              ${
-                !giftTicket 
-                  ? '<th style="text-align:right;">P/U</th><th style="text-align:right;">Total</th>' 
-                  : ''
-              }
-            </tr>
-          </thead>
-          <tbody>
-            ${productRows}
-          </tbody>
-        </table>
-        ${
-          !giftTicket 
-            ? `<hr/><div><strong>Total:</strong> ${orderData.total_paid.toFixed(2)} €</div>` 
-            : ''
-        }
-        ${!giftTicket ? paymentMethodsHTML : ''}
-
-        ${
-          footer1 
-            ? `<div class="footer-text">${footer1}</div>` 
-            : ''
-        }
-        ${
-          footer2 
-            ? `<div class="footer-text">${footer2}</div>` 
-            : ''
-        }
-      </body>
-      </html>
-    `;
-  };
-
-  // Imprimir el ticket
-  const printHTMLTicket = (htmlContent) => {
-    const printWindow = window.open('', '_blank', 'width=300,height=600');
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
-  };
-
-  /***********************************************************
-   * CustomRow: Renderiza la "fila" + detalles con animación
-   ***********************************************************/
-  const CustomRow = ({ sale }) => {
+  const CustomRow = ({ sale, isLoading }) => {
     const [expanded, setExpanded] = useState(false);
-    const contentRef = useRef(null);
     const [maxHeight, setMaxHeight] = useState('0px');
+    const contentRef = useRef(null);
 
     const toggleExpand = () => {
       if (!isLoading && sale.order_details?.length > 0) {
@@ -271,6 +130,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
       }
     }, [expanded, sale.order_details]);
 
+    // Seleccionar
     const isSelected = sale.id_order === selectedOrderId;
     const handleSelect = () => {
       if (!isLoading) {
@@ -302,7 +162,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
 
           <div className="flex items-center space-x-4">
             {isLoading ? (
-              // Skeleton
               <div className="animate-pulse flex space-x-2">
                 <div className="bg-gray-200 h-4 w-16 rounded" />
                 <div className="bg-gray-200 h-4 w-16 rounded" />
@@ -322,7 +181,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
               </>
             )}
 
-            {/* Radio */}
+            {/* Radio de selección */}
             <div>
               <input
                 type="radio"
@@ -332,7 +191,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
               />
             </div>
 
-            {/* Botón ver detalles */}
+            {/* Botón expandir */}
             {(!isLoading && sale.order_details?.length > 0) && (
               <Button
                 label={expanded ? 'Ocultar' : 'Ver Detalles'}
@@ -344,7 +203,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Subtabla con transición de altura */}
+        {/* Subtabla con transición */}
         <div
           ref={contentRef}
           className="overflow-hidden transition-all duration-300"
@@ -355,7 +214,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
         >
           <div className="border rounded p-2 bg-gray-50">
             {isLoading ? (
-              // Skeleton en la subtabla
               <div className="animate-pulse">
                 <div className="h-4 bg-gray-200 rounded mb-1 w-3/4" />
                 <div className="h-4 bg-gray-200 rounded mb-1 w-2/3" />
@@ -398,17 +256,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
     );
   };
 
-  /***********************************************************
-   * singleColumnBodyTemplate => Renderiza CADA "fila"
-   * Si isLoading => en lugar de data real, pon placeholders
-   ***********************************************************/
-  const singleColumnBodyTemplate = (sale) => {
-    return <CustomRow sale={sale} isLoading={isLoading} />;
-  };
-
-  /***********************************************************
-   * Generar "dummy" array con 6 elementos para skeleton
-   ***********************************************************/
+  // Skeleton
   const skeletonData = new Array(rows).fill(null).map((_, idx) => ({
     id_order: `skeleton-${idx}`,
     id_customer: '',
@@ -417,91 +265,104 @@ const ReprintModal = ({ isOpen, onClose }) => {
     order_details: []
   }));
 
-  /***********************************************************
-   * Determinar qué data mostrar en la tabla:
-   * si isLoading => 6 placeholders
-   * else => modo "recent" => allOrders
-   *      => modo "search" => [searchedOrder] o vacio
-   ***********************************************************/
+  // Cuerpo de la columna (primera y única) que renderiza CustomRow
+  const singleColumnBodyTemplate = (sale) => {
+    return <CustomRow sale={sale} isLoading={isLoading} />;
+  };
+
+  // Determinar qué data mostrar
   let displayData = [];
   if (isLoading) {
-    displayData = skeletonData; // 6 placeholders
+    displayData = skeletonData;
   } else {
     if (mode === 'recent') {
       displayData = allOrders;
     } else {
-      // mode = search
+      // mode=search
       displayData = searchedOrder ? [searchedOrder] : [];
     }
   }
 
-  /***********************************************************
-   * Render
-   ***********************************************************/
+  if (!isOpen) return null;
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Reimprimir Ticket"
-      showCloseButton
-      showBackButton={false}
-      size="xl"
-      height="md"
-    >
-      <div className="w-full mx-auto space-y-4">
-        {/* Búsqueda ID */}
-        <div className="flex space-x-2 items-end">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Número de ticket"
-              value={orderId}
-              onChange={(e) => setOrderId(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSearchOrder();
-              }}
-              className="border rounded p-2 w-full"
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Reimprimir Ticket"
+        showCloseButton
+        showBackButton={false}
+        size="xl"
+        height="md"
+      >
+        <div className="w-full mx-auto space-y-4">
+          {/* Barra de búsqueda */}
+          <div className="flex space-x-2 items-end">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="Número de ticket"
+                value={orderId}
+                onChange={(e) => setOrderId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSearchOrder();
+                }}
+                className="border rounded p-2 w-full"
+              />
+            </div>
+          </div>
+
+          {error && <div className="text-red-500 font-semibold">{error}</div>}
+
+          {/* Tabla */}
+          <DataTable
+            value={displayData}
+            className="p-datatable-sm"
+            paginator
+            rows={rows}
+            dataKey="id_order"
+            emptyMessage={
+              isLoading
+                ? '' 
+                : mode === 'recent'
+                ? 'No hay ventas recientes.'
+                : 'No se encontró esa venta.'
+            }
+          >
+            <Column body={singleColumnBodyTemplate} />
+          </DataTable>
+
+          {/* Botones de acción */}
+          <div className="flex justify-end space-x-2">
+            <Button
+              label="Ticket Normal"
+              icon="pi pi-print"
+              onClick={() => handleReprintClick(false)}
+              className="p-button-success p-button-sm"
+            />
+            <Button
+              label="Ticket Regalo"
+              icon="pi pi-gift"
+              onClick={() => handleReprintClick(true)}
+              className="p-button-help p-button-sm"
             />
           </div>
         </div>
+      </Modal>
 
-        {error && <div className="text-red-500 font-semibold">{error}</div>}
-
-        {/* Tabla: Si isLoading => 6 placeholders, sino => mode "recent" o "search" */}
-        <DataTable
-          value={displayData}
-          className="p-datatable-sm"
-          paginator
-          rows={rows}
-          dataKey="id_order"
-          emptyMessage={
-            isLoading
-              ? '' /* no texto "Cargando..." */
-              : mode === 'recent'
-              ? 'No hay ventas recientes.'
-              : 'No se encontró esa venta.'
-          }
-        >
-          <Column body={singleColumnBodyTemplate} />
-        </DataTable>
-
-        {/* Botones de acción */}
-        <div className="flex justify-end space-x-2">
-          <Button
-            label="Ticket Normal"
-            icon="pi pi-print"
-            onClick={() => handleReprint(false)}
-            className="p-button-success p-button-sm"
-          />
-          <Button
-            label="Ticket Regalo"
-            icon="pi pi-gift"
-            onClick={() => handleReprint(true)}
-            className="p-button-help p-button-sm"
-          />
-        </div>
-      </div>
-    </Modal>
+      {/* TicketViewModal con mode="ticket" */}
+      {ticketModalOpen && viewTicketOrderId && (
+        <TicketViewModal
+          isOpen={ticketModalOpen}
+          onClose={() => setTicketModalOpen(false)}
+          mode="ticket"         // <-- Aquí indicamos el modo "ticket"
+          orderId={viewTicketOrderId}
+          giftTicket={ticketGift}
+          printOnOpen={true}   // Si deseas que abra la impresión automáticamente, pon true
+        />
+      )}
+    </>
   );
 };
 

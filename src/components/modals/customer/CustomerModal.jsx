@@ -159,8 +159,8 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
         showCloseButton={true}
         showBackButton={showBackButton}
         onBack={goBack}
-        size="md"
-        height="md"
+        size="lg"
+        height="tall"
       >
         {step === 'selectClient' && (
           <div className="p-4">
@@ -245,7 +245,10 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
       </Modal>
 
       {selectedClientInfo && (
-        <Modal isOpen={true} onClose={() => setSelectedClientInfo(null)} title="Detalles del Cliente">
+        <Modal
+        isOpen={true}
+        onClose={() => setSelectedClientInfo(null)}
+        title="Detalles del Cliente">
           {/* Aquí el contenido del modal de detalles del cliente */}
         </Modal>
       )}
