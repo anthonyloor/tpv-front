@@ -1,4 +1,5 @@
 // src/contexts/AuthContext.jsx
+
 import React, { createContext, useState } from 'react';
 
 export const AuthContext = createContext();
@@ -18,14 +19,12 @@ function AuthProvider({ children }) {
   };
 
   const handleLogout = () => {
-    // Lógica para limpiar datos de sesión
     localStorage.removeItem('token');
     localStorage.removeItem('employee');
     localStorage.removeItem('shop');
     localStorage.removeItem('selectedClient');
     localStorage.removeItem('selectedAddress');
 
-    // Resetea los estados
     setIsAuthenticated(false);
     setShopId(null);
     setShopName('');
