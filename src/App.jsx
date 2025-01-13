@@ -13,6 +13,8 @@ import ConfigLoader from './components/ConfigLoader';
 import SessionExpiredModal from './components/modals/session/SessionExpiredModal';
 import { ConfigContext } from './contexts/ConfigContext';
 import useCart from './hooks/useCart';
+import useDiscounts from './hooks/useDiscounts';  // Importar useDiscounts
+
 // PrimeReact
 import 'primereact/resources/themes/md-light-indigo/theme.css'; // Tema Material
 import 'primereact/resources/primereact.min.css';
@@ -58,6 +60,13 @@ function App() {
     loadParkedCart,           // Nueva función
     deleteParkedCart,         // Nueva función
   } = useCart(allowOutOfStockSales);
+
+  const {
+    appliedDiscounts,
+    addDiscount,
+    removeDiscountByIndex,
+    clearDiscounts,
+  } = useDiscounts();
 
   useEffect(() => {
     if (!isShopLoaded) return; // Esperar hasta que el shop esté cargado
@@ -107,10 +116,18 @@ function App() {
                     getParkedCarts={getParkedCarts}                     // Pasar la función
                     loadParkedCart={loadParkedCart}                     // Pasar la función
                     deleteParkedCart={deleteParkedCart}                 // Pasar la función
+                    // Pasar props de descuentos a SalesCard
+                    appliedDiscounts={appliedDiscounts}
+                    addDiscount={addDiscount}
+                    removeDiscountByIndex={removeDiscountByIndex}
+                    clearDiscounts={clearDiscounts}
                   />
                 </div>
                 <div className="w-full md:w-2/3">
-                  <ProductSearchCard onAddProduct={handleAddProduct} />
+                  <ProductSearchCard
+                  onAddProduct={handleAddProduct}
+                  onAddDiscount={addDiscount}
+                  />
                 </div>
               </div>
             </PrivateRoute>

@@ -8,8 +8,8 @@ import PinValidationModal from '../modals/pin/PinValidationModal';
 import DiscountModal from '../modals/discount/DiscountModal';
 import TicketViewModal from '../modals/ticket/TicketViewModal';
 import useFinalizeSale from '../../hooks/useFinalizeSale';
-import useDiscounts from '../../hooks/useDiscounts';
 import { AuthContext } from '../../contexts/AuthContext';
+import { useCartRuleCreator } from '../../hooks/useCartRuleCreator';
 
 function simulateDiscountConsumption(cartItems, appliedDiscounts) {
   const subtotalInclTax = cartItems.reduce(
@@ -59,6 +59,10 @@ function SalesCard({
   getParkedCarts,
   loadParkedCart,
   deleteParkedCart,
+  appliedDiscounts,
+  addDiscount,
+  removeDiscountByIndex,
+  clearDiscounts,
 }) {
   const { isLoading, finalizeSale } = useFinalizeSale();
   const { idProfile } = useContext(AuthContext);
@@ -82,7 +86,7 @@ function SalesCard({
   const [giftTicketTM, setGiftTicketTM] = useState(false);
   const [cartRuleModalOpen, setCartRuleModalOpen] = useState(false);
   const [newCartRuleCode, setNewCartRuleCode] = useState(null);
-  const { appliedDiscounts, addDiscount, removeDiscountByIndex, clearDiscounts } = useDiscounts();
+  const { createCartRuleWithResponse } = useCartRuleCreator();
 
   const subtotalProducts = cartItems.reduce(
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
@@ -197,7 +201,7 @@ function SalesCard({
         amounts,
         changeAmount,
         giftTicket,
-        onSuccess: ({
+        onSuccess: async ({
           orderId,
           print,
           giftTicket,
@@ -214,11 +218,6 @@ function SalesCard({
             setNewCartRuleCode(newCartRuleCode);
           }
           setLeftoverInfo(leftoverArray);
-          leftoverArray.forEach((l) => {
-            if (l.leftover > 0) {
-              alert(`Importe restante del vale ${l.code}: ${l.leftover.toFixed(2)} €`);
-            }
-          });
           setCartItems([]);
           const storedShop = JSON.parse(localStorage.getItem('shop'));
           if (storedShop) {
@@ -239,10 +238,23 @@ function SalesCard({
     );
   };
 
-  const handleCloseTicketNormal = () => {
+  const handleCloseTicketNormal = async () => {
     setTicketModalOpen(false);
-    if (newCartRuleCode) {
-      setCartRuleModalOpen(true);
+    if (Math.max(0, total) === 0) {
+      const voucherAmount = Math.abs(subtotalProducts - totalDiscounts);
+      try {
+        const voucherResult = await createCartRuleWithResponse({
+          discountType: 'amount',
+          value: voucherAmount,
+        }, null, null, null, null);
+        console.log('Vale generado tras cerrar ticket normal:', voucherResult);
+        if (voucherResult && voucherResult.code) {
+          setNewCartRuleCode(voucherResult.code);
+          setCartRuleModalOpen(true);
+        }
+      } catch (err) {
+        console.error('Error al crear vale tras cerrar ticket:', err);
+      }
     }
   };
 
@@ -379,7 +391,7 @@ function SalesCard({
           <div className="flex justify-between items-center mt-2">
             <span className="text-xl font-medium">Total Descuentos:</span>
             <span className="text-xl font-bold text-red-600">
-              -{totalDiscounts.toFixed(2)} €
+              {totalDiscounts.toFixed(2)} €
             </span>
           </div>
         )}
@@ -553,18 +565,27 @@ function SalesCard({
             </p>
           </div>
 
+          {/* Mostrar mensaje de vale descuento si total es 0 */}
+          {Math.max(0, total) === 0 && (
+            <div className="text-red-600 font-bold mb-4">
+              Se generará un vale descuento de {Math.abs(subtotalProducts - totalDiscounts).toFixed(2)} €.
+            </div>
+          )}
+
+          {/* Métodos de pago - deshabilitar si total es 0 */}
           <div className="flex flex-col space-y-4 mb-4">
             {['efectivo', 'tarjeta', 'bizum'].map((method) => (
               <div key={method} className="flex items-center space-x-4">
                 <button
                   className={`w-1/3 py-4 rounded ${
-                    selectedMethods.includes(method)
+                    selectedMethods.includes(method) && total > 0
                       ? method === 'efectivo'
                         ? 'bg-green-500'
                         : 'bg-blue-500'
                       : 'bg-gray-400'
                   } text-white`}
-                  onClick={() => togglePaymentMethod(method)}
+                  onClick={() => total > 0 && togglePaymentMethod(method)}
+                  disabled={total <= 0}
                 >
                   {method.charAt(0).toUpperCase() + method.slice(1)}
                 </button>
@@ -574,20 +595,21 @@ function SalesCard({
                   placeholder={`Importe en ${method}`}
                   value={amounts[method]}
                   onChange={(e) => handleAmountChange(method, e.target.value)}
-                  disabled={!selectedMethods.includes(method)}
+                  disabled={!selectedMethods.includes(method) || total <= 0}
                 />
               </div>
             ))}
           </div>
 
+          {/* Botón Confirmar Venta */}
           <button
             className={`w-full py-4 px-4 py-2 rounded text-white ${
-              totalEntered < total || isLoading
+              (totalEntered < total) || isLoading
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-600'
             }`}
+            disabled={(totalEntered < total) || isLoading}
             onClick={handleConfirmSale}
-            disabled={totalEntered < total || isLoading}
           >
             {isLoading ? 'Procesando...' : 'Confirmar Venta'}
           </button>

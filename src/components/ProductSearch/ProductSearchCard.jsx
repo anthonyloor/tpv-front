@@ -5,7 +5,7 @@ import Modal from '../modals/Modal';
 import { useApiFetch } from '../utils/useApiFetch';
 import { ConfigContext } from '../../contexts/ConfigContext';
 
-const ProductSearchCard = ({ onAddProduct }) => {
+const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isModalOpen, setModalOpen] = useState(false);
@@ -29,6 +29,51 @@ const ProductSearchCard = ({ onAddProduct }) => {
   };
 
   const handleKeyDown = async (event) => {
+    // Si se presiona Enter y el término empieza con '#', buscar un vale descuento
+    if (event.key === 'Enter' && searchTerm.startsWith('#')) {
+      const code = searchTerm.slice(1); // Quitar el '#'
+      setIsLoading(true);
+      try {
+        const data = await apiFetch(`https://apitpv.anthonyloor.com/get_cart_rule?code=${encodeURIComponent(code)}`, {
+          method: 'GET',
+        });
+
+        // Verificar si el vale está activo
+        if (!data.active) {
+          alert('Vale descuento no válido, motivo: no activo');
+          setSearchTerm('');
+          return;
+        }
+
+        // Verificar si el vale pertenece al cliente seleccionado (si se ha seleccionado uno)
+        const client = JSON.parse(localStorage.getItem('selectedClient'));
+        if (client && data.id_customer && client.id_customer !== data.id_customer) {
+          alert('Vale descuento no válido, motivo: no pertenece al cliente seleccionado');
+          setSearchTerm('');
+          return;
+        }
+
+        if (data && onAddDiscount) {
+          const discObj = {
+            name: data.name || '',
+            description: data.description || '',
+            code: data.code || '',
+            reduction_amount: data.reduction_amount || 0,
+            reduction_percent: data.reduction_percent || 0,
+          };
+          onAddDiscount(discObj);
+        }
+        setSearchTerm('');
+      } catch (error) {
+        console.error('Error al buscar vale descuento:', error);
+        alert('Error al buscar el vale. Intenta de nuevo.');
+      } finally {
+        setIsLoading(false);
+      }
+      return; // Salir para no continuar con búsqueda de productos
+    }
+
+    // Lógica existente para búsqueda de productos
     if (event.key === 'Enter' && searchTerm.length >= 3) {
       setIsLoading(true);
       try {

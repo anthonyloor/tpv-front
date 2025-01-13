@@ -2,89 +2,31 @@
 
 import React, { useState } from 'react';
 import Modal from '../Modal';
-import { useApiFetch } from '../../utils/useApiFetch';
+import { useCartRuleCreator } from '../../../hooks/useCartRuleCreator';
 
 const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
   const [discountType, setDiscountType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const apiFetch = useApiFetch();
+  const { createCartRuleWithResponse } = useCartRuleCreator();
 
-  const handleApplyDiscount = async () => {
+  const handleApplyDiscount = () => {
     const value = parseFloat(discountValue);
     if (isNaN(value) || value <= 0) {
       setErrorMessage('Introduce un valor válido para el descuento.');
       return;
     }
-
-    const now = new Date();
-    const oneYearLater = new Date(now);
-    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
-    const date_from = now.toISOString().split('T')[0] + ' 00:00:00';
-    const date_to = oneYearLater.toISOString().split('T')[0] + ' 23:59:59';
-
-    const employee = JSON.parse(localStorage.getItem('employee')) || {};
-    const shop = JSON.parse(localStorage.getItem('shop')) || {};
-    const client = JSON.parse(localStorage.getItem('selectedClient'));
-    const employeeName = employee.employee_name || 'Empleado';
-    const shopName = shop.name || 'Tienda';
-    const description = `Descuento generado por ${employeeName} en ${shopName}`;
-    const name =
-      discountType === 'percentage'
-        ? `Descuento de ${value}%`
-        : `Descuento de ${value}€`;
-    const reduction_percent = discountType === 'percentage' ? value : 0;
-    const reduction_amount = discountType === 'amount' ? value : 0;
-
-    const discountData = {
-      name,
-      date_from,
-      date_to,
-      description,
-      id_customer: client ? client.id_customer : null,
-      reduction_percent,
-      reduction_amount,
-    };
-
-    try {
-      const result = await apiFetch(
-        'https://apitpv.anthonyloor.com/create_cart_rule',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(discountData),
-        }
-      );
-
-      if (result) {
-        const discObj = {
-          name: name || '',
-          description: description || '',
-          code: result.code || '',
-          reduction_amount: result.reduction_amount || 0,
-          reduction_percent: result.reduction_percent || 0,
-        };
-        if (onDiscountApplied) onDiscountApplied(discObj);
-        setDiscountValue('');
-        setErrorMessage('');
-        onClose();
-      } else {
-        setErrorMessage(result.message || 'Error al crear el descuento.');
-      }
-    } catch (error) {
-      console.error('Error al enviar descuento:', error);
-      setErrorMessage('Error al enviar el descuento.');
-    }
+    createCartRuleWithResponse(
+      { discountType, value },
+      onDiscountApplied,
+      onClose,
+      setDiscountValue,
+      setErrorMessage
+    );
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="lg"
-      height="medium"
-      title="Descuento"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} size="lg" height="medium" title="Descuento">
       <div>
         <div className="mb-4">
           <label className="block font-medium mb-1">Tipo de Descuento:</label>
@@ -114,15 +56,11 @@ const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
               onChange={(e) => setDiscountValue(e.target.value)}
               className="flex-grow border rounded-md px-3 py-2"
             />
-            <span className="ml-2">
-              {discountType === 'percentage' ? '%' : '€'}
-            </span>
+            <span className="ml-2">{discountType === 'percentage' ? '%' : '€'}</span>
           </div>
         </div>
 
-        {errorMessage && (
-          <p className="text-red-500 text-sm mb-4">{errorMessage}</p>
-        )}
+        {errorMessage && <p className="text-red-500 text-sm mb-4">{errorMessage}</p>}
 
         <div className="flex justify-end space-x-2">
           <button
