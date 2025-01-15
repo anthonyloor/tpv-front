@@ -77,79 +77,91 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
     if (event.key === 'Enter' && searchTerm.length >= 3) {
       setIsLoading(true);
       try {
-        const results = await apiFetch(
-          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(searchTerm)}`,
-          { method: 'GET' }
-        );
-        const filteredForCurrentShop = results.filter(
-          (product) => product.id_shop === currentShop.id_shop
-        );
-        setFilteredProducts(groupProductsByProductName(results));
-        if (filteredForCurrentShop.length === 1) {
-          addProductToCart(filteredForCurrentShop[0]);
-          setSearchTerm('');
-        }
+      const results = await apiFetch(
+        `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(searchTerm)}`,
+        { method: 'GET' }
+      );
+      // Filtrar solo los registros donde los tres campos son nulos
+      const validResults = results.filter(product =>
+        !(product.id_product_attribute === null &&
+        product.ean13_combination === null &&
+        product.ean13_combination_0 === null)
+      );
+      const filteredForCurrentShop = validResults.filter(
+        (product) => product.id_shop === currentShop.id_shop
+      );
+      setFilteredProducts(groupProductsByProductName(validResults));
+      if (filteredForCurrentShop.length === 1) {
+        addProductToCart(filteredForCurrentShop[0]);
+        setSearchTerm('');
+      }
       } catch (error) {
-        console.error('Error en la búsqueda:', error);
-        alert('Error al buscar productos. Inténtalo de nuevo más tarde.');
+      console.error('Error en la búsqueda:', error);
+      alert('Error al buscar productos. Inténtalo de nuevo más tarde.');
       } finally {
-        setIsLoading(false);
+      setIsLoading(false);
       }
     }
-  };
+    };
 
-  const groupProductsByProductName = (products) => {
-    return products.reduce((acc, product) => {
+    const groupProductsByProductName = (products) => {
+    // Filtrar solo los productos donde los tres campos son nulos
+    const validProducts = products.filter(product =>
+      !(product.id_product_attribute === null &&
+      product.ean13_combination === null &&
+      product.ean13_combination_0 === null)
+    );
+    return validProducts.reduce((acc, product) => {
       const existingGroup = acc.find(
-        (group) => group.product_name === product.product_name
+      (group) => group.product_name === product.product_name
       );
       if (existingGroup) {
-        const existingCombination = existingGroup.combinations.find(
-          (combination) =>
-            combination.id_product_attribute === product.id_product_attribute
-        );
-        if (existingCombination) {
-          existingCombination.stocks.push({
+      const existingCombination = existingGroup.combinations.find(
+        (combination) =>
+        combination.id_product_attribute === product.id_product_attribute
+      );
+      if (existingCombination) {
+        existingCombination.stocks.push({
+        shop_name: product.shop_name,
+        id_shop: product.id_shop,
+        quantity: product.quantity,
+        id_stock_available: product.id_stock_available,
+        });
+      } else {
+        existingGroup.combinations.push({
+        ...product,
+        stocks: [
+          {
+          shop_name: product.shop_name,
+          id_shop: product.id_shop,
+          quantity: product.quantity,
+          id_stock_available: product.id_stock_available,
+          },
+        ],
+        });
+      }
+      } else {
+      acc.push({
+        product_name: product.product_name,
+        image_url: product.image_url,
+        combinations: [
+        {
+          ...product,
+          stocks: [
+          {
             shop_name: product.shop_name,
             id_shop: product.id_shop,
             quantity: product.quantity,
             id_stock_available: product.id_stock_available,
-          });
-        } else {
-          existingGroup.combinations.push({
-            ...product,
-            stocks: [
-              {
-                shop_name: product.shop_name,
-                id_shop: product.id_shop,
-                quantity: product.quantity,
-                id_stock_available: product.id_stock_available,
-              },
-            ],
-          });
-        }
-      } else {
-        acc.push({
-          product_name: product.product_name,
-          image_url: product.image_url,
-          combinations: [
-            {
-              ...product,
-              stocks: [
-                {
-                  shop_name: product.shop_name,
-                  id_shop: product.id_shop,
-                  quantity: product.quantity,
-                  id_stock_available: product.id_stock_available,
-                },
-              ],
-            },
+          },
           ],
-        });
+        },
+        ],
+      });
       }
       return acc;
     }, []);
-  };
+    };
 
   const getStockForCurrentShop = (stocks) => {
     if (!Array.isArray(stocks) || !currentShop) return 0;
@@ -178,6 +190,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
       alert('No hay stock disponible de este producto.');
       return;
     }
+    const priceWithIVA = product.price * 1.21;
     const productForCart = {
       id_product: product.id_product,
       id_product_attribute: product.id_product_attribute,
@@ -185,10 +198,10 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
       product_name: product.product_name,
       combination_name: product.combination_name,
       reference_combination: product.reference_combination,
-      ean13_combination: product.ean13_combination,
-      price_incl_tax: product.price_incl_tax,
-      final_price_incl_tax: product.final_price_incl_tax,
-      tax_rate: product.tax_rate,
+      ean13_combination: product.id_product_attribute ? product.ean13_combination : product.ean13_combination_0,
+      price_incl_tax: priceWithIVA,  // usando price directamente
+      final_price_incl_tax: priceWithIVA,
+      tax_rate: 0.21,
       image_url: product.image_url,
       quantity: 1,
       shop_name: currentShop.name,
@@ -321,15 +334,15 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
                         {product.final_price_incl_tax !== product.price_incl_tax ? (
                           <div>
                             <span className="line-through text-sm text-gray-500">
-                              {product.price_incl_tax.toFixed(2)} €
+                              {product.price_incl_tax} €
                             </span>
                             <br />
                             <span className="text-red-500 font-semibold">
-                              {product.final_price_incl_tax.toFixed(2)} €
+                              {product.final_price_incl_tax} €
                             </span>
                           </div>
                         ) : (
-                          <span>{product.price_incl_tax.toFixed(2)} €</span>
+                          <span>{product.price_incl_tax} €</span>
                         )}
                       </td>
                       <td className="py-3 px-4 relative group text-center">

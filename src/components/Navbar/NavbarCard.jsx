@@ -9,6 +9,7 @@ import TransfersModal from '../modals/transfers/TransfersModal';
 import ConfigurationModal from '../modals/configuration/ConfigurationModal';
 import SalesReportModal from '../reports/SalesReportModal';
 import CloseCashRegisterModal from '../modals/cashRegister/CloseCashRegisterModal';
+import CreateCustomerModal from '../modals/customer/CreateCustomerModal';
 
 const NavbarCard = () => {
   const [isTransfersModalOpen, setTransfersModalOpen] = useState(false);
@@ -17,6 +18,7 @@ const NavbarCard = () => {
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isSalesReportModalOpen, setIsSalesReportModalOpen] = useState(false);
   const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
+  const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
 
   const navigate = useNavigate();
   const {
@@ -39,6 +41,10 @@ const NavbarCard = () => {
   const handleLogoutClick = () => {
     handleLogout();
     navigate(`/${shop.route}`);
+  };
+
+  const handleCreateNewCustomer = () => {
+    setShowCreateCustomerModal(true);
   };
 
   useEffect(() => {
@@ -176,11 +182,28 @@ const NavbarCard = () => {
         onClose={() => setConfigurationModalOpen(false)}
       />
 
-      <ClientModal
-        isOpen={isClientModalOpen}
-        onClose={() => setIsClientModalOpen(false)}
-        handleSelectClientAndAddress={handleSelectClientAndAddress}
-      />
+      {/* Renderiza CustomerModal si es necesario */}
+      {isClientModalOpen && (
+        <ClientModal
+          isOpen={true}
+          onClose={() => setIsClientModalOpen(false)}
+          handleSelectClientAndAddress={handleSelectClientAndAddress}
+          onCreateNewCustomer={handleCreateNewCustomer}
+        />
+      )}
+
+      {/* Renderiza CreateCustomerModal si es necesario */}
+      {showCreateCustomerModal && (
+        <CreateCustomerModal
+          isOpen={true}
+          onClose={() => setShowCreateCustomerModal(false)}
+          onComplete={(newClient, newAddress) => {
+            // Manejar selección automática del cliente y dirección
+            // Por ejemplo: actualizar estado global, cerrar modal, etc.
+            handleSelectClientAndAddress(newClient, newAddress);
+          }}
+        />
+      )}
 
       <AddressModal
         isOpen={isAddressModalOpen}

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 
-const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
+const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress, onCreateNewCustomer }) => {
   const [clients, setClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -192,14 +192,20 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
                 </tbody>
               </table>
             </div>
-            <div className="mt-4">
-              <button
-                className="bg-green-500 text-white px-4 py-2 rounded w-full"
-                onClick={() => alert('Crear nuevo cliente')}
-              >
-                Crear Cliente Nuevo
-              </button>
-            </div>
+            {/* Botón para abrir CreateCustomerModal */}
+            {isOpen && (
+              <div className="mt-4 px-4">
+                <button
+                  className="bg-green-500 text-white px-4 py-2 rounded w-full"
+                  onClick={() => {
+                    onClose();               // Cierra el modal actual
+                    if (onCreateNewCustomer) onCreateNewCustomer();  // Notifica al padre que se quiere crear un nuevo cliente
+                  }}
+                >
+                  Crear Cliente Nuevo
+                </button>
+              </div>
+            )}
           </div>
         )}
         {step === 'selectAddress' && (
@@ -228,6 +234,7 @@ const CustomerModal = ({ isOpen, onClose, handleSelectClientAndAddress }) => {
           </div>
         )}
       </Modal>
+      
     </>
   );
 };
