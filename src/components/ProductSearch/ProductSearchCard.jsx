@@ -190,7 +190,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
       alert('No hay stock disponible de este producto.');
       return;
     }
-    const priceWithIVA = product.price * 1.21;
+    const priceWithIVA = product.price;
     const productForCart = {
       id_product: product.id_product,
       id_product_attribute: product.id_product_attribute,
@@ -207,6 +207,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
       shop_name: currentShop.name,
       id_shop: currentShop.id_shop,
     };
+    console.log('Product for cart:', productForCart);
     onAddProduct(productForCart, stockQuantity, (exceedsStock) => {
       if (exceedsStock) {
         setProductToConfirm(productForCart);
@@ -331,19 +332,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
                       <td className="py-3 px-4 text-gray-700">{product.reference_combination}</td>
                       <td className="py-3 px-4 text-gray-700">{product.ean13_combination}</td>
                       <td className="py-3 px-4">
-                        {product.final_price_incl_tax !== product.price_incl_tax ? (
-                          <div>
-                            <span className="line-through text-sm text-gray-500">
-                              {product.price_incl_tax} €
-                            </span>
-                            <br />
-                            <span className="text-red-500 font-semibold">
-                              {product.final_price_incl_tax} €
-                            </span>
-                          </div>
-                        ) : (
-                          <span>{product.price_incl_tax} €</span>
-                        )}
+                        <span>{product.price} €</span>
                       </td>
                       <td className="py-3 px-4 relative group text-center">
                         <span>{getStockForCurrentShop(product.stocks)}</span>
