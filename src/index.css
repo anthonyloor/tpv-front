@@ -54,3 +54,13 @@ code {
   background: white;
   z-index: 1;
 }
+
+@keyframes productFlash {
+  0% { background-color: #fff59d; }
+  50% { background-color: #fefae0; }
+  100% { background-color: transparent; }
+}
+
+.animate-product {
+  animation: productFlash 2s ease-out;
+}

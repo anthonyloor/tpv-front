@@ -56,10 +56,11 @@ function App() {
     handleAddProduct,
     handleRemoveProduct,
     handleDecreaseProduct,
-    saveCurrentCartAsParked, // Nueva función
-    getParkedCarts,           // Nueva función
-    loadParkedCart,           // Nueva función
-    deleteParkedCart,         // Nueva función
+    saveCurrentCartAsParked,
+    getParkedCarts,
+    loadParkedCart,
+    deleteParkedCart,
+    recentlyAddedId,
   } = useCart(allowOutOfStockSales);
 
   const {
@@ -123,6 +124,7 @@ function App() {
                     addDiscount={addDiscount}
                     removeDiscountByIndex={removeDiscountByIndex}
                     clearDiscounts={clearDiscounts}
+                    recentlyAddedId={recentlyAddedId}
                   />
                 </div>
                 <div className="w-full md:w-2/3">

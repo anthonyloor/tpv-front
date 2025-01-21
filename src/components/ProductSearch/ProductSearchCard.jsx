@@ -188,7 +188,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
     }
     const stockQuantity = currentShopStock ? currentShopStock.quantity : 0;
     if (!allowOutOfStockSales && stockQuantity <= 0) {
-      toast.error('No se pudo añadir: sin stock disponible en esta tienda');
+      toast.error('Sin stock disponible. No se permite la venta sin stock.');
       return;
     }
     const priceWithIVA = product.price;
@@ -214,7 +214,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
         setProductToConfirm(productForCart);
         setConfirmModalOpen(true);
       } else {
-        toast.success('Producto añadido correctamente al ticket');
+        toast.success('Producto añadido al ticket');
       }
     });
   };
@@ -226,13 +226,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
 
   const handleConfirmAdd = () => {
     onAddProduct(productToConfirm, null, null, true, 1);
-    toast.success('Producto vendido sin stock (forzado)');
+    toast.success('Producto sin stock añadido al ticket');
     setConfirmModalOpen(false);
     setProductToConfirm(null);
   };
 
   const handleCancelAdd = () => {
-    toast.error('Operación cancelada, producto no añadido');
     setConfirmModalOpen(false);
     setProductToConfirm(null);
   };

@@ -6,6 +6,7 @@ export default function useCart(allowOutOfStockSales) {
   const [cartItems, setCartItems] = useState([]);
   const [lastAction, setLastAction] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [recentlyAddedId, setRecentlyAddedId] = useState(null);
 
   const getCartKey = (shopId) => `cart_shop_${shopId}`;
   const getParkedCartsKey = (shopId) => `parked_carts_shop_${shopId}`;
@@ -104,17 +105,19 @@ export default function useCart(allowOutOfStockSales) {
 
     setCartItems((prevItems) => {
       if (existingProduct) {
+        // Actualizar cantidad
         return prevItems.map((item) =>
           item.id_stock_available === product.id_stock_available
             ? { ...item, quantity: newQuantity }
             : item
         );
       } else {
+        // Agregar producto nuevo
         return [
           ...prevItems,
           {
             ...product,
-            quantity: quantity,
+            quantity,
             price_excl_tax: parseFloat(price_excl_tax.toFixed(2)),
             final_price_excl_tax: parseFloat(final_price_excl_tax.toFixed(2)),
             unit_price_tax_excl: parseFloat(final_price_excl_tax.toFixed(2)),
@@ -124,6 +127,16 @@ export default function useCart(allowOutOfStockSales) {
       }
     });
 
+    // Avisar callback que no se superó stock
+    if (exceedsStockCallback) exceedsStockCallback(false);
+
+    // Marcar el producto como recién añadido, para la animación
+    setRecentlyAddedId(product.id_stock_available);
+    setTimeout(() => {
+      setRecentlyAddedId(null);
+    }, 2000);
+
+    // Registrar la acción
     setLastAction({ id: product.id_stock_available, action: 'add', timestamp: Date.now() });
   };
 
@@ -157,5 +170,7 @@ export default function useCart(allowOutOfStockSales) {
     getParkedCarts,
     loadParkedCart,
     deleteParkedCart,
+    // Exporta recentlyAddedId para que el componente de ticket (SalesCard) aplique la animación
+    recentlyAddedId,
   };
 }

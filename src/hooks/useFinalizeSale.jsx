@@ -136,6 +136,7 @@ export default function useFinalizeSale() {
       setIsLoading(false);
 
       if (onSuccess && newOrderId) {
+        toast.success('Venta finalizada correctamente');
         onSuccess({
           orderId: newOrderId,
           print,

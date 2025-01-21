@@ -8,7 +8,7 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal }) => {
   const [shops, setShops] = useState([]);
   const [selectedOriginStore, setSelectedOriginStore] = useState('');
   const [selectedDestinationStore, setSelectedDestinationStore] = useState('');
-  const [permisoEjecutar, setPermisoEjecutar] = useState('Permitir');
+  const [permisoEjecutar, setPermisoEjecutar] = useState('Denegado');
   const [isLoadingShops, setIsLoadingShops] = useState(true);
   const [errorLoadingShops, setErrorLoadingShops] = useState(null);
 
@@ -22,7 +22,7 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal }) => {
   }, []);
 
   useEffect(() => {
-    setPermisoEjecutar('Permitir');
+    setPermisoEjecutar(permisosGlobal[permisosUsuario]?.acceso_ejecutar || 'Denegado');
   }, [permisosUsuario, permisosGlobal]);
 
   useEffect(() => {

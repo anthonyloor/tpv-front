@@ -63,6 +63,7 @@ function SalesCard({
   addDiscount,
   removeDiscountByIndex,
   clearDiscounts,
+  recentlyAddedId,
 }) {
   const { isLoading, finalizeSale } = useFinalizeSale();
   const { idProfile } = useContext(AuthContext);
@@ -305,10 +306,13 @@ function SalesCard({
           <ul className="space-y-2">
             {cartItems.map((item) => {
               const totalItem = item.final_price_incl_tax * item.quantity;
+              const isHighlighted = item.id_stock_available === recentlyAddedId;
               return (
                 <li
                   key={item.id_stock_available}
-                  className="p-2 border rounded flex flex-col md:flex-row md:justify-between md:items-center"
+                  className={`border p-2 rounded flex flex-col md:flex-row md:justify-between md:items-center ${
+                    isHighlighted ? 'animate-product' : ''
+                  }`}
                 >
                   <div>
                     <span className="font-bold">{item.quantity}x </span>
