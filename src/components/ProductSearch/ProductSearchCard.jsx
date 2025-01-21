@@ -4,6 +4,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import Modal from '../modals/Modal';
 import { useApiFetch } from '../utils/useApiFetch';
 import { ConfigContext } from '../../contexts/ConfigContext';
+import { toast } from 'sonner';
 
 const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -187,7 +188,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
     }
     const stockQuantity = currentShopStock ? currentShopStock.quantity : 0;
     if (!allowOutOfStockSales && stockQuantity <= 0) {
-      alert('No hay stock disponible de este producto.');
+      toast.error('No se pudo añadir: sin stock disponible en esta tienda');
       return;
     }
     const priceWithIVA = product.price;
@@ -212,6 +213,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
       if (exceedsStock) {
         setProductToConfirm(productForCart);
         setConfirmModalOpen(true);
+      } else {
+        toast.success('Producto añadido correctamente al ticket');
       }
     });
   };
@@ -223,11 +226,13 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
 
   const handleConfirmAdd = () => {
     onAddProduct(productToConfirm, null, null, true, 1);
+    toast.success('Producto vendido sin stock (forzado)');
     setConfirmModalOpen(false);
     setProductToConfirm(null);
   };
 
   const handleCancelAdd = () => {
+    toast.error('Operación cancelada, producto no añadido');
     setConfirmModalOpen(false);
     setProductToConfirm(null);
   };

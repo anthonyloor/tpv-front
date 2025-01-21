@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useApiFetch } from '../components/utils/useApiFetch';
+import { toast } from 'sonner';
 
 export default function useFinalizeSale() {
   const [isLoading, setIsLoading] = useState(false);
@@ -116,9 +117,12 @@ export default function useFinalizeSale() {
         id_employee: employee ? employee.id_employee : 0,
         total_discounts: parseFloat(total_discounts.toFixed(2)),
         total_discounts_tax_excl: parseFloat(total_discounts_tax_excl.toFixed(2)),
-        discounts: discountsArray,
         order_details,
       };
+
+      if (discountsArray.length > 0) {
+        saleData.discounts = discountsArray;
+      }
 
       const response = await apiFetch('https://apitpv.anthonyloor.com/create_order', {
         method: 'POST',

@@ -1,5 +1,6 @@
 // src/App.js
 import React, { useEffect, useContext, useState } from 'react';
+import { Toaster } from 'sonner';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import NavbarCard from './components/Navbar/NavbarCard';
 import SalesCard from './components/Sales/SalesCard';
@@ -89,6 +90,7 @@ function App() {
 
   return (
     <div className="bg-gray-light min-h-screen flex flex-col">
+      <Toaster position="bottom-right" />
       <Routes>
         {/* Rutas para cada tienda */}
         <Route path="/penaprieta8" element={<LoginPage shopRoute="penaprieta8" />} />
