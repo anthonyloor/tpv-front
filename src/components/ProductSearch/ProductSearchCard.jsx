@@ -6,7 +6,7 @@ import { useApiFetch } from '../utils/useApiFetch';
 import { ConfigContext } from '../../contexts/ConfigContext';
 import { toast } from 'sonner';
 
-const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
+const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isModalOpen, setModalOpen] = useState(false);
@@ -251,7 +251,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 h-full">
+    <div className="p-4 h-full">
       <div className="relative mb-4">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <svg
@@ -304,7 +304,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
         )}
       </div>
 
-      <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 226px)' }}>
+      <div className="overflow-y-auto">
         <table className="min-w-full bg-white border rounded-lg">
           <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10 border-b border-gray-200">
             <tr>
@@ -332,7 +332,10 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount }) => {
                   const rowClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
                   return (
                     <tr key={`${product.id_product}_${product.id_product_attribute}`} className={rowClass}>
-                      <td className="py-3 px-4 text-gray-700">{product.combination_name}</td>
+                      <td
+                        onClick={() => onClickProduct?.(product)}
+                        className="cursor-pointer hover:bg-gray-100">{product.combination_name}
+                      </td>
                       <td className="py-3 px-4 text-gray-700">{product.reference_combination}</td>
                       <td className="py-3 px-4 text-gray-700">{product.ean13_combination}</td>
                       <td className="py-3 px-4">

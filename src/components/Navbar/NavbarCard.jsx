@@ -87,7 +87,7 @@ const NavbarCard = () => {
   };
 
   return (
-    <div className="bg-white shadow p-4 flex items-center justify-between">
+    <div className="p-4 flex items-center justify-between">
       <h1 className="text-xl font-semibold">{shop ? shop.name : 'Tienda'} TPV</h1>
 
       <div className="flex items-center space-x-2">
