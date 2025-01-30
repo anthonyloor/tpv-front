@@ -86,7 +86,7 @@ const SalesCardActions = ({
   // Para leftover info, si te hace falta
   const [leftoverPreview, setLeftoverPreview] = useState([]);
   const [leftoverInfo, setLeftoverInfo] = useState([]);
-
+  
   // Calcular subtotal y descuentos
   const subtotalProducts = cartItems.reduce(
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
