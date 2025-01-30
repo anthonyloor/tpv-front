@@ -14,15 +14,10 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
   const [errorLoadingShops, setErrorLoadingShops] = useState(null);
   const apiFetch = useApiFetch();
 
+  // Texto descriptivo del movimiento
   const [description, setDescription] = useState('');
 
-  useEffect(() => {
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (storedShop && storedShop.id_shop) {
-      setSelectedOriginStore(storedShop.id_shop.toString());
-    }
-  }, []);
-  
+  // 1) Cargar la lista de tiendas al montar
   useEffect(() => {
     const loadShops = async () => {
       try {
@@ -40,20 +35,31 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
     loadShops();
   }, [apiFetch]);
 
+  // 2) Si `movementData` es nulo => estamos creando uno nuevo => 
+  //    asignar la tienda local al origen/destino según "type"
   useEffect(() => {
-    // Determinar permisos
-    // (si tu lógica original lo hacía, la mantenemos)
-    // p.e. setPermisoEjecutar(permisosGlobal[permisosUsuario]?.acceso_ejecutar || 'Denegado');
+    if (!movementData) {
+      const storedShop = JSON.parse(localStorage.getItem('shop'));
+      if (storedShop && storedShop.id_shop) {
+        if (type === 'salida' || type === 'traspaso') {
+          setSelectedOriginStore(String(storedShop.id_shop));
+        } else if (type === 'entrada') {
+          setSelectedDestinationStore(String(storedShop.id_shop));
+        }
+      }
+    }
+  }, [movementData, type]);
+
+  // 3) Permisos globales
+  useEffect(() => {
     if (permisosGlobal && permisosUsuario) {
       setPermisoEjecutar(permisosGlobal[permisosUsuario]?.acceso_ejecutar || 'Denegado');
     }
   }, [permisosUsuario, permisosGlobal]);
 
-  // Si movementData existe => precargamos la info
+  // 4) Si `movementData` existe => precargar la info
   useEffect(() => {
     if (movementData) {
-      // Ejemplo de asignar sus campos
-      // Ajusta nombres según tu API
       setDescription(movementData.description || '');
       if (movementData.id_shop_origin) {
         setSelectedOriginStore(String(movementData.id_shop_origin));
@@ -62,23 +68,16 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
         setSelectedDestinationStore(String(movementData.id_shop_destiny));
       }
 
-      // Si movementData.movement_details existe => convertimos en productsToTransfer
+      // Convertir movement_details en productsToTransfer
       if (Array.isArray(movementData.movement_details)) {
-        // Por ejemplo, lo almacenamos en productsToTransfer
-        // con la forma {product_name, quantity, ...} 
         const loadedProducts = movementData.movement_details.map((md) => {
-          // Observa que md.sent_quantity o md.recived_quantity
-          // depende de si es un traspaso, salida o entrada
-          // Suponiendo que en un traspaso "sent_quantity" es la cantidad
-          // y en una entrada "received_quantity" es la cantidad, etc.
+          // Suponiendo: en 'traspaso' y 'salida' la cantidad se registra en "sent_quantity"
+          // y en 'entrada' la cantidad se registra en "recived_quantity"
           const quantity = md.sent_quantity || md.recived_quantity || 0;
           return {
-            // la "lógica actual" solía tener: id_product, product_name, quantity, etc.
-            // Aquí no tenemos id_product, solo un product_name: "Faja..."
-            // Ajusta según tu API. Ponemos un ID simulado o -1
             id_product_attribute: md.id_warehouse_movement_detail,
             product_name: md.product_name,
-            quantity,
+            quantity
           };
         });
         setProductsToTransfer(loadedProducts);
@@ -86,27 +85,24 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
     }
   }, [movementData]);
 
-  // Manejo de la creación/edición
+  // Guardar (crear/editar)
   const handleSave = () => {
-    // Lógica de guardar con la API
-    // EJ: si movementData existe => update, sino => create
     if (movementData?.id_warehouse_movement) {
       console.log('[TransferForm] Editar movimiento:', movementData.id_warehouse_movement);
-      // TODO: llama a tu API, por ejemplo `update_warehouse_movement`
+      // TODO: Llamada a tu API p.ej. update_warehouse_movement
     } else {
       console.log('[TransferForm] Crear nuevo movimiento');
-      // TODO: llama a tu API, por ejemplo `create_warehouse_movement`
+      // TODO: Llamada a tu API p.ej. create_warehouse_movement
     }
-    // Al terminar, llamamos onSave (para que el padre refresque la lista y cierre)
+
     if (onSave) onSave();
   };
 
-  // Lógica para añadir producto
+  // Añadir producto
   const handleAddProduct = (product) => {
     setProductsToTransfer((prev) => {
       const existing = prev.find((p) => p.id_product_attribute === product.id_product_attribute);
       if (existing) {
-        // sumar 1 a quantity
         return prev.map((p) =>
           p.id_product_attribute === product.id_product_attribute
             ? { ...p, quantity: p.quantity + 1 }
@@ -118,6 +114,7 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
     });
   };
 
+  // Cambiar cantidad
   const handleQuantityChange = (id_product_attribute, newQty) => {
     setProductsToTransfer((prev) =>
       prev.map((p) =>
@@ -128,20 +125,21 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
     );
   };
 
+  // Eliminar producto
   const handleRemoveProduct = (id_product_attribute) => {
     setProductsToTransfer((prev) =>
       prev.filter((p) => p.id_product_attribute !== id_product_attribute)
     );
   };
 
-  // Flag para saber si la tienda origen y destino son la misma
-  const isSameStoreSelected = selectedOriginStore === selectedDestinationStore && type === 'traspasos';
+  // Saber si la tienda origen y destino son iguales (en 'traspaso')
+  const isSameStoreSelected =
+    selectedOriginStore === selectedDestinationStore && type === 'traspaso';
 
   return (
     <div className="bg-white rounded-lg p-6">
-
-      {/* Nombre o Descripción del movimiento */}
       <div className="grid grid-cols-2 gap-4">
+        {/* Columna 1: Descripción + Fecha */}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-bold mb-2">Descripción</label>
@@ -153,7 +151,6 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-
           <div>
             <label className="block text-sm font-bold mb-2">Fecha</label>
             <input
@@ -165,13 +162,8 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
           </div>
         </div>
 
+        {/* Columna 2: según type => origen/destino */}
         <div className="space-y-4">
-          {/* 
-            Mantenemos la lógica actual de tu type:
-            if (type === 'traspaso'), pintar "Tienda Origen / Destino"
-            if (type === 'entrada'), se pinta la tienda destino, etc.
-            Si movementData existía, ya setSelectedOriginStore/destiny.
-          */}
           {type === 'traspaso' && (
             <>
               <div>
@@ -195,7 +187,6 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
                   </select>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-bold mb-2">Tienda Destino</label>
                 {isLoadingShops ? (
@@ -228,7 +219,6 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
           {type === 'entrada' && (
             <div>
               <label className="block text-sm font-bold mb-2">Tienda Destino</label>
-              {/* Lógica para "entrada" => solo la tienda de destino */}
               {isLoadingShops ? (
                 <p>Cargando tiendas...</p>
               ) : errorLoadingShops ? (
@@ -253,7 +243,6 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
           {type === 'salida' && (
             <div>
               <label className="block text-sm font-bold mb-2">Tienda Origen</label>
-              {/* Lógica para "salida" => solo la tienda de origen */}
               {isLoadingShops ? (
                 <p>Cargando tiendas...</p>
               ) : errorLoadingShops ? (
@@ -277,11 +266,7 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
         </div>
       </div>
 
-      {/* Si no hay movementData => mostramos ProductSearchCardForTransfer (lógica actual).
-          Si sí hay movementData => igualmente puedes permitir "añadir" más productos si tu 
-          negocio lo requiere, o dejarlo en modo "lectura". 
-          Ajusta a tu gusto.
-      */}
+      {/* ProductSearchCardForTransfer => solo si movementData es null (nuevo) */}
       {!movementData && (
         <ProductSearchCardForTransfer
           onAddProduct={handleAddProduct}
@@ -291,7 +276,7 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
         />
       )}
 
-      {/* Tabla de productos a traspasar */}
+      {/* Tabla de productos */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold">Productos a Traspasar:</h3>
         <table className="min-w-full bg-white border">
@@ -305,18 +290,14 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
           <tbody>
             {productsToTransfer.map((product, index) => (
               <tr key={index}>
-                <td className="py-2 px-4 border-b">
-                  {product.product_name}
-                </td>
+                <td className="py-2 px-4 border-b">{product.product_name}</td>
                 <td className="py-2 px-4 border-b">
                   <input
                     type="number"
                     min="1"
                     className="border rounded w-12 p-1"
                     value={product.quantity}
-                    onChange={(e) =>
-                      handleQuantityChange(product.id_product_attribute, e.target.value)
-                    }
+                    onChange={(e) => handleQuantityChange(product.id_product_attribute, e.target.value)}
                   />
                 </td>
                 <td className="py-2 px-4 border-b">
@@ -340,7 +321,7 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
         </table>
       </div>
 
-      {/* Botones Guardar / Ejecutar (si la lógica actual lo requiere) */}
+      {/* Botones Guardar / Ejecutar */}
       <div className="mt-6 flex gap-4">
         <button
           className="bg-blue-500 text-white px-4 py-2 rounded w-full"
@@ -349,12 +330,11 @@ const TransferForm = ({ type, onSave, permisosUsuario, permisosGlobal, movementD
         >
           Guardar
         </button>
-
         {permisoEjecutar === 'Permitido' && (
           <button
             className="bg-green-500 text-white px-4 py-2 rounded w-full"
             onClick={() => {
-              alert('Ejecutar Traspaso');
+              alert('Ejecutar Traspaso (o Entrada / Salida)');
               // tu lógica
             }}
             disabled={isSameStoreSelected}
