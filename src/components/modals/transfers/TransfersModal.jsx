@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 import TransferForm from './TransferForm';
 import { useApiFetch } from '../../utils/useApiFetch';
@@ -36,9 +36,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
   // Para mostrar/ocultar contenedor de filtros
   const [showFilters, setShowFilters] = useState(false);
 
-  // ---------------------------------------------------------------------
-  // LÓGICA PRINCIPAL DE BÚSQUEDA
-  // ---------------------------------------------------------------------
   const handleSearch = async () => {
     setLoading(true);
     setSelectedMovements([]);
@@ -51,8 +48,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
 
         if (Array.isArray(data) && data.length > 0) {
           setUnfilteredMovements(data);
-          // En este caso “bloqueas” la lógica de filtrar local Título/Tipo/Estado,
-          // pero si quisieras, podrías filtrar local de igual forma.
+          // Podrías filtrar localmente si quisieras, pero aquí directamente:
           setMovements(data);
         } else {
           setUnfilteredMovements([]);
@@ -72,12 +68,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
         if (Array.isArray(data)) {
           setUnfilteredMovements(data);
           // Aplicar filtrado local Título, Tipo, Estado
-          const localFiltered = localFilterData(
-            data,
-            filterTitle,
-            filterType,
-            filterStatus
-          );
+          const localFiltered = localFilterData(data, filterTitle, filterType, filterStatus);
           setMovements(localFiltered);
         } else {
           setUnfilteredMovements([]);
@@ -153,9 +144,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // ---------------------------------------------------------------------
-  // FUNCIONES EVENTOS
-  // ---------------------------------------------------------------------
   const handleRowSelect = (movement) => {
     setSelectedMovement(movement);
     setMovementType(movement.type || 'traspaso');
@@ -190,15 +178,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
     setCurrentView('form');
   };
 
-  const goBack = () => {
-    setCurrentView('list');
-    setSelectedMovement(null);
-    setMovementType(null);
-  };
-
-  // ---------------------------------------------------------------------
-  // RENDER DE LA VISTA "LIST"
-  // ---------------------------------------------------------------------
   const renderMovementList = () => {
     // Lógica para habilitar/deshabilitar
     const disableById = filterId.trim() !== '';
@@ -234,7 +213,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
                     handleSearch();
                   }
                 }}
-                // si se rellena fecha => se bloquea => disabled=disableByDate
                 disabled={disableByDate}
               />
               {/* Botón x para limpiar */}
@@ -258,7 +236,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
                 onChange={(e) => {
                   setFilterDateFrom(e.target.value);
                   if (e.target.value) {
-                    // Se rellena => limpiamos ID
                     setFilterId('');
                   }
                 }}
@@ -452,19 +429,10 @@ const TransfersModal = ({ isOpen, onClose }) => {
       </div>
     );
   };
-
-  // ---------------------------------------------------------------------
-  // RENDER SELECT TYPE
-  // ---------------------------------------------------------------------
+  
   const renderSelectType = () => {
     return (
       <div>
-        <button
-          onClick={goBack}
-          className="bg-gray-300 px-3 py-1 rounded mb-3"
-        >
-          Atrás
-        </button>
         <h2 className="text-xl font-bold mb-4">Selecciona el tipo de movimiento</h2>
         <div className="space-y-4">
           <button
@@ -490,18 +458,9 @@ const TransfersModal = ({ isOpen, onClose }) => {
     );
   };
 
-  // ---------------------------------------------------------------------
-  // RENDER FORM
-  // ---------------------------------------------------------------------
   const renderForm = () => {
     return (
       <div>
-        <button
-          onClick={goBack}
-          className="bg-gray-300 px-3 py-1 rounded mb-3"
-        >
-          Atrás
-        </button>
         <TransferForm
           movementData={selectedMovement}
           type={movementType}
@@ -514,9 +473,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
     );
   };
 
-  // ---------------------------------------------------------------------
-  // RENDER PRINCIPAL
-  // ---------------------------------------------------------------------
   let content = null;
   if (currentView === 'list') {
     content = renderMovementList();
@@ -526,11 +482,23 @@ const TransfersModal = ({ isOpen, onClose }) => {
     content = renderForm();
   }
 
+  // Mostramos u ocultamos el botón "Atrás" en el header del modal
+  const showBackButton = currentView !== 'list';
+
+  // Al pulsar atrás en el modal => volver a la lista
+  const handleBack = () => {
+    setCurrentView('list');
+    setSelectedMovement(null);
+    setMovementType(null);
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Gestión de Mercadería"
+      showBackButton={showBackButton}
+      onBack={handleBack}
       size="3xl"
       height="tall"
     >

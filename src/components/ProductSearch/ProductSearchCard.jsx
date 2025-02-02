@@ -82,7 +82,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(searchTerm)}`,
         { method: 'GET' }
       );
-      // Filtrar solo los registros donde los tres campos son nulos
       const validResults = results.filter(product =>
         !(product.id_product_attribute === null &&
         product.ean13_combination === null &&

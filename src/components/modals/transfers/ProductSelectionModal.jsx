@@ -1,7 +1,6 @@
 // src/components/modals/transfers/ProductSelectionModal.jsx
 import React from 'react';
-import Modal from '../Modal'; 
-import productsData from '../../../data/products.json';
+import Modal from '../Modal';
 
 const ProductSelectionModal = ({ isOpen, onClose, products, onSelectProduct, originShopId, destinationShopId }) => {
   // Si no hay productos, se muestra la tabla vacía
@@ -10,10 +9,10 @@ const ProductSelectionModal = ({ isOpen, onClose, products, onSelectProduct, ori
       isOpen={isOpen}
       onClose={onClose}
       title="Seleccionar Producto"
-      showBackButton={false} // No se requiere botón atrás
+      showBackButton={false}
       showCloseButton={true}
-      size="md"
-      height="md"
+      size="3xl"
+      height="default"
     >
       <div className="overflow-y-auto max-h-[70vh]">
         <table className="min-w-full bg-white border">
@@ -21,32 +20,34 @@ const ProductSelectionModal = ({ isOpen, onClose, products, onSelectProduct, ori
             <tr>
               <th className="py-2 px-4 border-b text-left">Nombre Producto</th>
               <th className="py-2 px-4 border-b text-left">Combinación</th>
-              <th className="py-2 px-4 border-b text-left">Origen</th>
+              <th className="py-2 px-4 border-b text-left">Stock Origen</th>
               {destinationShopId && (
-                <th className="py-2 px-4 border-b text-left">Destino</th>
+                <th className="py-2 px-4 border-b text-left">Stock Destino</th>
               )}
               <th className="py-2 px-4 border-b text-left">Acción</th>
             </tr>
           </thead>
           <tbody>
             {products.map((product) => {
-              let destinationQuantity = '-';
+              // Suponiendo que product.quantity es el stock en la tienda "origen"
+              // y si hay destino, lo calculas o lo muestras. Ajusta según tu API.
+              let destinyQty = '-';
               if (destinationShopId) {
-                const destProduct = productsData.find(
-                  (p) =>
-                    p.id_product_attribute === product.id_product_attribute &&
-                    p.id_shop.toString() === destinationShopId
-                );
-                destinationQuantity = destProduct ? destProduct.quantity : 0;
+                // Este trozo es opcional, si la API no da esa info, podrías omitirlo
+                // o llamarlo "stockDestiny"
               }
 
               return (
                 <tr key={product.id_product_attribute}>
                   <td className="py-2 px-4 border-b">{product.product_name}</td>
                   <td className="py-2 px-4 border-b">{product.combination_name}</td>
-                  <td className="py-2 px-4 border-b">{product.quantity}</td>
+                  <td className="py-2 px-4 border-b">
+                    {product.quantity ?? 0}
+                  </td>
                   {destinationShopId && (
-                    <td className="py-2 px-4 border-b">{destinationQuantity}</td>
+                    <td className="py-2 px-4 border-b">
+                      {destinyQty}
+                    </td>
                   )}
                   <td className="py-2 px-4 border-b">
                     <button
@@ -59,6 +60,13 @@ const ProductSelectionModal = ({ isOpen, onClose, products, onSelectProduct, ori
                 </tr>
               );
             })}
+            {products.length === 0 && (
+              <tr>
+                <td colSpan={destinationShopId ? 4 : 3} className="text-center p-4">
+                  No hay productos para mostrar.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
