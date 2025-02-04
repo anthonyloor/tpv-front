@@ -22,7 +22,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
   // Checkboxes (selección múltiple)
   const [selectedMovements, setSelectedMovements] = useState([]);
 
-  // Guardamos data sin filtrar por Título,Tipo,Estado
+  // Guardamos data sin filtrar
   const [unfilteredMovements, setUnfilteredMovements] = useState([]);
 
   // Filtros
@@ -36,69 +36,13 @@ const TransfersModal = ({ isOpen, onClose }) => {
   // Para mostrar/ocultar contenedor de filtros
   const [showFilters, setShowFilters] = useState(false);
 
-  const handleSearch = async () => {
-    setLoading(true);
-    setSelectedMovements([]);
-
-    try {
-      // 1) si filterId => llama a GET /get_warehouse_movement
-      if (filterId.trim() !== '') {
-        const url = `https://apitpv.anthonyloor.com/get_warehouse_movement?id_warehouse_movement=${encodeURIComponent(filterId.trim())}`;
-        const data = await apiFetch(url, { method: 'GET' });
-
-        if (Array.isArray(data) && data.length > 0) {
-          setUnfilteredMovements(data);
-          // Podrías filtrar localmente si quisieras, pero aquí directamente:
-          setMovements(data);
-        } else {
-          setUnfilteredMovements([]);
-          setMovements([]);
-        }
-      } else {
-        // 2) sino => /get_warehouse_movements con date1, date2
-        const body = {};
-        if (filterDateFrom) body.data1 = filterDateFrom;
-        if (filterDateTo) body.data2 = filterDateTo;
-
-        const data = await apiFetch('https://apitpv.anthonyloor.com/get_warehouse_movements', {
-          method: 'POST',
-          body: JSON.stringify(body),
-        });
-
-        if (Array.isArray(data)) {
-          setUnfilteredMovements(data);
-          // Aplicar filtrado local Título, Tipo, Estado
-          const localFiltered = localFilterData(data, filterTitle, filterType, filterStatus);
-          setMovements(localFiltered);
-        } else {
-          setUnfilteredMovements([]);
-          setMovements([]);
-        }
-      }
-    } catch (error) {
-      console.error('[TransfersModal] handleSearch error:', error);
-      setUnfilteredMovements([]);
-      setMovements([]);
-    } finally {
-      setLoading(false);
+  // Al abrir => list => refrescar
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentView('list');
+      handleRefresh();
     }
-  };
-
-  // Filtrado local Título, Tipo, Estado
-  const localFilterData = (arr, title, type, status) => {
-    let result = [...arr];
-    if (title.trim() !== '') {
-      const lower = title.toLowerCase();
-      result = result.filter(mov => mov.description.toLowerCase().includes(lower));
-    }
-    if (type !== '') {
-      result = result.filter(mov => mov.type === type);
-    }
-    if (status !== '') {
-      result = result.filter(mov => mov.status === status);
-    }
-    return result;
-  };
+  }, [isOpen]);
 
   // Refrescar => sin filtros
   const handleRefresh = async () => {
@@ -108,7 +52,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
     try {
       const data = await apiFetch('https://apitpv.anthonyloor.com/get_warehouse_movements', {
         method: 'POST',
-        body: JSON.stringify({}), // sin body => últimas 50
+        body: JSON.stringify({}), // últimas 50
       });
       if (Array.isArray(data)) {
         setUnfilteredMovements(data);
@@ -126,7 +70,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // Limpiar todos los filtros
+  // Reset filtros
   const resetFilters = () => {
     setFilterId('');
     setFilterDateFrom('');
@@ -136,20 +80,111 @@ const TransfersModal = ({ isOpen, onClose }) => {
     setFilterStatus('');
   };
 
-  // Al abrir => list => handleRefresh
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentView('list');
-      handleRefresh();
-    }
-  }, [isOpen]);
+  // Buscar con filtros
+  const handleSearch = async () => {
+    setLoading(true);
+    setSelectedMovements([]);
+    try {
+      if (filterId.trim() !== '') {
+        // get_warehouse_movement ?id=...
+        const url = `https://apitpv.anthonyloor.com/get_warehouse_movement?id_warehouse_movement=${encodeURIComponent(
+          filterId.trim()
+        )}`;
+        const data = await apiFetch(url, { method: 'GET' });
+        if (data && !Array.isArray(data)) {
+          setUnfilteredMovements([data]);
+          setMovements([data]);
+        } else if (Array.isArray(data)) {
+          setUnfilteredMovements(data);
+          setMovements(data);
+        } else {
+          setUnfilteredMovements([]);
+          setMovements([]);
+        }
+      } else {
+        // get_warehouse_movements con date1, date2
+        const body = {};
+        if (filterDateFrom) body.data1 = filterDateFrom;
+        if (filterDateTo) body.data2 = filterDateTo;
 
-  const handleRowSelect = (movement) => {
-    setSelectedMovement(movement);
-    setMovementType(movement.type || 'traspaso');
-    setCurrentView('form');
+        const data = await apiFetch('https://apitpv.anthonyloor.com/get_warehouse_movements', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        if (Array.isArray(data)) {
+          setUnfilteredMovements(data);
+          const localFiltered = localFilterData(data, filterTitle, filterType, filterStatus);
+          setMovements(localFiltered);
+        } else {
+          setUnfilteredMovements([]);
+          setMovements([]);
+        }
+      }
+    } catch (error) {
+      console.error('[TransfersModal] handleSearch error:', error);
+      setUnfilteredMovements([]);
+      setMovements([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Filtrado local
+  const localFilterData = (arr, title, type, status) => {
+    let result = [...arr];
+    if (title.trim() !== '') {
+      const lower = title.toLowerCase();
+      result = result.filter((mov) =>
+        (mov.description || '').toLowerCase().includes(lower)
+      );
+    }
+    if (type !== '') {
+      result = result.filter((mov) => mov.type === type);
+    }
+    if (status !== '') {
+      result = result.filter(
+        (mov) => (mov.status || '').toLowerCase() === status.toLowerCase()
+      );
+    }
+    return result;
+  };
+
+  // Doble click => abrir el detalle (llamar a get_warehouse_movement)
+  const handleRowDoubleClick = async (movement) => {
+    try {
+      setLoading(true);
+      const data = await apiFetch(
+        `https://apitpv.anthonyloor.com/get_warehouse_movement?id_warehouse_movement=${movement.id_warehouse_movement}`,
+        { method: 'GET' }
+      );
+      setSelectedMovement(data);
+      setMovementType(data.type || 'traspaso');
+      setCurrentView('form');
+    } catch (error) {
+      console.error('Error al obtener detalles del movimiento:', error);
+      alert('No se pudo cargar el detalle del movimiento');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Single click => alternar en selectedMovements
+  const handleRowClick = (movement) => {
+    let _selected = [...selectedMovements];
+    const index = _selected.findIndex(
+      (m) => m.id_warehouse_movement === movement.id_warehouse_movement
+    );
+    if (index >= 0) {
+      // Quitar
+      _selected.splice(index, 1);
+    } else {
+      // Agregar
+      _selected.push(movement);
+    }
+    setSelectedMovements(_selected);
+  };
+
+  // Botones
   const handleCreateTransfer = () => {
     setSelectedMovement(null);
     setMovementType(null);
@@ -172,21 +207,24 @@ const TransfersModal = ({ isOpen, onClose }) => {
     alert(`Eliminar ${selectedMovements.length} movimientos (pendiente).`);
   };
 
-  const selectMovementType = (type) => {
-    setMovementType(type);
+  const selectMovementType = (newType) => {
+    setMovementType(newType);
     setSelectedMovement(null);
     setCurrentView('form');
   };
 
+  const handleFormSave = () => {
+    handleRefresh();
+    setCurrentView('list');
+  };
+
+  // --- Render subpantallas ---
   const renderMovementList = () => {
     // Lógica para habilitar/deshabilitar
     const disableById = filterId.trim() !== '';
     const disableByDate = !!(filterDateFrom || filterDateTo);
-
-    // container de Filtros (desplegable)
     const renderFilters = () => {
       if (!showFilters) return null;
-
       return (
         <div className="bg-white p-3 mb-3 border border-gray-200 rounded">
           <div className="grid grid-cols-6 gap-4">
@@ -330,11 +368,11 @@ const TransfersModal = ({ isOpen, onClose }) => {
                 disabled={disableById}
               >
                 <option value="">(Todos)</option>
-                <option value="en creacion">En creacion</option>
-                <option value="enviado">Enviado</option>
-                <option value="recibido">Recibido</option>
-                <option value="en revision">En revision</option>
-                <option value="finalizado">Finalizado</option>
+                <option value="En creacion">En creacion</option>
+                <option value="Enviado">Enviado</option>
+                <option value="Recibido">Recibido</option>
+                <option value="En revision">En revision</option>
+                <option value="Finalizado">Finalizado</option>
               </select>
               {filterStatus && (
                 <button
@@ -380,7 +418,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
               onClick={handleDeleteTransfer}
               className="bg-red-500 text-white px-3 py-2 rounded"
             >
-              Eliminar Traspaso
+              Eliminar
             </button>
             <button
               onClick={handleRefresh}
@@ -389,7 +427,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
               Refrescar
             </button>
           </div>
-          {/* Botón para mostrar/ocultar contenedor de filtros */}
           <div>
             <button
               onClick={() => setShowFilters((prev) => !prev)}
@@ -400,36 +437,35 @@ const TransfersModal = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Filtros condicionales */}
         {renderFilters()}
-
-        {/* Separador */}
         <hr className="my-3 border-gray-300" />
 
-        {/* Tabla */}
         <DataTable
           value={movements}
           loading={loading}
+          dataKey="id_warehouse_movement"
+          selectionMode="multiple"
+          metaKeySelection={false}  // Para toggle con click normal
           selection={selectedMovements}
           onSelectionChange={(e) => setSelectedMovements(e.value)}
-          selectionMode="checkbox"
           paginator
           rows={8}
           emptyMessage={loading ? 'Cargando...' : 'No hay movimientos.'}
-          onRowClick={(e) => handleRowSelect(e.data)}
           className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
+          onRowClick={(e) => handleRowClick(e.data)}  // Click => toggle selection
+          onRowDoubleClick={(e) => handleRowDoubleClick(e.data)} // DblClick => abrir
         >
           <Column selectionMode="multiple" headerStyle={{ width: '3em' }} />
           <Column field="id_warehouse_movement" header="ID" style={{ width: '70px' }} />
           <Column field="date_add" header="Fecha" style={{ width: '120px' }} />
           <Column field="description" header="Título" style={{ minWidth: '150px' }} />
           <Column field="type" header="Tipo" style={{ width: '100px' }} />
-          <Column field="status" header="Estado" style={{ width: '100px' }} />
+          <Column field="status" header="Estado" style={{ width: '120px' }} />
         </DataTable>
       </div>
     );
   };
-  
+
   const renderSelectType = () => {
     return (
       <div>
@@ -464,14 +500,32 @@ const TransfersModal = ({ isOpen, onClose }) => {
         <TransferForm
           movementData={selectedMovement}
           type={movementType}
-          onSave={() => {
-            handleRefresh();
-            setCurrentView('list');
-          }}
+          onSave={handleFormSave}
         />
       </div>
     );
   };
+
+  // Título modal
+  let modalTitle = '';
+  if (currentView === 'list') {
+    modalTitle = 'Gestión de Stock';
+  } else if (currentView === 'selectType') {
+    modalTitle = 'Crear Movimiento';
+  } else if (currentView === 'form') {
+    if (!selectedMovement) {
+      const t = movementType || 'traspaso';
+      modalTitle = `Crear Movimiento: ${
+        t === 'traspaso' ? 'Traspaso' : t === 'entrada' ? 'Entrada' : 'Salida'
+      }`;
+    } else {
+      const t = selectedMovement.type;
+      if (t === 'traspaso') modalTitle = 'Traspaso entre tiendas';
+      else if (t === 'entrada') modalTitle = 'Entrada de mercadería';
+      else if (t === 'salida') modalTitle = 'Salida de mercadería';
+      else modalTitle = 'Movimiento';
+    }
+  }
 
   let content = null;
   if (currentView === 'list') {
@@ -482,10 +536,8 @@ const TransfersModal = ({ isOpen, onClose }) => {
     content = renderForm();
   }
 
-  // Mostramos u ocultamos el botón "Atrás" en el header del modal
   const showBackButton = currentView !== 'list';
 
-  // Al pulsar atrás en el modal => volver a la lista
   const handleBack = () => {
     setCurrentView('list');
     setSelectedMovement(null);
@@ -496,7 +548,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Gestión de Mercadería"
+      title={modalTitle}
       showBackButton={showBackButton}
       onBack={handleBack}
       size="3xl"
