@@ -21,6 +21,8 @@ import StoreStockPanel from './components/Stock/StoreStockPanel';
 import 'primereact/resources/themes/md-light-indigo/theme.css'; // Tema Material
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
+import { isMobile } from 'react-device-detect'; // <-- 1) importamos isMobile
+import MobileDashboard from './MobileDashboard'; // <-- 2) importamos tu UI móvil
 
 function App() {
   const { setIsAuthenticated, setShopId, setEmployeeId, setEmployeeName, setIdProfile, setShopName } = useContext(AuthContext);
@@ -28,11 +30,8 @@ function App() {
   const allowOutOfStockSales = configData ? configData.allow_out_of_stock_sales : false;
   const navigate = useNavigate();
   const [selectedProductForStock, setSelectedProductForStock] = useState(null);
-
-  // Estado para indicar si el shop ya ha sido cargado
   const [isShopLoaded, setIsShopLoaded] = useState(false);
 
-  // Cargar autenticación y datos de la tienda
   useEffect(() => {
     const storedShop = JSON.parse(localStorage.getItem('shop'));
     const storedEmployee = JSON.parse(localStorage.getItem('employee'));
@@ -50,7 +49,6 @@ function App() {
     }
   }, [setIsAuthenticated, setShopId, setShopName, setEmployeeId, setEmployeeName, setIdProfile]);
 
-  // useCart y useDiscounts
   const {
     cartItems,
     setCartItems,
@@ -71,7 +69,6 @@ function App() {
     clearDiscounts,
   } = useDiscounts();
 
-  // CONTROL DE RUTAS
   useEffect(() => {
     if (!isShopLoaded) return;
     const currentPath = window.location.pathname.split('/')[1];
@@ -87,12 +84,20 @@ function App() {
   if (!isShopLoaded) {
     return <div className="flex justify-center items-center h-screen">Cargando...</div>;
   }
+  
+  if (isMobile) {
+    // Si es móvil => devolvemos la UI de móvil (MobileDashboard)
+    return (
+      <MobileDashboard />
+    );
+  }
 
+  // 4) Si NO es móvil => devolvemos la UI de siempre (TPV de escritorio)
   return (
     <div className="bg-gray-light min-h-screen flex flex-col">
       <Toaster position="top-center" expand={true} />
       <Routes>
-        {/* Rutas para cada tienda */}
+        {/* Rutas de login */}
         <Route path="/penaprieta8" element={<LoginPage shopRoute="penaprieta8" />} />
         <Route path="/bravomurillo205" element={<LoginPage shopRoute="bravomurillo205" />} />
         <Route path="/alcala397" element={<LoginPage shopRoute="alcala397" />} />
