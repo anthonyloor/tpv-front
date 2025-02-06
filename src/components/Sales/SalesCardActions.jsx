@@ -1,6 +1,6 @@
 // src/components/Sales/SalesCardActions.jsx
 
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import ReturnsExchangesModal from '../modals/returns/ReturnsExchangesModal';
 import ReprintModal from '../modals/reprint/ReprintModal';
 import PinValidationModal from '../modals/pin/PinValidationModal';

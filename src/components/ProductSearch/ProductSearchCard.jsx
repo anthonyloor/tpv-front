@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useContext } from "react";
 import Modal from "../modals/Modal";
+import { AuthContext } from "../../contexts/AuthContext";
 import { useApiFetch } from "../utils/useApiFetch";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { toast } from "sonner";
@@ -17,7 +18,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [clickedButtons, setClickedButtons] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const { configData, shopId, shopName } = useContext(ConfigContext);
+  const { configData } = useContext(ConfigContext);
+  const { shopId, shopName } = useContext(AuthContext);
   const allowOutOfStockSales = configData
     ? configData.allow_out_of_stock_sales
     : false;
