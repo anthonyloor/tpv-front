@@ -1,20 +1,25 @@
 // src/components/Navbar/NavbarCard.jsx
 
 import React, { useState, useEffect, useContext } from "react";
-import { AuthContext } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../contexts/AuthContext";
 import TransfersModal from "../modals/transfers/TransfersModal";
 import ConfigurationModal from "../modals/configuration/ConfigurationModal";
-import SalesReportModal from "../../components/reports/SalesReportModal";
+import SalesReportModal from "../reports/SalesReportModal";
 import CloseCashRegisterModal from "../modals/cashRegister/CloseCashRegisterModal";
 
+// Importamos Menubar de PrimeReact
+import { Menubar } from 'primereact/menubar';
+
 const NavbarCard = () => {
+  // Estados y contexto
   const [isTransfersModalOpen, setTransfersModalOpen] = useState(false);
   const [isConfigurationModalOpen, setConfigurationModalOpen] = useState(false);
   const [isSalesReportModalOpen, setIsSalesReportModalOpen] = useState(false);
   const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
 
-  // Se han quitado las referencias a isClientModalOpen, isAddressModalOpen, etc.
+  const [configModalView, setConfigModalView] = useState("config"); 
+  // Para abrir config directamente en “permisos”, “impresoras”, etc.
 
   const navigate = useNavigate();
   const {
@@ -26,15 +31,7 @@ const NavbarCard = () => {
     setOpenCloseCashModal,
   } = useContext(AuthContext);
 
-  // También se retiran las referencias a selectedClient, selectedAddress, etc.
-  // Pues ahora está en SalesCard.
-
   const shop = JSON.parse(localStorage.getItem("shop"));
-
-  const handleLogoutClick = () => {
-    handleLogout();
-    navigate(`/${shop.route}`);
-  };
 
   useEffect(() => {
     if (openCloseCashModal) {
@@ -43,88 +40,106 @@ const NavbarCard = () => {
     }
   }, [openCloseCashModal, setOpenCloseCashModal]);
 
-  const handleCloseCashRegisterModal = () => {
-    setIsCashRegisterModalOpen(false);
+  const handleLogoutClick = () => {
+    handleLogout();
+    navigate(`/${shop.route}`);
   };
 
-  const handleOpenSalesReport = () => {
-    setIsSalesReportModalOpen(true);
+  // Para abrir Configuración en una vista específica
+  const openConfigView = (viewName) => {
+    setConfigModalView(viewName);
+    setConfigurationModalOpen(true);
   };
 
-  const handleOpenCashRegister = () => {
-    setIsCashRegisterModalOpen(true);
-  };
+  // Construimos el modelo para Menubar (items principales)
+  const items = [
+    {
+      label: shopName ? shopName + " TPV" : "TPV",
+      icon: "pi pi-home",
+      command: () => {
+        // Podríamos navegar a la home de la tienda si quisieras
+        navigate(`/${shop.route}/app`);
+      },
+    },
+    // Transferencias solo si es Admin
+    ...(idProfile === 1
+      ? [
+          {
+            label: "Transferencias",
+            icon: "pi pi-exchange",
+            command: () => setTransfersModalOpen(true),
+          },
+        ]
+      : []),
+    {
+      label: "Labels",
+      icon: "pi pi-tags",
+      command: () => {
+        // Lógica para “Labels” (si existe o en construcción)
+        console.log("Clicked on Labels");
+      },
+    },
+    {
+      label: "Caja",
+      icon: "pi pi-wallet",
+      command: () => setIsCashRegisterModalOpen(true),
+    },
+    {
+      label: "Configuración",
+      icon: "pi pi-cog",
+      items: [
+        // Submenú para la configuración
+        {
+          label: "Permisos",
+          icon: "pi pi-lock",
+          command: () => openConfigView("permisos"),
+        },
+        {
+          label: "Impresoras",
+          icon: "pi pi-print",
+          command: () => openConfigView("impresoras"),
+        },
+        {
+          label: "Inventario",
+          icon: "pi pi-folder-open",
+          command: () => openConfigView("inventory"),
+        },
+      ],
+    },
+    // Reportes solo si es Admin
+    ...(idProfile === 1
+      ? [
+          {
+            label: "Reportes",
+            icon: "pi pi-chart-bar",
+            command: () => setIsSalesReportModalOpen(true),
+          },
+        ]
+      : []),
+  ];
+
+  // Bloque “usuario actual + logout” lo podemos poner a la derecha (end)
+  const end = (
+    <div className="flex items-center space-x-3 mr-4">
+      <div className="flex items-center space-x-1">
+        <i className="pi pi-user" />
+        <span className="font-semibold text-gray-700">{employeeName}</span>
+      </div>
+      <button
+        onClick={handleLogoutClick}
+        className="inline-flex items-center text-black hover:text-gray-600"
+      >
+        <i className="pi pi-sign-out" style={{ fontSize: "1.2rem" }}></i>
+      </button>
+    </div>
+  );
 
   return (
-    <div className="p-4 flex items-center justify-between">
-      <h1 className="text-xl font-semibold">{shopName} TPV</h1>
+    <div className="w-full">
+      {/* Menubar principal */}
+      <Menubar model={items} end={end} />
 
-      {/* Se ha eliminado el bloque de cliente/dirección que antes estaba aquí */}
-
-      <div className="border-l h-6 mx-4"></div>
-
-      <div className="flex items-center space-x-4">
-        {idProfile === 1 && (
-          <button
-            className="text-black hover:text-gray-600"
-            onClick={() => setTransfersModalOpen(true)}
-          >
-            Transferencias
-          </button>
-        )}
-        <button className="text-black hover:text-gray-600">Labels</button>
-        <button
-          className="text-black hover:text-gray-600"
-          onClick={handleOpenCashRegister}
-        >
-          Caja
-        </button>
-        <button
-          className="text-black hover:text-gray-600"
-          onClick={() => setConfigurationModalOpen(true)}
-        >
-          Configuración
-        </button>
-        {idProfile === 1 && (
-          <button
-            className="text-black hover:text-gray-600"
-            onClick={handleOpenSalesReport}
-          >
-            Reportes de Ventas
-          </button>
-        )}
-      </div>
-
-      <div className="border-l h-6 mx-4"></div>
-
-      {/* Bloque final: Empleado y logout */}
-      <div className="flex items-center space-x-2">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="currentColor"
-          viewBox="0 0 24 24"
-          className="h-5 w-5"
-        >
-          <path d="M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Z" />
-          <path d="M8.5 9.75a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 0 0-2.5 0Z" />
-        </svg>
-        <span className="font-semibold text-gray-700">{employeeName}</span>
-        <button
-          onClick={handleLogoutClick}
-          className="text-black hover:text-gray-600"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            className="h-5 w-5"
-          >
-            <path d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Modales que se mantienen aquí */}
+      {/* Modales (idénticos, solo que ahora se abren al pulsar items del menú) */}
       <TransfersModal
         isOpen={isTransfersModalOpen}
         onClose={() => setTransfersModalOpen(false)}
@@ -133,6 +148,7 @@ const NavbarCard = () => {
       <ConfigurationModal
         isOpen={isConfigurationModalOpen}
         onClose={() => setConfigurationModalOpen(false)}
+        initialView={configModalView}
       />
 
       <SalesReportModal
@@ -142,7 +158,7 @@ const NavbarCard = () => {
 
       <CloseCashRegisterModal
         isOpen={isCashRegisterModalOpen}
-        onClose={handleCloseCashRegisterModal}
+        onClose={() => setIsCashRegisterModalOpen(false)}
       />
     </div>
   );

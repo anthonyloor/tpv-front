@@ -1,34 +1,43 @@
 // src/components/modals/configuration/ConfigurationModal.jsx
 
-import React, { useState } from 'react';
-import Modal from '../Modal';
-import PermisosModal from './permissions/PermissionsModal';
-import TicketConfigModal from './printers/TicketConfigModal';
+import React, { useState, useEffect } from "react";
+import Modal from "../Modal";
+import PermisosModal from "./permissions/PermissionsModal";
+import TicketConfigModal from "./printers/TicketConfigModal";
 
-const ConfigurationModal = ({ isOpen, onClose }) => {
-  const [currentView, setCurrentView] = useState('config');
+const ConfigurationModal = ({ isOpen, onClose, initialView = "config" }) => {
+  const [currentView, setCurrentView] = useState(initialView);
+
+  // Si `initialView` cambia mientras el modal está abierto
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentView(initialView);
+    }
+  }, [initialView, isOpen]);
 
   const goBack = () => {
-    if (currentView === 'permisos' || currentView === 'impresoras') {
-      setCurrentView('config');
-    } else if (currentView === 'ticketConfig' || currentView === 'etiquetaPrecios') {
-      setCurrentView('impresoras');
+    if (currentView === "permisos" || currentView === "impresoras") {
+      setCurrentView("config");
+    } else if (
+      currentView === "ticketConfig" ||
+      currentView === "etiquetaPrecios"
+    ) {
+      setCurrentView("impresoras");
     } else {
       onClose();
     }
   };
 
-  let title = 'Configuración';
+  let title = "Configuración";
   let showBackButton = false;
-
-  if (currentView === 'permisos') {
-    title = 'Permisos';
+  if (currentView === "permisos") {
+    title = "Permisos";
     showBackButton = true;
-  } else if (currentView === 'impresoras') {
-    title = 'Impresoras';
+  } else if (currentView === "impresoras") {
+    title = "Impresoras";
     showBackButton = true;
-  } else if (currentView === 'ticketConfig') {
-    title = 'Configuración de Tickets';
+  } else if (currentView === "ticketConfig") {
+    title = "Configuración de Tickets";
     showBackButton = true;
   }
 
@@ -42,18 +51,18 @@ const ConfigurationModal = ({ isOpen, onClose }) => {
       size="md"
       height="md"
     >
-      {currentView === 'config' && (
+      {currentView === "config" && (
         <div>
           <div className="space-y-4">
             <button
               className="bg-gray-300 text-black px-4 py-2 rounded w-full"
-              onClick={() => setCurrentView('permisos')}
+              onClick={() => setCurrentView("permisos")}
             >
               Permisos
             </button>
             <button
               className="bg-gray-300 text-black px-4 py-2 rounded w-full"
-              onClick={() => setCurrentView('impresoras')}
+              onClick={() => setCurrentView("impresoras")}
             >
               Impresoras
             </button>
@@ -64,29 +73,32 @@ const ConfigurationModal = ({ isOpen, onClose }) => {
         </div>
       )}
 
-      {currentView === 'permisos' && (
+      {currentView === "permisos" && (
         <div>
           <PermisosModal onClose={onClose} />
         </div>
       )}
 
-      {currentView === 'impresoras' && (
+      {currentView === "impresoras" && (
         <div>
           <div className="space-y-4">
             <button
               className="bg-gray-300 text-black px-4 py-2 rounded w-full"
-              onClick={() => setCurrentView('ticketConfig')}
+              onClick={() => setCurrentView("ticketConfig")}
             >
               Tickets al Cliente
             </button>
-            <button className="bg-gray-300 text-black px-4 py-2 rounded w-full">
+            <button
+              className="bg-gray-300 text-black px-4 py-2 rounded w-full"
+              onClick={() => setCurrentView("etiquetaPrecios")}
+            >
               Etiqueta Precios
             </button>
           </div>
         </div>
       )}
 
-      {currentView === 'ticketConfig' && (
+      {currentView === "ticketConfig" && (
         <div>
           <TicketConfigModal onClose={onClose} goBack={goBack} />
         </div>
