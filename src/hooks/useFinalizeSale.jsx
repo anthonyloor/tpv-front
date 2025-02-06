@@ -1,12 +1,14 @@
 // src/hooks/useFinalizeSale.jsx
 
-import { useState } from 'react';
-import { useApiFetch } from '../components/utils/useApiFetch';
-import { toast } from 'sonner';
+import { useState, useContext } from "react";
+import { AuthContext } from "../contexts/AuthContext";
+import { useApiFetch } from "../components/utils/useApiFetch";
+import { toast } from "sonner";
 
 export default function useFinalizeSale() {
   const [isLoading, setIsLoading] = useState(false);
   const apiFetch = useApiFetch();
+  const { employeeId, shopId } = useContext(AuthContext);
 
   const finalizeSale = async (
     {
@@ -23,11 +25,9 @@ export default function useFinalizeSale() {
   ) => {
     setIsLoading(true);
     try {
-      const shop = JSON.parse(localStorage.getItem('shop'));
-      const employee = JSON.parse(localStorage.getItem('employee'));
-      const client = JSON.parse(localStorage.getItem('selectedClient'));
-      const address = JSON.parse(localStorage.getItem('selectedAddress'));
-      const licenseData = JSON.parse(localStorage.getItem('licenseData'));
+      const client = JSON.parse(localStorage.getItem("selectedClient"));
+      const address = JSON.parse(localStorage.getItem("selectedAddress"));
+      const licenseData = JSON.parse(localStorage.getItem("licenseData"));
 
       const id_customer = client ? client.id_customer : 0;
       const id_address_delivery = address ? address.id_address : 0;
@@ -47,21 +47,33 @@ export default function useFinalizeSale() {
         product_id: item.id_product,
         product_attribute_id: item.id_product_attribute,
         stock_available_id: item.id_stock_available,
-        product_name: `${item.product_name} ${item.combination_name || ''}`.trim(),
+        product_name: `${item.product_name} ${
+          item.combination_name || ""
+        }`.trim(),
         product_quantity: item.quantity,
         product_price: item.unit_price_tax_excl,
         product_ean13: item.ean13_combination,
         product_reference: item.reference_combination,
-        total_price_tax_incl: parseFloat((item.final_price_incl_tax * item.quantity).toFixed(2)),
-        total_price_tax_excl: parseFloat((item.final_price_excl_tax * item.quantity).toFixed(2)),
+        total_price_tax_incl: parseFloat(
+          (item.final_price_incl_tax * item.quantity).toFixed(2)
+        ),
+        total_price_tax_excl: parseFloat(
+          (item.final_price_excl_tax * item.quantity).toFixed(2)
+        ),
         unit_price_tax_incl: item.final_price_incl_tax,
         unit_price_tax_excl: item.final_price_excl_tax,
         id_shop: item.id_shop,
       }));
 
-      const total_cash = selectedMethods.includes('efectivo') ? parseFloat(amounts.efectivo || 0) : 0;
-      const total_card = selectedMethods.includes('tarjeta') ? parseFloat(amounts.tarjeta || 0) : 0;
-      const total_bizum = selectedMethods.includes('bizum') ? parseFloat(amounts.bizum || 0) : 0;
+      const total_cash = selectedMethods.includes("efectivo")
+        ? parseFloat(amounts.efectivo || 0)
+        : 0;
+      const total_card = selectedMethods.includes("tarjeta")
+        ? parseFloat(amounts.tarjeta || 0)
+        : 0;
+      const total_bizum = selectedMethods.includes("bizum")
+        ? parseFloat(amounts.bizum || 0)
+        : 0;
 
       let remaining = subtotalInclTax;
       let total_discounts = 0;
@@ -103,20 +115,22 @@ export default function useFinalizeSale() {
       const total_discounts_tax_excl = total_discounts / factorTax;
 
       const saleData = {
-        id_shop: shop?.id_shop || 0,
+        id_shop: shopId,
         id_customer,
         id_address_delivery,
-        payment: selectedMethods.join(', '),
+        payment: selectedMethods.join(", "),
         total_paid: parseFloat(finalTotalInclTax.toFixed(2)),
         total_paid_tax_excl: parseFloat(total_paid_tax_excl.toFixed(2)),
         total_products: parseFloat(total_products.toFixed(2)),
         total_cash: parseFloat(total_cash.toFixed(2)),
         total_card: parseFloat(total_card.toFixed(2)),
         total_bizum: parseFloat(total_bizum.toFixed(2)),
-        license: licenseData?.licenseKey || '',
-        id_employee: employee ? employee.id_employee : 0,
+        license: licenseData?.licenseKey || "",
+        id_employee: employeeId,
         total_discounts: parseFloat(total_discounts.toFixed(2)),
-        total_discounts_tax_excl: parseFloat(total_discounts_tax_excl.toFixed(2)),
+        total_discounts_tax_excl: parseFloat(
+          total_discounts_tax_excl.toFixed(2)
+        ),
         order_details,
       };
 
@@ -124,19 +138,22 @@ export default function useFinalizeSale() {
         saleData.discounts = discountsArray;
       }
 
-      const response = await apiFetch('https://apitpv.anthonyloor.com/create_order', {
-        method: 'POST',
-        body: JSON.stringify(saleData),
-      });
+      const response = await apiFetch(
+        "https://apitpv.anthonyloor.com/create_order",
+        {
+          method: "POST",
+          body: JSON.stringify(saleData),
+        }
+      );
 
-      const message = response.message || '';
+      const message = response.message || "";
       const orderIdMatch = message.match(/id (\d+)/);
       const newOrderId = orderIdMatch ? orderIdMatch[1] : null;
 
       setIsLoading(false);
 
       if (onSuccess && newOrderId) {
-        toast.success('Venta finalizada correctamente');
+        toast.success("Venta finalizada correctamente");
         onSuccess({
           orderId: newOrderId,
           print,
@@ -152,18 +169,18 @@ export default function useFinalizeSale() {
         try {
           const leftoverResp = await apiFetch(
             `https://apitpv.anthonyloor.com/get_cart_rule?code=${leftoverCode}`,
-            { method: 'GET' }
+            { method: "GET" }
           );
-          console.log('Respuesta get_cart_rule:', leftoverResp);
+          console.log("Respuesta get_cart_rule:", leftoverResp);
           alert(
             `Se va a imprimir un nuevo vale con la cantidad sobrante: ${leftoverCode}`
           );
         } catch (error) {
-          console.error('Error al obtener el nuevo cart rule sobrante:', error);
+          console.error("Error al obtener el nuevo cart rule sobrante:", error);
         }
       }
     } catch (error) {
-      console.error('Error al crear la orden:', error);
+      console.error("Error al crear la orden:", error);
       setIsLoading(false);
       if (onError) onError(error);
     }

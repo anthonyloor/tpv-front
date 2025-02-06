@@ -1,43 +1,42 @@
 // src/hooks/useDiscounts.jsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../contexts/AuthContext";
 
 export default function useDiscounts() {
   const [appliedDiscounts, setAppliedDiscounts] = useState([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const { shopId } = useContext(AuthContext);
 
   const getDiscountsKey = (shopId) => `discounts_shop_${shopId}`;
 
   useEffect(() => {
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (storedShop) {
-      const discountsKey = getDiscountsKey(storedShop.id_shop);
+    if (shopId) {
+      const discountsKey = getDiscountsKey(shopId);
       const storedDiscounts = localStorage.getItem(discountsKey);
       if (storedDiscounts) {
         try {
           setAppliedDiscounts(JSON.parse(storedDiscounts));
         } catch (err) {
-          console.error('[useDiscounts] Error parseando descuentos:', err);
+          console.error("[useDiscounts] Error parseando descuentos:", err);
         }
       }
     }
     setIsInitialLoad(false);
-  }, []);
+  }, [shopId]);
 
   useEffect(() => {
     if (isInitialLoad) return;
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (storedShop) {
-      const discountsKey = getDiscountsKey(storedShop.id_shop);
+    if (shopId) {
+      const discountsKey = getDiscountsKey(shopId);
       localStorage.setItem(discountsKey, JSON.stringify(appliedDiscounts));
     }
-  }, [appliedDiscounts, isInitialLoad]);
+  }, [appliedDiscounts, isInitialLoad, shopId]);
 
   const clearDiscounts = () => {
     setAppliedDiscounts([]);
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (storedShop) {
-      localStorage.removeItem(getDiscountsKey(storedShop.id_shop));
+    if (shopId) {
+      localStorage.removeItem(getDiscountsKey(shopId));
     }
   };
 

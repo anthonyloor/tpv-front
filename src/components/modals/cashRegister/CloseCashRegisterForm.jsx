@@ -1,32 +1,30 @@
 // src/components/modals/cashRegister/CloseCashRegisterForm.jsx
 
-import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import SalesReportModal from '../../reports/SalesReportModal';
-import { useApiFetch } from '../../../components/utils/useApiFetch';
+import React, { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../../../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import SalesReportModal from "../../reports/SalesReportModal";
+import { useApiFetch } from "../../../components/utils/useApiFetch";
 
 const CloseCashRegisterForm = ({ onClose }) => {
   const [numberOfSales, setNumberOfSales] = useState(0);
   const [totalSalesTPV, setTotalSalesTPV] = useState(0);
-  const [totalSalesStore, setTotalSalesStore] = useState('');
+  const [totalSalesStore, setTotalSalesStore] = useState("");
   const [fetchedTotalCash, setFetchedTotalCash] = useState(0.0);
   const [fetchedTotalCard, setFetchedTotalCard] = useState(0.0);
   const [fetchedTotalBizum, setFetchedTotalBizum] = useState(0.0);
-  const [inputTotalCash, setInputTotalCash] = useState('');
-  const [inputTotalCard, setInputTotalCard] = useState('');
-  const [inputTotalBizum, setInputTotalBizum] = useState('');
+  const [inputTotalCash, setInputTotalCash] = useState("");
+  const [inputTotalCard, setInputTotalCard] = useState("");
+  const [inputTotalBizum, setInputTotalBizum] = useState("");
   const [isCloseButtonDisabled, setIsCloseButtonDisabled] = useState(true);
   const [isSalesReportOpen, setIsSalesReportOpen] = useState(false);
 
   const apiFetch = useApiFetch();
   const navigate = useNavigate();
-  const { handleLogout } = useContext(AuthContext);
-  const shop = JSON.parse(localStorage.getItem('shop'));
-  const licenseData = JSON.parse(localStorage.getItem('licenseData')) || {};
+  const { handleLogout, employeeId } = useContext(AuthContext);
+  const shop = JSON.parse(localStorage.getItem("shop"));
+  const licenseData = JSON.parse(localStorage.getItem("licenseData")) || {};
   const license = licenseData.licenseKey;
-  const employee = JSON.parse(localStorage.getItem('employee'));
-  const id_employee = employee ? employee.id_employee : null;
 
   useEffect(() => {
     const fetchReportAmounts = async () => {
@@ -34,11 +32,11 @@ const CloseCashRegisterForm = ({ onClose }) => {
         const data = await apiFetch(
           `https://apitpv.anthonyloor.com/get_report_amounts?license=${license}`,
           {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
           }
         );
-        if (data.status === 'OK') {
+        if (data.status === "OK") {
           const totalCashNum = parseFloat(data.total_cash);
           const totalCardNum = parseFloat(data.total_card);
           const totalBizumNum = parseFloat(data.total_bizum);
@@ -46,14 +44,15 @@ const CloseCashRegisterForm = ({ onClose }) => {
           setFetchedTotalCard(totalCardNum);
           setFetchedTotalBizum(totalBizumNum);
           const dummyNumberOfSales = 10;
-          const dummyTotalSalesTPV = totalCashNum + totalCardNum + totalBizumNum;
+          const dummyTotalSalesTPV =
+            totalCashNum + totalCardNum + totalBizumNum;
           setNumberOfSales(dummyNumberOfSales);
           setTotalSalesTPV(dummyTotalSalesTPV);
         } else {
-          alert(data.message || 'No se pudo obtener el reporte de caja');
+          alert(data.message || "No se pudo obtener el reporte de caja");
         }
       } catch (error) {
-        console.error('Error fetch report amounts:', error);
+        console.error("Error fetch report amounts:", error);
       }
     };
     if (license) {
@@ -65,8 +64,11 @@ const CloseCashRegisterForm = ({ onClose }) => {
     const cashMatches = parseFloat(inputTotalCash) === fetchedTotalCash;
     const cardMatches = parseFloat(inputTotalCard) === fetchedTotalCard;
     const bizumMatches = parseFloat(inputTotalBizum) === fetchedTotalBizum;
-    const salesMatches = parseFloat(totalSalesStore) === parseFloat(totalSalesTPV);
-    setIsCloseButtonDisabled(!(cashMatches && cardMatches && bizumMatches && salesMatches));
+    const salesMatches =
+      parseFloat(totalSalesStore) === parseFloat(totalSalesTPV);
+    setIsCloseButtonDisabled(
+      !(cashMatches && cardMatches && bizumMatches && salesMatches)
+    );
   }, [
     inputTotalCash,
     inputTotalCard,
@@ -101,25 +103,28 @@ const CloseCashRegisterForm = ({ onClose }) => {
 
   const handleCloseCashRegister = async () => {
     try {
-      const data = await apiFetch('https://apitpv.anthonyloor.com/close_pos_session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          license,
-          id_employee,
-        }),
-      });
-      if (data.status === 'OK') {
-        alert('Cierre de caja realizado exitosamente.');
+      const data = await apiFetch(
+        "https://apitpv.anthonyloor.com/close_pos_session",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            license,
+            employeeId,
+          }),
+        }
+      );
+      if (data.status === "OK") {
+        alert("Cierre de caja realizado exitosamente.");
         onClose();
         handleLogout();
         navigate(`/${shop.route}`);
       } else {
-        alert(data.message || 'No se pudo cerrar la caja.');
+        alert(data.message || "No se pudo cerrar la caja.");
       }
     } catch (error) {
-      console.error('Error al cerrar la caja:', error);
-      alert('Error al cerrar la caja.');
+      console.error("Error al cerrar la caja:", error);
+      alert("Error al cerrar la caja.");
     }
   };
 
@@ -127,11 +132,19 @@ const CloseCashRegisterForm = ({ onClose }) => {
     <>
       <div className="space-y-4">
         <div>
-          <p><strong>Número de Ventas:</strong> {numberOfSales}</p>
-          <p><strong>TOTAL VENTAS TPV:</strong> {Number(totalSalesTPV).toFixed(2)} €</p>
+          <p>
+            <strong>Número de Ventas:</strong> {numberOfSales}
+          </p>
+          <p>
+            <strong>TOTAL VENTAS TPV:</strong>{" "}
+            {Number(totalSalesTPV).toFixed(2)} €
+          </p>
         </div>
         <div>
-          <label htmlFor="totalSalesStore" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="totalSalesStore"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             Total de Ventas Tienda
           </label>
           <input
@@ -144,7 +157,10 @@ const CloseCashRegisterForm = ({ onClose }) => {
           />
         </div>
         <div>
-          <label htmlFor="inputTotalCash" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="inputTotalCash"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             Total Efectivo (coincidir con {fetchedTotalCash.toFixed(2)} €)
           </label>
           <input
@@ -154,7 +170,10 @@ const CloseCashRegisterForm = ({ onClose }) => {
             onChange={handleInputTotalCashChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
           />
-          <label htmlFor="inputTotalCard" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="inputTotalCard"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             Total Tarjeta (coincidir con {fetchedTotalCard.toFixed(2)} €)
           </label>
           <input
@@ -164,7 +183,10 @@ const CloseCashRegisterForm = ({ onClose }) => {
             onChange={handleInputTotalCardChange}
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
           />
-          <label htmlFor="inputTotalBizum" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="inputTotalBizum"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             Total Bizum (coincidir con {fetchedTotalBizum.toFixed(2)} €)
           </label>
           <input
@@ -188,8 +210,8 @@ const CloseCashRegisterForm = ({ onClose }) => {
             disabled={isCloseButtonDisabled}
             className={`px-4 py-2 rounded ${
               isCloseButtonDisabled
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-red-600 text-white hover:bg-red-700'
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-red-600 text-white hover:bg-red-700"
             }`}
           >
             Cerrar Caja
@@ -197,7 +219,9 @@ const CloseCashRegisterForm = ({ onClose }) => {
         </div>
       </div>
 
-      {isSalesReportOpen && <SalesReportModal onClose={handleCloseSalesReport} />}
+      {isSalesReportOpen && (
+        <SalesReportModal onClose={handleCloseSalesReport} />
+      )}
     </>
   );
 };

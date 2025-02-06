@@ -1,46 +1,48 @@
 // src/components/modals/transfers/TransferForm.jsx
 
-import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import ProductSearchCardForTransfer from './ProductSearchCardForTransfer';
-import { useApiFetch } from '../../utils/useApiFetch';
+import React, { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../../../contexts/AuthContext";
+import { toast } from "sonner";
+import ProductSearchCardForTransfer from "./ProductSearchCardForTransfer";
+import { useApiFetch } from "../../utils/useApiFetch";
 
 const TransferForm = ({ type, onSave, movementData }) => {
   const [productsToTransfer, setProductsToTransfer] = useState([]);
   const [recentlyAddedId, setRecentlyAddedId] = useState(null);
   const [shops, setShops] = useState([]);
-  const [selectedOriginStore, setSelectedOriginStore] = useState('');
-  const [selectedDestinationStore, setSelectedDestinationStore] = useState('');
-  const [originShopName, setOriginShopName] = useState('');
-  const [destinationShopName, setDestinationShopName] = useState('');
+  const [selectedOriginStore, setSelectedOriginStore] = useState("");
+  const [selectedDestinationStore, setSelectedDestinationStore] = useState("");
+  const [originShopName, setOriginShopName] = useState("");
+  const [destinationShopName, setDestinationShopName] = useState("");
   const [isLoadingShops, setIsLoadingShops] = useState(true);
   const [errorLoadingShops, setErrorLoadingShops] = useState(null);
+  const { employeeId, shopId } = useContext(AuthContext);
 
   // Datos del movimiento
-  const [description, setDescription] = useState('');
-  const [createDate, setCreateDate] = useState('');
-  const [movementStatus, setMovementStatus] = useState('En creacion');
-  const [employeeId, setEmployeeId] = useState(null);
+  const [description, setDescription] = useState("");
+  const [createDate, setCreateDate] = useState("");
+  const [movementStatus, setMovementStatus] = useState("En creacion");
+  const [employeeIdV, setEmployeeId] = useState(null);
 
   const apiFetch = useApiFetch();
 
   const isNewMovement = !movementData;
-  const currentStatus = movementData?.status || 'En creacion';
+  const currentStatus = movementData?.status || "En creacion";
 
   // 1) Carga de tiendas
   useEffect(() => {
     const loadShops = async () => {
       try {
         setIsLoadingShops(true);
-        const data = await apiFetch('https://apitpv.anthonyloor.com/shops', {
-          method: 'GET',
+        const data = await apiFetch("https://apitpv.anthonyloor.com/shops", {
+          method: "GET",
         });
         // Filtramos tienda con id=1 si no la quieres
         const filteredData = data.filter((shop) => shop.id_shop !== 1);
         setShops(filteredData);
       } catch (error) {
-        console.error('Error al cargar tiendas:', error);
-        setErrorLoadingShops(error.message || 'Error al cargar tiendas');
+        console.error("Error al cargar tiendas:", error);
+        setErrorLoadingShops(error.message || "Error al cargar tiendas");
       } finally {
         setIsLoadingShops(false);
       }
@@ -51,41 +53,44 @@ const TransferForm = ({ type, onSave, movementData }) => {
   // 2) Asignar nombre de tienda al cambiar selectedOriginStore
   useEffect(() => {
     if (shops.length > 0 && selectedOriginStore) {
-      const shopObj = shops.find((s) => String(s.id_shop) === String(selectedOriginStore));
-      setOriginShopName(shopObj ? shopObj.name : '');
+      const shopObj = shops.find(
+        (s) => String(s.id_shop) === String(selectedOriginStore)
+      );
+      setOriginShopName(shopObj ? shopObj.name : "");
     } else {
-      setOriginShopName('');
+      setOriginShopName("");
     }
   }, [shops, selectedOriginStore]);
 
   // 3) Asignar nombre de tienda al cambiar selectedDestinationStore
   useEffect(() => {
     if (shops.length > 0 && selectedDestinationStore) {
-      const shopObj = shops.find((s) => String(s.id_shop) === String(selectedDestinationStore));
-      setDestinationShopName(shopObj ? shopObj.name : '');
+      const shopObj = shops.find(
+        (s) => String(s.id_shop) === String(selectedDestinationStore)
+      );
+      setDestinationShopName(shopObj ? shopObj.name : "");
     } else {
-      setDestinationShopName('');
+      setDestinationShopName("");
     }
   }, [shops, selectedDestinationStore]);
 
   // 4) Si es movimiento nuevo => asignamos tienda local por defecto
   useEffect(() => {
     if (isNewMovement) {
-      const storedShop = JSON.parse(localStorage.getItem('shop'));
-      if (storedShop && storedShop.id_shop) {
-        if (type === 'salida' || type === 'traspaso') {
-          setSelectedOriginStore(String(storedShop.id_shop));
-        } else if (type === 'entrada') {
-          setSelectedDestinationStore(String(storedShop.id_shop));
+      if (shopId) {
+        if (type === "salida" || type === "traspaso") {
+          setSelectedOriginStore(String(shopId));
+        } else if (type === "entrada") {
+          setSelectedDestinationStore(String(shopId));
         }
       }
     }
-  }, [isNewMovement, type]);
+  }, [isNewMovement, type, shopId]);
 
   // 5) Carga de datos del movimiento si existe
   useEffect(() => {
     if (movementData) {
-      setDescription(movementData.description || '');
+      setDescription(movementData.description || "");
       if (movementData.id_shop_origin) {
         setSelectedOriginStore(String(movementData.id_shop_origin));
       }
@@ -99,17 +104,16 @@ const TransferForm = ({ type, onSave, movementData }) => {
   useEffect(() => {
     if (isNewMovement) {
       // Fecha = hoy
-      setCreateDate(new Date().toISOString().split('T')[0]);
-      const emp = JSON.parse(localStorage.getItem('employee') || '{}');
-      setEmployeeId(emp.id_employee || null);
+      setCreateDate(new Date().toISOString().split("T")[0]);
+      setEmployeeId(employeeId);
     } else {
       // Movimiento existente
       if (movementData?.date_add) {
-        const onlyDate = movementData.date_add.split(' ')[0];
+        const onlyDate = movementData.date_add.split(" ")[0];
         setCreateDate(onlyDate);
       }
-      setMovementStatus(movementData?.status || 'En creacion');
-      setEmployeeId(movementData?.employee || null);
+      setMovementStatus(movementData?.status || "En creacion");
+      setEmployeeId(movementData?.employee);
 
       // Cargar los detalles del movimiento
       if (Array.isArray(movementData.movement_details)) {
@@ -120,26 +124,26 @@ const TransferForm = ({ type, onSave, movementData }) => {
             id_product: md.id_product,
             id_product_attribute: md.id_product_attribute,
             product_name: md.product_name,
-            ean13: md.ean13 || '',
+            ean13: md.ean13 || "",
             quantity,
-            stockOrigin: md.stock_origin
+            stockOrigin: md.stock_origin,
           };
         });
         setProductsToTransfer(loadedProducts);
       }
     }
-  }, [isNewMovement, movementData]);
+  }, [isNewMovement, movementData, employeeId]);
 
   // Saber si la tienda origen y destino son iguales (solo para traspaso)
   const isSameStoreSelected =
-    type === 'traspaso' &&
+    type === "traspaso" &&
     selectedOriginStore &&
     selectedDestinationStore &&
     selectedOriginStore === selectedDestinationStore;
 
   // Podemos editar productos si: es nuevo o status = 'En creacion'
   const canEditProducts =
-    isNewMovement || movementStatus.toLowerCase() === 'en creacion';
+    isNewMovement || movementStatus.toLowerCase() === "en creacion";
 
   // Añadir producto => si no hay suficiente stock, no se añade
   const handleAddProduct = (product) => {
@@ -149,7 +153,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
       // 1) Comprobar stock
       const maxStock = product.stockOrigin;
       if (product.quantity > maxStock) {
-        toast.error('No dispones de más stock para añadir.');
+        toast.error("No dispones de más stock para añadir.");
         // No se agrega
         return prev;
       }
@@ -161,7 +165,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
       if (existing) {
         const newQty = existing.quantity + product.quantity;
         if (newQty > maxStock) {
-          toast.error('No dispones de más stock para añadir.');
+          toast.error("No dispones de más stock para añadir.");
           return prev;
         }
         // Actualizar
@@ -192,7 +196,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
 
       let val = parseInt(newQty, 10) || 1;
       if (val > maxStock) {
-        toast.error('No dispones de más stock para añadir.');
+        toast.error("No dispones de más stock para añadir.");
         return prev; // no se actualiza
       }
       // Actualizar
@@ -219,9 +223,9 @@ const TransferForm = ({ type, onSave, movementData }) => {
         id_product: prod.id_product,
         id_product_attribute: prod.id_product_attribute,
         product_name: prod.product_name,
-        ean13: prod.ean13 || '',
+        ean13: prod.ean13 || "",
       };
-      if (type === 'entrada') {
+      if (type === "entrada") {
         detail.recived_quantity = prod.quantity;
       } else {
         // 'salida' o 'traspaso'
@@ -234,34 +238,33 @@ const TransferForm = ({ type, onSave, movementData }) => {
   // Crear => POST create_warehouse_movement
   const handleSaveCreate = async () => {
     try {
-      // Empleado local
-      const emp = JSON.parse(localStorage.getItem('employee') || '{}');
-      const id_employee = emp.id_employee || null;
-
       const payload = {
         description,
         type,
-        id_employee,
+        employeeId,
       };
-      if (type === 'entrada') {
+      if (type === "entrada") {
         payload.id_shop_destiny = parseInt(selectedDestinationStore, 10);
-      } else if (type === 'salida') {
+      } else if (type === "salida") {
         payload.id_shop_origin = parseInt(selectedOriginStore, 10);
-      } else if (type === 'traspaso') {
+      } else if (type === "traspaso") {
         payload.id_shop_origin = parseInt(selectedOriginStore, 10);
         payload.id_shop_destiny = parseInt(selectedDestinationStore, 10);
       }
       payload.movements_details = buildMovementsDetails();
 
-      await apiFetch('https://apitpv.anthonyloor.com/create_warehouse_movement', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      toast.success('Movimiento creado con éxito');
+      await apiFetch(
+        "https://apitpv.anthonyloor.com/create_warehouse_movement",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+      toast.success("Movimiento creado con éxito");
       if (onSave) onSave();
     } catch (error) {
-      console.error('Error creando movimiento:', error);
-      toast.error('Error al crear el movimiento');
+      console.error("Error creando movimiento:", error);
+      toast.error("Error al crear el movimiento");
     }
   };
 
@@ -274,24 +277,29 @@ const TransferForm = ({ type, onSave, movementData }) => {
     const payload = {
       id_warehouse_movement: movementData.id_warehouse_movement,
       description,
-      status: 'En creacion', 
+      status: "En creacion",
       type: movementData.type,
       id_shop_origin: movementData.id_shop_origin,
       id_shop_destiny: movementData.id_shop_destiny,
       movement_details: buildMovementsDetails(),
-      modify_reason: `${currentDate} - Movimiento actualizado a En creacion \n${movementData.modify_reason || ''}`,
+      modify_reason: `${currentDate} - Movimiento actualizado a En creacion \n${
+        movementData.modify_reason || ""
+      }`,
     };
 
     try {
-      await apiFetch('https://apitpv.anthonyloor.com/update_warehouse_movement', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      toast.success('Movimiento actualizado (En creacion).');
+      await apiFetch(
+        "https://apitpv.anthonyloor.com/update_warehouse_movement",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+      toast.success("Movimiento actualizado (En creacion).");
       if (onSave) onSave();
     } catch (error) {
-      console.error('Error al actualizar movimiento:', error);
-      toast.error('Error al actualizar movimiento');
+      console.error("Error al actualizar movimiento:", error);
+      toast.error("Error al actualizar movimiento");
     }
   };
 
@@ -303,15 +311,18 @@ const TransferForm = ({ type, onSave, movementData }) => {
       const payload = {
         id_warehouse_movement: movementData.id_warehouse_movement,
       };
-      await apiFetch('https://apitpv.anthonyloor.com/execute_warehouse_movement', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-      toast.success('Movimiento ejecutado con éxito.');
+      await apiFetch(
+        "https://apitpv.anthonyloor.com/execute_warehouse_movement",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+      toast.success("Movimiento ejecutado con éxito.");
       if (onSave) onSave();
     } catch (error) {
-      console.error('Error al ejecutar movimiento:', error);
-      toast.error('Error al ejecutar movimiento');
+      console.error("Error al ejecutar movimiento:", error);
+      toast.error("Error al ejecutar movimiento");
     }
   };
 
@@ -327,19 +338,24 @@ const TransferForm = ({ type, onSave, movementData }) => {
       id_shop_origin: movementData.id_shop_origin,
       id_shop_destiny: movementData.id_shop_destiny,
       movement_details: buildMovementsDetails(),
-      modify_reason: `${currentDate} - Movimiento actualizado a ${newStatus} \n${movementData.modify_reason || ''}`,
+      modify_reason: `${currentDate} - Movimiento actualizado a ${newStatus} \n${
+        movementData.modify_reason || ""
+      }`,
     };
 
     try {
-      await apiFetch('https://apitpv.anthonyloor.com/update_warehouse_movement', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      await apiFetch(
+        "https://apitpv.anthonyloor.com/update_warehouse_movement",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
       toast.success(`Movimiento actualizado (estado = ${newStatus}).`);
       if (onSave) onSave();
     } catch (error) {
-      console.error('Error al actualizar movimiento:', error);
-      toast.error('Error al actualizar movimiento');
+      console.error("Error al actualizar movimiento:", error);
+      toast.error("Error al actualizar movimiento");
     }
   };
 
@@ -363,8 +379,8 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
 
     // 2) Movimiento existente
-    if (st === 'en creacion') {
-      if (type === 'traspaso') {
+    if (st === "en creacion") {
+      if (type === "traspaso") {
         // "Actualizar" => mantiene En creacion
         // "Enviar" => pasa a Enviado
         return (
@@ -379,13 +395,13 @@ const TransferForm = ({ type, onSave, movementData }) => {
             <button
               className="bg-green-500 text-white px-4 py-2 rounded flex-1"
               disabled={isSameStore || noProducts}
-              onClick={() => handleUpdateMovementStatus('Enviado')}
+              onClick={() => handleUpdateMovementStatus("Enviado")}
             >
               Enviar
             </button>
           </div>
         );
-      } else if (type === 'entrada' || type === 'salida') {
+      } else if (type === "entrada" || type === "salida") {
         // "Actualizar" + "Ejecutar"
         return (
           <div className="flex gap-2 w-full">
@@ -409,11 +425,11 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
 
     // 3) Si es "Enviado" => solo para traspaso => "Marcar Recibido"
-    if (st === 'enviado' && type === 'traspaso') {
+    if (st === "enviado" && type === "traspaso") {
       return (
         <button
           className="bg-yellow-500 text-white px-4 py-2 rounded w-full"
-          onClick={() => handleUpdateMovementStatus('Recibido')}
+          onClick={() => handleUpdateMovementStatus("Recibido")}
         >
           Marcar como Recibido
         </button>
@@ -421,11 +437,11 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
 
     // 4) "Recibido" => "Revisar" (traspaso)
-    if (st === 'recibido' && type === 'traspaso') {
+    if (st === "recibido" && type === "traspaso") {
       return (
         <button
           className="bg-orange-500 text-white px-4 py-2 rounded w-full"
-          onClick={() => handleUpdateMovementStatus('En revision')}
+          onClick={() => handleUpdateMovementStatus("En revision")}
         >
           Revisar
         </button>
@@ -433,7 +449,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
 
     // 5) "En revision" => "Finalizar" (traspaso)
-    if (st === 'en revision' && type === 'traspaso') {
+    if (st === "en revision" && type === "traspaso") {
       return (
         <button
           className="bg-blue-500 text-white px-4 py-2 rounded flex-1"
@@ -447,29 +463,32 @@ const TransferForm = ({ type, onSave, movementData }) => {
 
     // 6) Si estado final o no encaja: sin acciones
     return (
-      <button className="bg-gray-400 text-white px-4 py-2 rounded w-full" disabled>
+      <button
+        className="bg-gray-400 text-white px-4 py-2 rounded w-full"
+        disabled
+      >
         Sin acciones
       </button>
     );
   };
 
   // Título interno
-  let formTitle = '';
+  let formTitle = "";
   if (isNewMovement) {
     formTitle = `Crear movimiento: ${
-      type === 'traspaso'
-        ? 'Traspaso'
-        : type === 'entrada'
-        ? 'Entrada'
-        : 'Salida'
+      type === "traspaso"
+        ? "Traspaso"
+        : type === "entrada"
+        ? "Entrada"
+        : "Salida"
     }`;
   } else {
-    if (type === 'traspaso') {
-      formTitle = 'Traspaso entre tiendas';
-    } else if (type === 'entrada') {
-      formTitle = 'Entrada de mercadería';
-    } else if (type === 'salida') {
-      formTitle = 'Salida de mercadería';
+    if (type === "traspaso") {
+      formTitle = "Traspaso entre tiendas";
+    } else if (type === "entrada") {
+      formTitle = "Entrada de mercadería";
+    } else if (type === "salida") {
+      formTitle = "Salida de mercadería";
     }
   }
 
@@ -484,7 +503,9 @@ const TransferForm = ({ type, onSave, movementData }) => {
         {/* Columna 1: Fecha + Estado + Empleado */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-bold mb-1">Fecha Creación</label>
+            <label className="block text-sm font-bold mb-1">
+              Fecha Creación
+            </label>
             <input
               className="border rounded w-full p-2"
               type="date"
@@ -506,7 +527,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
             <input
               className="border rounded w-full p-2"
               type="text"
-              value={employeeId || ''}
+              value={employeeIdV || ""}
               readOnly
             />
           </div>
@@ -522,13 +543,17 @@ const TransferForm = ({ type, onSave, movementData }) => {
               placeholder="Ej: Traspaso ropa navidad"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              disabled={!isNewMovement && currentStatus.toLowerCase() !== 'en creacion'}
+              disabled={
+                !isNewMovement && currentStatus.toLowerCase() !== "en creacion"
+              }
             />
           </div>
-          {type === 'traspaso' && (
+          {type === "traspaso" && (
             <div className="space-y-2">
               <div>
-                <label className="block text-sm font-bold mb-1">Tienda Origen</label>
+                <label className="block text-sm font-bold mb-1">
+                  Tienda Origen
+                </label>
                 {isLoadingShops ? (
                   <p>Cargando tiendas...</p>
                 ) : errorLoadingShops ? (
@@ -550,7 +575,9 @@ const TransferForm = ({ type, onSave, movementData }) => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-bold mb-1">Tienda Destino</label>
+                <label className="block text-sm font-bold mb-1">
+                  Tienda Destino
+                </label>
                 {isLoadingShops ? (
                   <p>Cargando tiendas...</p>
                 ) : errorLoadingShops ? (
@@ -559,12 +586,16 @@ const TransferForm = ({ type, onSave, movementData }) => {
                   <select
                     className="border rounded w-full p-2"
                     value={selectedDestinationStore}
-                    onChange={(e) => setSelectedDestinationStore(e.target.value)}
+                    onChange={(e) =>
+                      setSelectedDestinationStore(e.target.value)
+                    }
                     disabled={!canEditStores}
                   >
                     <option value="">Selecciona una tienda</option>
                     {shops
-                      .filter((s) => String(s.id_shop) !== String(selectedOriginStore))
+                      .filter(
+                        (s) => String(s.id_shop) !== String(selectedOriginStore)
+                      )
                       .map((shop) => (
                         <option key={shop.id_shop} value={shop.id_shop}>
                           {shop.name}
@@ -573,15 +604,19 @@ const TransferForm = ({ type, onSave, movementData }) => {
                   </select>
                 )}
                 {isSameStoreSelected && (
-                  <p className="text-red-500">La tienda origen y destino no pueden ser la misma.</p>
+                  <p className="text-red-500">
+                    La tienda origen y destino no pueden ser la misma.
+                  </p>
                 )}
               </div>
             </div>
           )}
 
-          {type === 'entrada' && (
+          {type === "entrada" && (
             <div>
-              <label className="block text-sm font-bold mb-1">Tienda Destino</label>
+              <label className="block text-sm font-bold mb-1">
+                Tienda Destino
+              </label>
               {isLoadingShops ? (
                 <p>Cargando tiendas...</p>
               ) : errorLoadingShops ? (
@@ -604,9 +639,11 @@ const TransferForm = ({ type, onSave, movementData }) => {
             </div>
           )}
 
-          {type === 'salida' && (
+          {type === "salida" && (
             <div>
-              <label className="block text-sm font-bold mb-1">Tienda Origen</label>
+              <label className="block text-sm font-bold mb-1">
+                Tienda Origen
+              </label>
               {isLoadingShops ? (
                 <p>Cargando tiendas...</p>
               ) : errorLoadingShops ? (
@@ -632,7 +669,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
       </div>
 
       {/* Si es nuevo o (estado=en creacion) => renderizar el ProductSearchCard */}
-      {((isNewMovement) || currentStatus.toLowerCase() === 'en creacion') && (
+      {(isNewMovement || currentStatus.toLowerCase() === "en creacion") && (
         <ProductSearchCardForTransfer
           onAddProduct={handleAddProduct}
           selectedOriginStore={selectedOriginStore}
@@ -646,11 +683,11 @@ const TransferForm = ({ type, onSave, movementData }) => {
       {/* Tabla de productos */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold mb-2">
-          {type === 'traspaso'
-            ? 'Productos a Traspasar'
-            : type === 'entrada'
-            ? 'Productos a Ingresar'
-            : 'Productos a Retirar'}
+          {type === "traspaso"
+            ? "Productos a Traspasar"
+            : type === "entrada"
+            ? "Productos a Ingresar"
+            : "Productos a Retirar"}
         </h3>
         <table className="min-w-full bg-white border">
           <thead>
@@ -672,9 +709,9 @@ const TransferForm = ({ type, onSave, movementData }) => {
             {productsToTransfer.map((product, index) => {
               const rowClass =
                 product.id_product_attribute === recentlyAddedId
-                  ? 'animate-product'
-                  : '';
-              const eanString = product.ean13 || '';
+                  ? "animate-product"
+                  : "";
+              const eanString = product.ean13 || "";
 
               return (
                 <tr
@@ -686,10 +723,10 @@ const TransferForm = ({ type, onSave, movementData }) => {
                       {product.product_name}
                       {product.combination_name
                         ? ` - ${product.combination_name}`
-                        : ''}
+                        : ""}
                     </div>
                     <div className="text-xs text-gray-500">
-                      EAN: {eanString || '--'}
+                      EAN: {eanString || "--"}
                     </div>
                   </td>
                   <td className="py-2 px-4 border-b">

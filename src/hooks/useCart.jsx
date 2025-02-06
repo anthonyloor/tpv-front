@@ -1,97 +1,110 @@
 // src/hooks/useCart.jsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../contexts/AuthContext";
 
 export default function useCart(allowOutOfStockSales) {
   const [cartItems, setCartItems] = useState([]);
   const [lastAction, setLastAction] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [recentlyAddedId, setRecentlyAddedId] = useState(null);
+  const { shopId } = useContext(AuthContext);
 
   const getCartKey = (shopId) => `cart_shop_${shopId}`;
   const getParkedCartsKey = (shopId) => `parked_carts_shop_${shopId}`;
 
   useEffect(() => {
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (storedShop) {
-      const storedCart = localStorage.getItem(getCartKey(storedShop.id_shop));
+    if (shopId) {
+      const storedCart = localStorage.getItem(getCartKey(shopId));
       if (storedCart) setCartItems(JSON.parse(storedCart));
     }
     setIsInitialLoad(false);
-  }, []);
+  }, [shopId]);
 
   useEffect(() => {
     if (isInitialLoad) return;
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (storedShop) {
-      localStorage.setItem(getCartKey(storedShop.id_shop), JSON.stringify(cartItems));
+    if (shopId) {
+      localStorage.setItem(getCartKey(shopId), JSON.stringify(cartItems));
     }
-  }, [cartItems, isInitialLoad]);
+  }, [cartItems, isInitialLoad, shopId]);
 
   const saveCurrentCartAsParked = (name = null) => {
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (!storedShop) {
-      alert('No se ha encontrado la tienda.');
+    if (!shopId) {
+      alert("No se ha encontrado la tienda.");
       return;
     }
-    const parkedCarts = JSON.parse(localStorage.getItem(getParkedCartsKey(storedShop.id_shop))) || [];
+    const parkedCarts =
+      JSON.parse(localStorage.getItem(getParkedCartsKey(shopId))) || [];
     const timestamp = new Date().toISOString();
     const cartName = name || `Ticket ${new Date().toLocaleString()}`;
     const newParkedCart = {
-      id: `${storedShop.id_shop}_${Date.now()}`,
+      id: `${shopId}_${Date.now()}`,
       name: cartName,
       items: cartItems,
       savedAt: timestamp,
     };
     parkedCarts.push(newParkedCart);
-    localStorage.setItem(getParkedCartsKey(storedShop.id_shop), JSON.stringify(parkedCarts));
-    alert('Carrito aparcado exitosamente.');
+    localStorage.setItem(
+      getParkedCartsKey(shopId),
+      JSON.stringify(parkedCarts)
+    );
+    alert("Carrito aparcado exitosamente.");
   };
 
   const getParkedCarts = () => {
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (!storedShop) return [];
-    return JSON.parse(localStorage.getItem(getParkedCartsKey(storedShop.id_shop))) || [];
+    if (!shopId) return [];
+    return JSON.parse(localStorage.getItem(getParkedCartsKey(shopId))) || [];
   };
 
   const loadParkedCart = (cartId) => {
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (!storedShop) {
-      alert('No se ha encontrado la tienda.');
+    if (!shopId) {
+      alert("No se ha encontrado la tienda.");
       return;
     }
-    const parkedCarts = JSON.parse(localStorage.getItem(getParkedCartsKey(storedShop.id_shop))) || [];
+    const parkedCarts =
+      JSON.parse(localStorage.getItem(getParkedCartsKey(shopId))) || [];
     const cartToLoad = parkedCarts.find((cart) => cart.id === cartId);
     if (cartToLoad) {
       setCartItems(cartToLoad.items);
       alert(`Carrito "${cartToLoad.name}" cargado.`);
     } else {
-      alert('Carrito no encontrado.');
+      alert("Carrito no encontrado.");
     }
   };
 
   const deleteParkedCart = (cartId) => {
-    const storedShop = JSON.parse(localStorage.getItem('shop'));
-    if (!storedShop) {
-      alert('No se ha encontrado la tienda.');
+    if (!shopId) {
+      alert("No se ha encontrado la tienda.");
       return;
     }
-    let parkedCarts = JSON.parse(localStorage.getItem(getParkedCartsKey(storedShop.id_shop))) || [];
+    let parkedCarts =
+      JSON.parse(localStorage.getItem(getParkedCartsKey(shopId))) || [];
     parkedCarts = parkedCarts.filter((cart) => cart.id !== cartId);
-    localStorage.setItem(getParkedCartsKey(storedShop.id_shop), JSON.stringify(parkedCarts));
-    alert('Carrito aparcado eliminado.');
+    localStorage.setItem(
+      getParkedCartsKey(shopId),
+      JSON.stringify(parkedCarts)
+    );
+    alert("Carrito aparcado eliminado.");
   };
 
-  const handleAddProduct = (product, stockQuantity, exceedsStockCallback, forceAdd = false, quantity = 1) => {
+  const handleAddProduct = (
+    product,
+    stockQuantity,
+    exceedsStockCallback,
+    forceAdd = false,
+    quantity = 1
+  ) => {
     const existingProduct = cartItems.find(
       (item) => item.id_stock_available === product.id_stock_available
     );
     const maxQuantity = stockQuantity ?? Infinity;
-    const newQuantity = existingProduct ? existingProduct.quantity + quantity : quantity;
+    const newQuantity = existingProduct
+      ? existingProduct.quantity + quantity
+      : quantity;
 
     if (newQuantity > maxQuantity && !forceAdd) {
       if (!allowOutOfStockSales) {
-        alert('No puedes añadir más de la cantidad disponible');
+        alert("No puedes añadir más de la cantidad disponible");
         return;
       } else {
         if (exceedsStockCallback) exceedsStockCallback(true);
@@ -137,7 +150,11 @@ export default function useCart(allowOutOfStockSales) {
     }, 2000);
 
     // Registrar la acción
-    setLastAction({ id: product.id_stock_available, action: 'add', timestamp: Date.now() });
+    setLastAction({
+      id: product.id_stock_available,
+      action: "add",
+      timestamp: Date.now(),
+    });
   };
 
   const handleDecreaseProduct = (idStockAvailable) => {
@@ -150,7 +167,11 @@ export default function useCart(allowOutOfStockSales) {
         )
         .filter((item) => item.quantity > 0)
     );
-    setLastAction({ id: idStockAvailable, action: 'decrease', timestamp: Date.now() });
+    setLastAction({
+      id: idStockAvailable,
+      action: "decrease",
+      timestamp: Date.now(),
+    });
   };
 
   const handleRemoveProduct = (idStockAvailable) => {
