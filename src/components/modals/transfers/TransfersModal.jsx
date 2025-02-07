@@ -1,15 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import Modal from '../Modal';
-import TransferForm from './TransferForm';
-import { useApiFetch } from '../../utils/useApiFetch';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
+// src/components/modals/transfers/TransfersModal.jsx
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Modal from "../Modal";
+import TransferForm from "./TransferForm";
+import { useApiFetch } from "../../utils/useApiFetch";
+
+// PrimeReact
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+import { Toolbar } from "primereact/toolbar";
 
 const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   const apiFetch = useApiFetch();
 
   // Vistas => 'list', 'selectType', 'form'
-  const [currentView, setCurrentView] = useState('list');
+  const [currentView, setCurrentView] = useState("list");
 
   // Movimientos
   const [movements, setMovements] = useState([]);
@@ -26,71 +32,95 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   const [unfilteredMovements, setUnfilteredMovements] = useState([]);
 
   // Filtros
-  const [filterId, setFilterId] = useState('');
-  const [filterDateFrom, setFilterDateFrom] = useState('');
-  const [filterDateTo, setFilterDateTo] = useState('');
-  const [filterTitle, setFilterTitle] = useState('');
-  const [filterType, setFilterType] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterId, setFilterId] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterTitle, setFilterTitle] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
 
   // Para mostrar/ocultar contenedor de filtros
   const [showFilters, setShowFilters] = useState(false);
 
-  // Al abrir => list => refrescar
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentView('list');
-      handleRefresh();
-    }
-  }, [isOpen]);
+  // Referencia para DataTable (CSV export)
+  const dt = useRef(null);
+
+  // Reset filtros
+  const resetFilters = useCallback(() => {
+    setFilterId("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setFilterTitle("");
+    setFilterType("");
+    setFilterStatus("");
+  }, []);
 
   // Refrescar => sin filtros
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     resetFilters();
     setLoading(true);
     setSelectedMovements([]);
+
+    const formatDate = (dateStr) => {
+      if (!dateStr) return dateStr;
+      const [datePart, timePart] = dateStr.split(" ");
+      if (!datePart || !timePart) return dateStr;
+      const [year, month, day] = datePart.split("-");
+      const [hour, minute] = timePart.split(":");
+      return `${day}-${month}-${year} ${hour}:${minute}`;
+    };
+
     try {
-      const data = await apiFetch('https://apitpv.anthonyloor.com/get_warehouse_movements', {
-        method: 'POST',
-        body: JSON.stringify({}), // últimas 50
-      });
+      const data = await apiFetch(
+        "https://apitpv.anthonyloor.com/get_warehouse_movements",
+        {
+          method: "POST",
+          body: JSON.stringify({}), // últimas 50
+        }
+      );
       if (Array.isArray(data)) {
-        setUnfilteredMovements(data);
-        setMovements(data);
+        // Formateamos los campos de fecha si vienen informados
+        const formattedData = data.map((mov) => ({
+          ...mov,
+          date_add: formatDate(mov.date_add),
+          date_excute: formatDate(mov.date_excute),
+          date_modified: formatDate(mov.date_modified),
+          date_recived: formatDate(mov.date_recived),
+        }));
+        setUnfilteredMovements(formattedData);
+        setMovements(formattedData);
       } else {
         setUnfilteredMovements([]);
         setMovements([]);
       }
     } catch (error) {
-      console.error('[TransfersModal] handleRefresh error:', error);
+      console.error("[TransfersModal] handleRefresh error:", error);
       setUnfilteredMovements([]);
       setMovements([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiFetch, resetFilters]);
 
-  // Reset filtros
-  const resetFilters = () => {
-    setFilterId('');
-    setFilterDateFrom('');
-    setFilterDateTo('');
-    setFilterTitle('');
-    setFilterType('');
-    setFilterStatus('');
-  };
+  // Al abrir => list => refrescar
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentView("list");
+      handleRefresh();
+    }
+  }, [isOpen, handleRefresh]);
 
   // Buscar con filtros
   const handleSearch = async () => {
     setLoading(true);
     setSelectedMovements([]);
     try {
-      if (filterId.trim() !== '') {
+      if (filterId.trim() !== "") {
         // get_warehouse_movement ?id=...
         const url = `https://apitpv.anthonyloor.com/get_warehouse_movement?id_warehouse_movement=${encodeURIComponent(
           filterId.trim()
         )}`;
-        const data = await apiFetch(url, { method: 'GET' });
+        const data = await apiFetch(url, { method: "GET" });
         if (data && !Array.isArray(data)) {
           setUnfilteredMovements([data]);
           setMovements([data]);
@@ -102,18 +132,25 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
           setMovements([]);
         }
       } else {
-        // get_warehouse_movements con date1, date2
         const body = {};
         if (filterDateFrom) body.data1 = filterDateFrom;
         if (filterDateTo) body.data2 = filterDateTo;
 
-        const data = await apiFetch('https://apitpv.anthonyloor.com/get_warehouse_movements', {
-          method: 'POST',
-          body: JSON.stringify(body),
-        });
+        const data = await apiFetch(
+          "https://apitpv.anthonyloor.com/get_warehouse_movements",
+          {
+            method: "POST",
+            body: JSON.stringify(body),
+          }
+        );
         if (Array.isArray(data)) {
           setUnfilteredMovements(data);
-          const localFiltered = localFilterData(data, filterTitle, filterType, filterStatus);
+          const localFiltered = localFilterData(
+            data,
+            filterTitle,
+            filterType,
+            filterStatus
+          );
           setMovements(localFiltered);
         } else {
           setUnfilteredMovements([]);
@@ -121,7 +158,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
         }
       }
     } catch (error) {
-      console.error('[TransfersModal] handleSearch error:', error);
+      console.error("[TransfersModal] handleSearch error:", error);
       setUnfilteredMovements([]);
       setMovements([]);
     } finally {
@@ -132,18 +169,18 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   // Filtrado local
   const localFilterData = (arr, title, type, status) => {
     let result = [...arr];
-    if (title.trim() !== '') {
+    if (title.trim() !== "") {
       const lower = title.toLowerCase();
       result = result.filter((mov) =>
-        (mov.description || '').toLowerCase().includes(lower)
+        (mov.description || "").toLowerCase().includes(lower)
       );
     }
-    if (type !== '') {
+    if (type !== "") {
       result = result.filter((mov) => mov.type === type);
     }
-    if (status !== '') {
+    if (status !== "") {
       result = result.filter(
-        (mov) => (mov.status || '').toLowerCase() === status.toLowerCase()
+        (mov) => (mov.status || "").toLowerCase() === status.toLowerCase()
       );
     }
     return result;
@@ -155,14 +192,14 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
       setLoading(true);
       const data = await apiFetch(
         `https://apitpv.anthonyloor.com/get_warehouse_movement?id_warehouse_movement=${movement.id_warehouse_movement}`,
-        { method: 'GET' }
+        { method: "GET" }
       );
       setSelectedMovement(data);
-      setMovementType(data.type || 'traspaso');
-      setCurrentView('form');
+      setMovementType(data.type || "traspaso");
+      setCurrentView("form");
     } catch (error) {
-      console.error('Error al obtener detalles del movimiento:', error);
-      alert('No se pudo cargar el detalle del movimiento');
+      console.error("Error al obtener detalles del movimiento:", error);
+      alert("No se pudo cargar el detalle del movimiento");
     } finally {
       setLoading(false);
     }
@@ -188,20 +225,12 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   const handleCreateTransfer = () => {
     setSelectedMovement(null);
     setMovementType(null);
-    setCurrentView('selectType');
-  };
-
-  const handlePrintSummary = () => {
-    if (selectedMovements.length === 0) {
-      alert('No hay movimientos seleccionados para imprimir.');
-      return;
-    }
-    alert(`Imprimir resumen de ${selectedMovements.length} movimientos (pendiente).`);
+    setCurrentView("selectType");
   };
 
   const handleDeleteTransfer = () => {
     if (selectedMovements.length === 0) {
-      alert('No hay movimientos seleccionados para eliminar.');
+      alert("No hay movimientos seleccionados para eliminar.");
       return;
     }
     alert(`Eliminar ${selectedMovements.length} movimientos (pendiente).`);
@@ -210,19 +239,80 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   const selectMovementType = (newType) => {
     setMovementType(newType);
     setSelectedMovement(null);
-    setCurrentView('form');
+    setCurrentView("form");
   };
 
   const handleFormSave = () => {
     handleRefresh();
-    setCurrentView('list');
+    setCurrentView("list");
   };
 
-  // --- Render subpantallas ---
+  const exportPdf = () => {
+    import("jspdf").then(({ default: JsPDF }) => {
+      import("jspdf-autotable").then(() => {
+        const doc = new JsPDF("p", "pt");
+        const head = [["ID", "Fecha", "Título", "Tipo", "Estado"]];
+        const body = selectedMovements.map((mov) => [
+          mov.id_warehouse_movement,
+          mov.date_add,
+          mov.description,
+          mov.type,
+          mov.status,
+        ]);
+        doc.autoTable({ head, body });
+        doc.save("movimientos.pdf");
+      });
+    });
+  };
+
+  // === Secciones de UI con prime react
+
+  // Toolbar => parte izquierda
+  const leftToolbarTemplate = () => {
+    return (
+      <div className="flex flex-wrap gap-2">
+        <Button
+          label=""
+          icon="pi pi-plus"
+          severity="success"
+          onClick={handleCreateTransfer}
+        />
+        <Button
+          label=""
+          icon="pi pi-trash"
+          severity="danger"
+          onClick={handleDeleteTransfer}
+          disabled={selectedMovements.length === 0}
+        />
+        <Button label="" icon="pi pi-refresh" onClick={handleRefresh} />
+      </div>
+    );
+  };
+
+  // Toolbar => parte derecha
+  const rightToolbarTemplate = () => {
+    return (
+      <div className="flex flex-wrap gap-2">
+        <Button
+          label=""
+          icon="pi pi-file-pdf"
+          className="p-button-help"
+          onClick={exportPdf}
+        />
+        <Button
+          icon={showFilters ? "pi pi-filter-slash" : "pi pi-filter"}
+          onClick={() => setShowFilters((prev) => !prev)}
+        />
+      </div>
+    );
+  };
+
+  // Render principal del "list" => la DataTable con toolbar
   const renderMovementList = () => {
-    // Lógica para habilitar/deshabilitar
-    const disableById = filterId.trim() !== '';
+    const disableById = filterId.trim() !== "";
     const disableByDate = !!(filterDateFrom || filterDateTo);
+
+    // Sección de Filtros
     const renderFilters = () => {
       if (!showFilters) return null;
       return (
@@ -230,7 +320,9 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
           <div className="grid grid-cols-6 gap-4">
             {/* ID */}
             <div className="relative">
-              <label className="block text-sm font-semibold mb-1">ID Movimiento</label>
+              <label className="block text-sm font-semibold mb-1">
+                ID Movimiento
+              </label>
               <input
                 type="text"
                 className="border p-2 rounded w-full pr-7"
@@ -239,25 +331,24 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
                   setFilterId(e.target.value);
                   if (e.target.value.trim()) {
                     // Se rellena ID => vaciamos fecha/título/tipo/estado
-                    setFilterDateFrom('');
-                    setFilterDateTo('');
-                    setFilterTitle('');
-                    setFilterType('');
-                    setFilterStatus('');
+                    setFilterDateFrom("");
+                    setFilterDateTo("");
+                    setFilterTitle("");
+                    setFilterType("");
+                    setFilterStatus("");
                   }
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleSearch();
                   }
                 }}
                 disabled={disableByDate}
               />
-              {/* Botón x para limpiar */}
               {filterId && (
                 <button
                   className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterId('')}
+                  onClick={() => setFilterId("")}
                 >
                   x
                 </button>
@@ -266,7 +357,9 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
 
             {/* Fecha Desde */}
             <div className="relative">
-              <label className="block text-sm font-semibold mb-1">Fecha Desde</label>
+              <label className="block text-sm font-semibold mb-1">
+                Fecha Desde
+              </label>
               <input
                 type="date"
                 className="border p-2 rounded w-full pr-7"
@@ -274,7 +367,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
                 onChange={(e) => {
                   setFilterDateFrom(e.target.value);
                   if (e.target.value) {
-                    setFilterId('');
+                    setFilterId("");
                   }
                 }}
                 disabled={disableById}
@@ -282,7 +375,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
               {filterDateFrom && (
                 <button
                   className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterDateFrom('')}
+                  onClick={() => setFilterDateFrom("")}
                 >
                   x
                 </button>
@@ -291,7 +384,9 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
 
             {/* Fecha Hasta */}
             <div className="relative">
-              <label className="block text-sm font-semibold mb-1">Fecha Hasta</label>
+              <label className="block text-sm font-semibold mb-1">
+                Fecha Hasta
+              </label>
               <input
                 type="date"
                 className="border p-2 rounded w-full pr-7"
@@ -299,7 +394,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
                 onChange={(e) => {
                   setFilterDateTo(e.target.value);
                   if (e.target.value) {
-                    setFilterId('');
+                    setFilterId("");
                   }
                 }}
                 disabled={disableById}
@@ -307,7 +402,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
               {filterDateTo && (
                 <button
                   className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterDateTo('')}
+                  onClick={() => setFilterDateTo("")}
                 >
                   x
                 </button>
@@ -327,7 +422,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
               {filterTitle && (
                 <button
                   className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterTitle('')}
+                  onClick={() => setFilterTitle("")}
                 >
                   x
                 </button>
@@ -351,7 +446,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
               {filterType && (
                 <button
                   className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterType('')}
+                  onClick={() => setFilterType("")}
                 >
                   x
                 </button>
@@ -377,7 +472,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
               {filterStatus && (
                 <button
                   className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterStatus('')}
+                  onClick={() => setFilterStatus("")}
                 >
                   x
                 </button>
@@ -386,12 +481,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
           </div>
 
           <div className="mt-3 text-right">
-            <button
-              onClick={handleSearch}
-              className="bg-blue-500 text-white px-4 py-2 rounded"
-            >
-              Buscar
-            </button>
+            <Button label="Buscar" icon="pi pi-search" onClick={handleSearch} />
           </div>
         </div>
       );
@@ -399,101 +489,102 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
 
     return (
       <div>
-        {/* Barra superior */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex space-x-2">
-            <button
-              onClick={handleCreateTransfer}
-              className="bg-blue-500 text-white px-3 py-2 rounded"
-            >
-              + Crear Traspaso
-            </button>
-            <button
-              onClick={handlePrintSummary}
-              className="bg-gray-300 px-3 py-2 rounded"
-            >
-              Imprimir Resumen
-            </button>
-            <button
-              onClick={handleDeleteTransfer}
-              className="bg-red-500 text-white px-3 py-2 rounded"
-            >
-              Eliminar
-            </button>
-            <button
-              onClick={handleRefresh}
-              className="bg-gray-300 px-3 py-2 rounded"
-            >
-              Refrescar
-            </button>
-          </div>
-          <div>
-            <button
-              onClick={() => setShowFilters((prev) => !prev)}
-              className="bg-indigo-500 text-white px-3 py-2 rounded"
-            >
-              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-            </button>
-          </div>
-        </div>
+        {/* Toolbar con los botones de crear, imprimir, eliminar, refrescar + export CSV */}
+        <Toolbar
+          className="mb-4"
+          left={leftToolbarTemplate}
+          right={rightToolbarTemplate}
+        />
 
         {renderFilters()}
-        <hr className="my-3 border-gray-300" />
+        {/* Botón para ocultar/mostrar el panel de filtros */}
 
         <DataTable
+          ref={dt}
           value={movements}
           loading={loading}
+          scrollable
+          scrollHeight="540px"
           dataKey="id_warehouse_movement"
           selectionMode="multiple"
-          metaKeySelection={false}  // Para toggle con click normal
+          metaKeySelection={false} // Para toggle con click normal
           selection={selectedMovements}
           onSelectionChange={(e) => setSelectedMovements(e.value)}
           paginator
-          rows={8}
-          emptyMessage={loading ? 'Cargando...' : 'No hay movimientos.'}
+          rows={12}
+          rowsPerPageOptions={[12, 20, 30]}
+          emptyMessage={loading ? "Cargando..." : "No hay movimientos."}
           className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
-          onRowClick={(e) => handleRowClick(e.data)}  // Click => toggle selection
+          onRowClick={(e) => handleRowClick(e.data)} // Click => toggle selection
           onRowDoubleClick={(e) => handleRowDoubleClick(e.data)} // DblClick => abrir
+          // Podrías añadir un "globalFilter" si quisieras un input global
         >
-          <Column selectionMode="multiple" headerStyle={{ width: '3em' }} />
-          <Column field="id_warehouse_movement" header="ID" style={{ width: '70px' }} />
-          <Column field="date_add" header="Fecha" style={{ width: '120px' }} />
-          <Column field="description" header="Título" style={{ minWidth: '150px' }} />
-          <Column field="type" header="Tipo" style={{ width: '100px' }} />
-          <Column field="status" header="Estado" style={{ width: '120px' }} />
+          <Column selectionMode="multiple" headerStyle={{ width: "3em" }} />
+          <Column
+            field="id_warehouse_movement"
+            header="ID"
+            style={{ width: "70px" }}
+            sortable
+          />
+          <Column
+            field="date_add"
+            header="Fecha creación"
+            style={{ width: "150px" }}
+            sortable
+          />
+          <Column
+            field="description"
+            header="Título"
+            style={{ minWidth: "150px" }}
+          />
+          <Column
+            field="type"
+            header="Tipo"
+            style={{ width: "100px" }}
+            body={(rowData) =>
+              rowData.type
+                ? rowData.type.charAt(0).toUpperCase() + rowData.type.slice(1)
+                : ""
+            }
+          />
+          <Column field="status" header="Estado" style={{ width: "120px" }} />
         </DataTable>
       </div>
     );
   };
 
+  // Vista: Seleccionar tipo de movimiento (traspaso, entrada, salida)
   const renderSelectType = () => {
     return (
       <div>
-        <h2 className="text-xl font-bold mb-4">Selecciona el tipo de movimiento</h2>
+        <h2 className="text-xl font-bold mb-4">
+          Selecciona el tipo de movimiento
+        </h2>
         <div className="space-y-4">
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded w-full"
-            onClick={() => selectMovementType('traspaso')}
-          >
-            Traspaso entre Tiendas
-          </button>
-          <button
-            className="bg-green-500 text-white px-4 py-2 rounded w-full"
-            onClick={() => selectMovementType('entrada')}
-          >
-            Entrada de Mercadería
-          </button>
-          <button
-            className="bg-red-500 text-white px-4 py-2 rounded w-full"
-            onClick={() => selectMovementType('salida')}
-          >
-            Salida de Mercadería
-          </button>
+          <Button
+            label="Traspaso entre Tiendas"
+            icon="pi pi-directions-alt"
+            className="w-full"
+            onClick={() => selectMovementType("traspaso")}
+          />
+          <Button
+            label="Entrada de Mercadería"
+            icon="pi pi-download"
+            className="w-full p-button-success"
+            onClick={() => selectMovementType("entrada")}
+          />
+          <Button
+            label="Salida de Mercadería"
+            icon="pi pi-upload"
+            className="w-full p-button-danger"
+            onClick={() => selectMovementType("salida")}
+          />
         </div>
       </div>
     );
   };
 
+  // Vista: Formulario de TransferForm
   const renderForm = () => {
     return (
       <div>
@@ -507,42 +598,42 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   };
 
   // Título modal
-  let modalTitle = '';
-  if (currentView === 'list') {
-    modalTitle = 'Gestión de Stock';
-  } else if (currentView === 'selectType') {
-    modalTitle = 'Crear Movimiento';
-  } else if (currentView === 'form') {
+  let modalTitle = "";
+  if (currentView === "list") {
+    modalTitle = "Gestión de Stock";
+  } else if (currentView === "selectType") {
+    modalTitle = "Crear Movimiento";
+  } else if (currentView === "form") {
     if (!selectedMovement) {
-      const t = movementType || 'traspaso';
+      const t = movementType || "traspaso";
       modalTitle = `Crear Movimiento: ${
-        t === 'traspaso' ? 'Traspaso' : t === 'entrada' ? 'Entrada' : 'Salida'
+        t === "traspaso" ? "Traspaso" : t === "entrada" ? "Entrada" : "Salida"
       }`;
     } else {
       const t = selectedMovement.type;
-      if (t === 'traspaso') modalTitle = 'Traspaso entre tiendas';
-      else if (t === 'entrada') modalTitle = 'Entrada de mercadería';
-      else if (t === 'salida') modalTitle = 'Salida de mercadería';
-      else modalTitle = 'Movimiento';
+      if (t === "traspaso") modalTitle = "Traspaso entre tiendas";
+      else if (t === "entrada") modalTitle = "Entrada de mercadería";
+      else if (t === "salida") modalTitle = "Salida de mercadería";
+      else modalTitle = "Movimiento";
     }
   }
 
-  let content = null;
-  if (currentView === 'list') {
-    content = renderMovementList();
-  } else if (currentView === 'selectType') {
-    content = renderSelectType();
-  } else if (currentView === 'form') {
-    content = renderForm();
-  }
-
-  const showBackButton = currentView !== 'list';
+  const showBackButton = currentView !== "list";
 
   const handleBack = () => {
-    setCurrentView('list');
+    setCurrentView("list");
     setSelectedMovement(null);
     setMovementType(null);
   };
+
+  let content = null;
+  if (currentView === "list") {
+    content = renderMovementList();
+  } else if (currentView === "selectType") {
+    content = renderSelectType();
+  } else if (currentView === "form") {
+    content = renderForm();
+  }
 
   return (
     <Modal
@@ -553,7 +644,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
       showBackButton={showBackButton}
       onBack={handleBack}
       size="3xl"
-      height="tall"
+      height="xl"
     >
       {content}
     </Modal>

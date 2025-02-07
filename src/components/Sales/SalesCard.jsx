@@ -7,6 +7,7 @@ import { ClientContext } from "../../contexts/ClientContext";
 import AddressModal from "../modals/customer/AddressModal";
 import ClientModal from "../modals/customer/CustomerModal";
 import CreateCustomerModal from "../modals/customer/CreateCustomerModal";
+import { SplitButton } from "primereact/splitbutton";
 
 function SalesCard({
   cartItems,
@@ -173,26 +174,31 @@ function SalesCard({
           )}
         </div>
 
-        {/* -- Botones de aparcar -- */}
+        {/* -- Botones de aparcar adaptados -- */}
         <div className="flex space-x-2">
-          <button
-            className="bg-yellow-500 text-white p-2 rounded"
+          <SplitButton
+            label="Tickets"
+            icon="pi pi-receipt"
             onClick={() => setIsParkedCartsModalOpen(true)}
-          >
-            Tickets Aparcados
-          </button>
-          <button
-            className="bg-gray-200 p-2 rounded"
-            onClick={handleParkCart}
-          >
-            Guardar Ticket
-          </button>
-          <button
-            className="bg-gray-200 p-2 rounded"
-            onClick={handleClearCart}
-          >
-            Borrar Ticket
-          </button>
+            model={[
+              {
+                label: "Tickets Aparcados",
+                icon: "pi pi-list",
+                command: () => setIsParkedCartsModalOpen(true),
+              },
+              {
+                label: "Guardar Ticket",
+                icon: "pi pi-file-plus",
+                command: handleParkCart,
+              },
+              {
+                label: "Borrar Ticket",
+                icon: "pi pi-trash",
+                command: handleClearCart,
+              },
+            ]}
+            className="p-button-warning"
+          />
         </div>
       </div>
 
@@ -260,9 +266,7 @@ function SalesCard({
                   className="p-2 border rounded flex flex-col md:flex-row md:justify-between md:items-center"
                 >
                   <div>
-                    <div className="font-bold">
-                      {disc.name || disc.code}
-                    </div>
+                    <div className="font-bold">{disc.name || disc.code}</div>
                     {disc.code && disc.name && (
                       <div className="text-xs text-gray-600">({disc.code})</div>
                     )}

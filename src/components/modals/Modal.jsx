@@ -80,9 +80,11 @@ const Modal = ({
 
   const heightClasses = {
     default: "h-auto",
-    sm: "max-h-[50vh]",
-    md: "max-h-[70vh]",
-    tall: "max-h-[80vh]",
+    xs: "min-h-[20vh] max-h-[30vh]",
+    sm: "min-h-[30vh] max-h-[50vh]",
+    md: "min-h-[40vh] max-h-[70vh]",
+    lg: "min-h-[50vh] max-h-[85vh]",
+    xl: "min-h-[60vh] max-h-[95vh]",
     full: "h-full max-h-none",
   };
 

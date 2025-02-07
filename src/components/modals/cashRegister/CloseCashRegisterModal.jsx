@@ -11,7 +11,7 @@ const CloseCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
       onClose={onClose}
       title="Cierre de Caja"
       size="lg"
-      height="tall"
+      height="md"
       inlineMode={inlineMode}
     >
       <CloseCashRegisterForm onClose={onClose} />

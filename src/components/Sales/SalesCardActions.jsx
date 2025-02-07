@@ -1,14 +1,14 @@
 // src/components/Sales/SalesCardActions.jsx
 
-import React, { useState, useContext } from 'react';
-import ReturnsExchangesModal from '../modals/returns/ReturnsExchangesModal';
-import ReprintModal from '../modals/reprint/ReprintModal';
-import PinValidationModal from '../modals/pin/PinValidationModal';
-import DiscountModal from '../modals/discount/DiscountModal';
-import TicketViewModal from '../modals/ticket/TicketViewModal';
-import Modal from '../modals/Modal';
-import useFinalizeSale from '../../hooks/useFinalizeSale';
-import { AuthContext } from '../../contexts/AuthContext';
+import React, { useState, useContext } from "react";
+import ReturnsExchangesModal from "../modals/returns/ReturnsExchangesModal";
+import ReprintModal from "../modals/reprint/ReprintModal";
+import PinValidationModal from "../modals/pin/PinValidationModal";
+import DiscountModal from "../modals/discount/DiscountModal";
+import TicketViewModal from "../modals/ticket/TicketViewModal";
+import Modal from "../modals/Modal";
+import useFinalizeSale from "../../hooks/useFinalizeSale";
+import { AuthContext } from "../../contexts/AuthContext";
 
 // Función auxiliar para simular cómo se "consume" el importe de un vale
 function simulateDiscountConsumption(cartItems, appliedDiscounts) {
@@ -80,13 +80,17 @@ const SalesCardActions = ({
 
   // Pago
   const [selectedMethods, setSelectedMethods] = useState([]);
-  const [amounts, setAmounts] = useState({ efectivo: '', tarjeta: '', bizum: '' });
+  const [amounts, setAmounts] = useState({
+    efectivo: "",
+    tarjeta: "",
+    bizum: "",
+  });
   const [changeAmount, setChangeAmount] = useState(0);
 
   // Para leftover info, si te hace falta
   const [leftoverPreview, setLeftoverPreview] = useState([]);
   const [leftoverInfo, setLeftoverInfo] = useState([]);
-  
+
   // Calcular subtotal y descuentos
   const subtotalProducts = cartItems.reduce(
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
@@ -113,7 +117,7 @@ const SalesCardActions = ({
 
   const handleAddManual = () => {
     // tu lógica de "añadir manual"...
-    console.log('[AddManual] Clic en añadir manual');
+    console.log("[AddManual] Clic en añadir manual");
   };
 
   // Pin + Descuento
@@ -134,13 +138,19 @@ const SalesCardActions = ({
     if (cartItems.length === 0) return;
 
     // Previsualizamos leftover con "simulateDiscountConsumption"
-    const { leftoverArray } = simulateDiscountConsumption(cartItems, appliedDiscounts);
+    const { leftoverArray } = simulateDiscountConsumption(
+      cartItems,
+      appliedDiscounts
+    );
     setLeftoverPreview(leftoverArray);
 
     // Logs de estado
-    console.log('[handleFinalSale] Subtotal:', subtotalProducts);
-    console.log('[handleFinalSale] totalDiscounts:', totalDiscounts);
-    console.log('[handleFinalSale] total final (Max(0, total)):', Math.max(0, total));
+    console.log("[handleFinalSale] Subtotal:", subtotalProducts);
+    console.log("[handleFinalSale] totalDiscounts:", totalDiscounts);
+    console.log(
+      "[handleFinalSale] total final (Max(0, total)):",
+      Math.max(0, total)
+    );
 
     setFinalSaleModalOpen(true);
   };
@@ -150,14 +160,14 @@ const SalesCardActions = ({
 
   // Confirma la venta => useFinalizeSale
   const handleConfirmSale = () => {
-    console.log('=== handleConfirmSale ===');
-    console.log('cartItems:', cartItems);
-    console.log('appliedDiscounts:', appliedDiscounts);
-    console.log('selectedMethods:', selectedMethods);
-    console.log('amounts:', amounts);
-    console.log('changeAmount:', changeAmount);
-    console.log('giftTicket:', giftTicket);
-    console.log('final total =>', total);
+    console.log("=== handleConfirmSale ===");
+    console.log("cartItems:", cartItems);
+    console.log("appliedDiscounts:", appliedDiscounts);
+    console.log("selectedMethods:", selectedMethods);
+    console.log("amounts:", amounts);
+    console.log("changeAmount:", changeAmount);
+    console.log("giftTicket:", giftTicket);
+    console.log("final total =>", total);
 
     finalizeSale(
       {
@@ -190,18 +200,18 @@ const SalesCardActions = ({
           // Limpia el carrito y descuentos
           setCartItems([]);
           clearDiscounts();
-          localStorage.removeItem('selectedAddress');
-          localStorage.removeItem('selectedClient');
+          localStorage.removeItem("selectedAddress");
+          localStorage.removeItem("selectedClient");
 
           // Limpia métodos de pago
           setSelectedMethods([]);
-          setAmounts({ efectivo: '', tarjeta: '', bizum: '' });
+          setAmounts({ efectivo: "", tarjeta: "", bizum: "" });
           setChangeAmount(0);
           setGiftTicket(false);
           setFinalSaleModalOpen(false);
         },
         onError: () => {
-          alert('Error al finalizar la venta. Intenta nuevamente.');
+          alert("Error al finalizar la venta. Intenta nuevamente.");
         },
       },
       true
@@ -225,16 +235,16 @@ const SalesCardActions = ({
   const togglePaymentMethod = (method) => {
     // Si ya está seleccionado -> lo deseleccionamos y ponemos a '' su importe
     if (selectedMethods.includes(method)) {
-      const updated = { ...amounts, [method]: '' };
+      const updated = { ...amounts, [method]: "" };
       setSelectedMethods((prev) => prev.filter((m) => m !== method));
       setAmounts(updated);
       updateChangeAmount(updated);
     } else {
       // Lo activamos. Si tarjeta o bizum -> sugerir resto
       setSelectedMethods((prev) => [...prev, method]);
-      if (method === 'tarjeta' || method === 'bizum') {
+      if (method === "tarjeta" || method === "bizum") {
         const remain = Math.max(0, total) - totalEntered;
-        const newVal = remain > 0 ? remain.toFixed(2) : '';
+        const newVal = remain > 0 ? remain.toFixed(2) : "";
         const updated = { ...amounts, [method]: newVal };
         setAmounts(updated);
         updateChangeAmount(updated);
@@ -258,10 +268,10 @@ const SalesCardActions = ({
     const newChange = totalEnteredAmount - finalTotal;
 
     // Logs
-    console.log('[updateChangeAmount]');
-    console.log('   finalTotal:', finalTotal);
-    console.log('   totalEnteredAmount:', totalEnteredAmount);
-    console.log('   newChange:', newChange);
+    console.log("[updateChangeAmount]");
+    console.log("   finalTotal:", finalTotal);
+    console.log("   totalEnteredAmount:", totalEnteredAmount);
+    console.log("   newChange:", newChange);
 
     setChangeAmount(newChange);
   };
@@ -273,7 +283,6 @@ const SalesCardActions = ({
 
   return (
     <div className="p-4">
-
       {/* --- Botones 1era fila: Devolución / Reimprimir --- */}
       <div className="flex justify-between space-x-2 mb-2">
         <button
@@ -311,13 +320,13 @@ const SalesCardActions = ({
         <button
           className={`px-6 py-3 rounded text-lg font-bold ${
             cartItems.length === 0 || isLoading
-              ? 'bg-gray-400 cursor-not-allowed text-white'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
+              ? "bg-gray-400 cursor-not-allowed text-white"
+              : "bg-blue-600 text-white hover:bg-blue-700"
           }`}
           disabled={cartItems.length === 0 || isLoading}
           onClick={handleFinalSale}
         >
-          {isLoading ? 'Procesando...' : 'Finalizar Venta'}
+          {isLoading ? "Procesando..." : "Finalizar Venta"}
         </button>
       </div>
 
@@ -357,7 +366,7 @@ const SalesCardActions = ({
         title="Finalizar Venta"
         showCloseButton
         size="lg"
-        height="tall"
+        height="lg"
       >
         <div className="p-6">
           {/* Resumen Subtotal / Descuentos / Total */}
@@ -413,21 +422,22 @@ const SalesCardActions = ({
 
           {Math.max(0, total) === 0 && (
             <div className="text-red-600 font-bold mb-4">
-              Se generará un vale descuento de {Math.abs(subtotalProducts - totalDiscounts).toFixed(2)} €.
+              Se generará un vale descuento de{" "}
+              {Math.abs(subtotalProducts - totalDiscounts).toFixed(2)} €.
             </div>
           )}
 
           {/* Métodos de pago */}
           <div className="flex flex-col space-y-4 mb-4">
-            {['efectivo', 'tarjeta', 'bizum'].map((method) => (
+            {["efectivo", "tarjeta", "bizum"].map((method) => (
               <div key={method} className="flex items-center space-x-4">
                 <button
                   className={`w-1/3 py-4 rounded text-white ${
                     selectedMethods.includes(method) && total > 0
-                      ? method === 'efectivo'
-                        ? 'bg-green-500'
-                        : 'bg-blue-500'
-                      : 'bg-gray-400'
+                      ? method === "efectivo"
+                        ? "bg-green-500"
+                        : "bg-blue-500"
+                      : "bg-gray-400"
                   }`}
                   onClick={() => total > 0 && togglePaymentMethod(method)}
                   disabled={total <= 0}
@@ -454,9 +464,10 @@ const SalesCardActions = ({
           */}
           <button
             className={`w-full py-4 rounded text-white text-lg font-bold ${
-              (Math.max(0, total) > 0 && totalEntered < Math.max(0, total)) || isLoading
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'
+              (Math.max(0, total) > 0 && totalEntered < Math.max(0, total)) ||
+              isLoading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
             }`}
             disabled={
               (Math.max(0, total) > 0 && totalEntered < Math.max(0, total)) ||
@@ -464,7 +475,7 @@ const SalesCardActions = ({
             }
             onClick={handleConfirmSale}
           >
-            {isLoading ? 'Procesando...' : 'Confirmar Venta'}
+            {isLoading ? "Procesando..." : "Confirmar Venta"}
           </button>
         </div>
       </Modal>

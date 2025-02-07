@@ -8,6 +8,7 @@
     "@testing-library/user-event": "^13.5.0",
     "jsbarcode": "^3.11.6",
     "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
     "primeicons": "^7.0.0",
     "primereact": "^10.9.1",
     "react": "^18.3.1",
