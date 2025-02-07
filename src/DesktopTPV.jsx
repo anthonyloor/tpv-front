@@ -1,4 +1,4 @@
-// DesktopTPV.jsx
+// src/DesktopTPV.jsx
 
 import React, { useState, useContext } from "react";
 import NavbarCard from "./components/Navbar/NavbarCard";
@@ -40,11 +40,10 @@ function DesktopTPV() {
 
   return (
     <div className="grid grid-cols-3 grid-rows-[auto,1fr,1fr,1fr,auto] gap-2 p-2 h-screen">
-      {/* div1 => NavBarCard => col-span-3, row=1 */}
       <div className="col-span-3 bg-white shadow row-span-1 rounded-lg">
         <NavbarCard />
       </div>
-      {/* div2 => SalesCard (contenido principal, SIN sus botones de abajo) => col=1, row-span=3, row-start=2 */}
+      {/* SalesCard => col=1, row-span=3 */}
       <div className="col-span-1 row-span-3 row-start-2 bg-white shadow overflow-auto rounded-lg">
         <SalesCard
           cartItems={cartItems}

@@ -1,23 +1,18 @@
 // src/components/Navbar/NavbarCard.jsx
-import React, { useState, useEffect, useContext } from "react";
-import { isMobile } from 'react-device-detect';
+
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { isMobile } from "react-device-detect";
+import { createPortal } from "react-dom";
+
 import { AuthContext } from "../../contexts/AuthContext";
 import TransfersModal from "../modals/transfers/TransfersModal";
 import ConfigurationModal from "../modals/configuration/ConfigurationModal";
 import SalesReportModal from "../reports/SalesReportModal";
 import CloseCashRegisterModal from "../modals/cashRegister/CloseCashRegisterModal";
-// Importamos Menubar de PrimeReact
-import { Menubar } from 'primereact/menubar';
+import { Menubar } from "primereact/menubar";
 
 const NavbarCard = () => {
-  // Estados para abrir/ cerrar modales
-  const [isTransfersModalOpen, setTransfersModalOpen] = useState(false);
-  const [isConfigurationModalOpen, setConfigurationModalOpen] = useState(false);
-  const [isSalesReportModalOpen, setIsSalesReportModalOpen] = useState(false);
-  const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
-  const [configModalView, setConfigModalView] = useState("config"); 
-
   const navigate = useNavigate();
   const {
     idProfile,
@@ -30,49 +25,88 @@ const NavbarCard = () => {
 
   const shop = JSON.parse(localStorage.getItem("shop"));
 
-  useEffect(() => {
+  // Ejemplo con 4 booleans. Solo uno se abre a la vez => cierra el resto
+  const [isTransfersModalOpen, setTransfersModalOpen] = useState(false);
+  const [isConfigurationModalOpen, setConfigurationModalOpen] = useState(false);
+  const [isSalesReportModalOpen, setSalesReportModalOpen] = useState(false);
+  const [isCashRegisterModalOpen, setCashRegisterModalOpen] = useState(false);
+
+  // Por si config tiene vistas
+  const [configModalView, setConfigModalView] = useState("config");
+
+  const closeAllModals = () => {
+    setTransfersModalOpen(false);
+    setConfigurationModalOpen(false);
+    setSalesReportModalOpen(false);
+    setCashRegisterModalOpen(false);
+  };
+
+  // Cada vez que abrimos uno => cerramos los demás
+  const openTransfers = () => {
+    closeAllModals();
+    setTransfersModalOpen(true);
+  };
+  const openConfig = (view = "config") => {
+    closeAllModals();
+    setConfigModalView(view);
+    setConfigurationModalOpen(true);
+  };
+  const openSalesReport = () => {
+    closeAllModals();
+    setSalesReportModalOpen(true);
+  };
+  const openCashRegister = () => {
+    closeAllModals();
+    setCashRegisterModalOpen(true);
+  };
+
+  // Si detectamos openCloseCashModal => abrimos Caja
+  React.useEffect(() => {
     if (openCloseCashModal) {
-      setIsCashRegisterModalOpen(true);
+      closeAllModals();
+      setCashRegisterModalOpen(true);
       setOpenCloseCashModal(false);
     }
   }, [openCloseCashModal, setOpenCloseCashModal]);
 
   const handleLogoutClick = () => {
     handleLogout();
-    navigate(`/${shop.route}`);
+    if (shop?.route) {
+      navigate(`/${shop.route}`);
+    } else {
+      navigate("/");
+    }
   };
 
-  // Para abrir Configuración en una vista específica
-  const openConfigView = (viewName) => {
-    setConfigModalView(viewName);
-    setConfigurationModalOpen(true);
-  };
-
-  // Construimos el modelo para Menubar (items principales)
+  // Menubar
   const items = [
     {
       label: shopName ? shopName + " TPV" : "TPV",
       icon: "pi pi-home",
-      command: () => navigate(`/${shop.route}/app`),
+      command: () => {
+        if (shop?.route) {
+          navigate(`/${shop.route}/app`);
+        }
+      },
     },
     ...(idProfile === 1
       ? [
           {
             label: "Transferencias",
             icon: "pi pi-exchange",
-            command: () => setTransfersModalOpen(true),
+            command: openTransfers,
           },
         ]
       : []),
     {
       label: "Labels",
       icon: "pi pi-tags",
-      command: () => console.log("Clicked on Labels"),
+      command: () => console.log("Clicked Labels"),
     },
     {
       label: "Caja",
       icon: "pi pi-wallet",
-      command: () => setIsCashRegisterModalOpen(true),
+      command: openCashRegister,
     },
     {
       label: "Configuración",
@@ -81,17 +115,17 @@ const NavbarCard = () => {
         {
           label: "Permisos",
           icon: "pi pi-lock",
-          command: () => openConfigView("permisos"),
+          command: () => openConfig("permisos"),
         },
         {
           label: "Impresoras",
           icon: "pi pi-print",
-          command: () => openConfigView("impresoras"),
+          command: () => openConfig("impresoras"),
         },
         {
           label: "Inventario",
           icon: "pi pi-folder-open",
-          command: () => openConfigView("inventory"),
+          command: () => openConfig("inventory"),
         },
       ],
     },
@@ -100,56 +134,117 @@ const NavbarCard = () => {
           {
             label: "Reportes",
             icon: "pi pi-chart-bar",
-            command: () => setIsSalesReportModalOpen(true),
+            command: openSalesReport,
           },
         ]
       : []),
   ];
 
-  // Sección derecha: empleado y botón de logout
   const end = (
     <div className="flex items-center space-x-3 mr-4">
       <div className="flex items-center space-x-1">
         <i className="pi pi-user" />
         <span className="font-semibold text-gray-700">{employeeName}</span>
       </div>
-      <button onClick={handleLogoutClick} className="inline-flex items-center text-black hover:text-gray-600">
+      <button
+        onClick={handleLogoutClick}
+        className="inline-flex items-center text-black hover:text-gray-600"
+      >
         <i className="pi pi-sign-out" style={{ fontSize: "1.2rem" }}></i>
       </button>
     </div>
   );
 
+  // -- RENDER --
   return (
-    <div className="w-full">
-      {/* Menubar principal */}
+    <>
+      {/* Menú principal */}
       <Menubar model={items} end={end} />
 
-      {/* Ahora, según si estamos en móvil, se pasan modales en inlineMode */}
-      <TransfersModal
-        isOpen={isTransfersModalOpen}
-        onClose={() => setTransfersModalOpen(false)}
-        inlineMode={isMobile}
-      />
+      {/* 
+        AHORA => Para cada modal => 
+        si isMobile => lo inyectamos en #mobile-modals-container con createPortal
+        si no => lo renderizamos normal (overlay)
+      */}
 
-      <ConfigurationModal
-        isOpen={isConfigurationModalOpen}
-        onClose={() => setConfigurationModalOpen(false)}
-        initialView={configModalView}
-        inlineMode={isMobile}
-      />
+      {/* TransfersModal */}
+      {isTransfersModalOpen &&
+        (isMobile ? (
+          createPortal(
+            <TransfersModal
+              isOpen={true}
+              onClose={() => setTransfersModalOpen(false)}
+              inlineMode={true}
+            />,
+            document.getElementById("mobile-modals-container")
+          )
+        ) : (
+          <TransfersModal
+            isOpen={true}
+            onClose={() => setTransfersModalOpen(false)}
+            inlineMode={false}
+          />
+        ))}
 
-      <SalesReportModal
-        isOpen={isSalesReportModalOpen}
-        onClose={() => setIsSalesReportModalOpen(false)}
-        inlineMode={isMobile}
-      />
+      {/* Config */}
+      {isConfigurationModalOpen &&
+        (isMobile ? (
+          createPortal(
+            <ConfigurationModal
+              isOpen={true}
+              onClose={() => setConfigurationModalOpen(false)}
+              initialView={configModalView}
+              inlineMode={true}
+            />,
+            document.getElementById("mobile-modals-container")
+          )
+        ) : (
+          <ConfigurationModal
+            isOpen={true}
+            onClose={() => setConfigurationModalOpen(false)}
+            initialView={configModalView}
+            inlineMode={false}
+          />
+        ))}
 
-      <CloseCashRegisterModal
-        isOpen={isCashRegisterModalOpen}
-        onClose={() => setIsCashRegisterModalOpen(false)}
-        inlineMode={isMobile}
-      />
-    </div>
+      {/* SalesReport */}
+      {isSalesReportModalOpen &&
+        (isMobile ? (
+          createPortal(
+            <SalesReportModal
+              isOpen={true}
+              onClose={() => setSalesReportModalOpen(false)}
+              inlineMode={true}
+            />,
+            document.getElementById("mobile-modals-container")
+          )
+        ) : (
+          <SalesReportModal
+            isOpen={true}
+            onClose={() => setSalesReportModalOpen(false)}
+            inlineMode={false}
+          />
+        ))}
+
+      {/* CashRegister */}
+      {isCashRegisterModalOpen &&
+        (isMobile ? (
+          createPortal(
+            <CloseCashRegisterModal
+              isOpen={true}
+              onClose={() => setCashRegisterModalOpen(false)}
+              inlineMode={true}
+            />,
+            document.getElementById("mobile-modals-container")
+          )
+        ) : (
+          <CloseCashRegisterModal
+            isOpen={true}
+            onClose={() => setCashRegisterModalOpen(false)}
+            inlineMode={false}
+          />
+        ))}
+    </>
   );
 };
 

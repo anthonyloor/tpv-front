@@ -1,19 +1,22 @@
 // src/MobileDashboard.jsx
 import NavbarCard from "./components/Navbar/NavbarCard";
-import React from 'react';
+import React from "react";
 
 export default function MobileDashboard() {
   return (
-    <div className="p-4">
-      <div className="col-span-3 bg-white shadow row-span-1 rounded-lg">
+    <div className="grid grid-cols-1 grid-rows-[auto,1fr,1fr,1fr,1fr] gap-2 p-2 h-screen">
+      <div className="bg-white shadow row-span-1 rounded-lg">
         <NavbarCard />
       </div>
-      <h1 className="text-lg font-bold">Panel Móvil</h1>
-      {/* 
-        Coloca aquí cualquier layout extra que quieras para la vista móvil.
-        Los modales (transferencias, reportes, etc.) se abren ahora desde NavbarCard.
-      */}
-      <p>Pantalla principal en móvil.</p>
+
+      <div className="bg-white shadow row-span-4 rounded-lg overflow-auto relative">
+        <h1 className="text-lg text-center font-bold p-4">Panel Administración Móvil</h1>
+        <div
+          id="mobile-modals-container"
+          className="absolute inset-0"
+          style={{ pointerEvents: "none" }}
+        />
+      </div>
     </div>
   );
 }
