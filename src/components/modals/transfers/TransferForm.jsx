@@ -5,6 +5,7 @@ import { AuthContext } from "../../../contexts/AuthContext";
 import { toast } from "sonner";
 import ProductSearchCardForTransfer from "./ProductSearchCardForTransfer";
 import { useApiFetch } from "../../utils/useApiFetch";
+import { Steps } from "primereact/steps";
 
 const TransferForm = ({ type, onSave, movementData }) => {
   const [productsToTransfer, setProductsToTransfer] = useState([]);
@@ -17,6 +18,25 @@ const TransferForm = ({ type, onSave, movementData }) => {
   const [isLoadingShops, setIsLoadingShops] = useState(true);
   const [errorLoadingShops, setErrorLoadingShops] = useState(null);
   const { employeeId, shopId } = useContext(AuthContext);
+  const stepItems =
+    type && type.toLowerCase() === "traspaso"
+      ? [
+          { label: "En creacion" },
+          { label: "Enviado" },
+          { label: "Recibido" },
+          { label: "En revision" },
+          { label: "Ejecutado" },
+        ]
+      : [{ label: "En creacion" }, { label: "Ejecutado" }];
+
+  // Calcular activeIndex usando el status del movimiento, se asume que movementData.status existe
+  const activeIndex =
+    movementData && movementData.status
+      ? stepItems.findIndex(
+          (item) =>
+            item.label.toLowerCase() === movementData.status.toLowerCase()
+        )
+      : 0;
 
   // Datos del movimiento
   const [description, setDescription] = useState("");
@@ -514,15 +534,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-bold mb-1">Estado</label>
-            <input
-              className="border rounded w-full p-2"
-              type="text"
-              value={movementStatus}
-              readOnly
-            />
-          </div>
-          <div>
             <label className="block text-sm font-bold mb-1">ID Empleado</label>
             <input
               className="border rounded w-full p-2"
@@ -666,6 +677,10 @@ const TransferForm = ({ type, onSave, movementData }) => {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="my-4">
+        <Steps readOnly model={stepItems} activeIndex={activeIndex} />
       </div>
 
       {/* Si es nuevo o (estado=en creacion) => renderizar el ProductSearchCard */}
