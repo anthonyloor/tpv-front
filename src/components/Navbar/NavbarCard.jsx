@@ -1,25 +1,22 @@
 // src/components/Navbar/NavbarCard.jsx
-
 import React, { useState, useEffect, useContext } from "react";
+import { isMobile } from 'react-device-detect';
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import TransfersModal from "../modals/transfers/TransfersModal";
 import ConfigurationModal from "../modals/configuration/ConfigurationModal";
 import SalesReportModal from "../reports/SalesReportModal";
 import CloseCashRegisterModal from "../modals/cashRegister/CloseCashRegisterModal";
-
 // Importamos Menubar de PrimeReact
 import { Menubar } from 'primereact/menubar';
 
 const NavbarCard = () => {
-  // Estados y contexto
+  // Estados para abrir/ cerrar modales
   const [isTransfersModalOpen, setTransfersModalOpen] = useState(false);
   const [isConfigurationModalOpen, setConfigurationModalOpen] = useState(false);
   const [isSalesReportModalOpen, setIsSalesReportModalOpen] = useState(false);
   const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
-
   const [configModalView, setConfigModalView] = useState("config"); 
-  // Para abrir config directamente en “permisos”, “impresoras”, etc.
 
   const navigate = useNavigate();
   const {
@@ -56,12 +53,8 @@ const NavbarCard = () => {
     {
       label: shopName ? shopName + " TPV" : "TPV",
       icon: "pi pi-home",
-      command: () => {
-        // Podríamos navegar a la home de la tienda si quisieras
-        navigate(`/${shop.route}/app`);
-      },
+      command: () => navigate(`/${shop.route}/app`),
     },
-    // Transferencias solo si es Admin
     ...(idProfile === 1
       ? [
           {
@@ -74,10 +67,7 @@ const NavbarCard = () => {
     {
       label: "Labels",
       icon: "pi pi-tags",
-      command: () => {
-        // Lógica para “Labels” (si existe o en construcción)
-        console.log("Clicked on Labels");
-      },
+      command: () => console.log("Clicked on Labels"),
     },
     {
       label: "Caja",
@@ -88,7 +78,6 @@ const NavbarCard = () => {
       label: "Configuración",
       icon: "pi pi-cog",
       items: [
-        // Submenú para la configuración
         {
           label: "Permisos",
           icon: "pi pi-lock",
@@ -106,7 +95,6 @@ const NavbarCard = () => {
         },
       ],
     },
-    // Reportes solo si es Admin
     ...(idProfile === 1
       ? [
           {
@@ -118,17 +106,14 @@ const NavbarCard = () => {
       : []),
   ];
 
-  // Bloque “usuario actual + logout” lo podemos poner a la derecha (end)
+  // Sección derecha: empleado y botón de logout
   const end = (
     <div className="flex items-center space-x-3 mr-4">
       <div className="flex items-center space-x-1">
         <i className="pi pi-user" />
         <span className="font-semibold text-gray-700">{employeeName}</span>
       </div>
-      <button
-        onClick={handleLogoutClick}
-        className="inline-flex items-center text-black hover:text-gray-600"
-      >
+      <button onClick={handleLogoutClick} className="inline-flex items-center text-black hover:text-gray-600">
         <i className="pi pi-sign-out" style={{ fontSize: "1.2rem" }}></i>
       </button>
     </div>
@@ -139,26 +124,30 @@ const NavbarCard = () => {
       {/* Menubar principal */}
       <Menubar model={items} end={end} />
 
-      {/* Modales (idénticos, solo que ahora se abren al pulsar items del menú) */}
+      {/* Ahora, según si estamos en móvil, se pasan modales en inlineMode */}
       <TransfersModal
         isOpen={isTransfersModalOpen}
         onClose={() => setTransfersModalOpen(false)}
+        inlineMode={isMobile}
       />
 
       <ConfigurationModal
         isOpen={isConfigurationModalOpen}
         onClose={() => setConfigurationModalOpen(false)}
         initialView={configModalView}
+        inlineMode={isMobile}
       />
 
       <SalesReportModal
         isOpen={isSalesReportModalOpen}
         onClose={() => setIsSalesReportModalOpen(false)}
+        inlineMode={isMobile}
       />
 
       <CloseCashRegisterModal
         isOpen={isCashRegisterModalOpen}
         onClose={() => setIsCashRegisterModalOpen(false)}
+        inlineMode={isMobile}
       />
     </div>
   );

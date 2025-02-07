@@ -1,29 +1,19 @@
 // src/MobileDashboard.jsx
-import React, { useState } from 'react';
-import TransfersModal from './components/modals/transfers/TransfersModal';
-// ... etc
+import NavbarCard from "./components/Navbar/NavbarCard";
+import React from 'react';
 
 export default function MobileDashboard() {
-  const [showTransfers, setShowTransfers] = useState(false);
-
   return (
     <div className="p-4">
+      <div className="col-span-3 bg-white shadow row-span-1 rounded-lg">
+        <NavbarCard />
+      </div>
       <h1 className="text-lg font-bold">Panel Móvil</h1>
-
-      <button
-        className="bg-blue-500 text-white px-3 py-2 rounded mt-2 mr-2"
-        onClick={() => setShowTransfers(true)}
-      >
-        Gestión de Movimientos
-      </button>
-
-      {/* Abrir modales si showTransfers o showStock */}
-      {showTransfers && (
-        <TransfersModal
-          isOpen={true}
-          onClose={() => setShowTransfers(false)}
-        />
-      )}
+      {/* 
+        Coloca aquí cualquier layout extra que quieras para la vista móvil.
+        Los modales (transferencias, reportes, etc.) se abren ahora desde NavbarCard.
+      */}
+      <p>Pantalla principal en móvil.</p>
     </div>
   );
 }

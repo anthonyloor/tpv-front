@@ -13,8 +13,8 @@ import SessionExpiredModal from "./components/modals/session/SessionExpiredModal
 import "primereact/resources/themes/md-light-indigo/theme.css"; // Tema Material
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
-import { isMobile } from "react-device-detect"; // <-- 1) importamos isMobile
-import MobileDashboard from "./MobileDashboard"; // <-- 2) importamos tu UI móvil
+import { isMobile } from "react-device-detect";
+import MobileDashboard from "./MobileDashboard";
 import DesktopTPV from "./DesktopTPV";
 
 function App() {

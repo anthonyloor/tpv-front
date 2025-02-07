@@ -5,7 +5,12 @@ import Modal from "../Modal";
 import PermisosModal from "./permissions/PermissionsModal";
 import TicketConfigModal from "./printers/TicketConfigModal";
 
-const ConfigurationModal = ({ isOpen, onClose, initialView = "config" }) => {
+const ConfigurationModal = ({
+  isOpen,
+  onClose,
+  initialView = "config",
+  inlineMode = false,
+}) => {
   const [currentView, setCurrentView] = useState(initialView);
 
   // Si `initialView` cambia mientras el modal está abierto
@@ -50,6 +55,7 @@ const ConfigurationModal = ({ isOpen, onClose, initialView = "config" }) => {
       title={title}
       size="md"
       height="md"
+      inlineMode={inlineMode}
     >
       {currentView === "config" && (
         <div>

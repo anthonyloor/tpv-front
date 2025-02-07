@@ -5,7 +5,7 @@ import { useApiFetch } from '../../utils/useApiFetch';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 
-const TransfersModal = ({ isOpen, onClose }) => {
+const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   const apiFetch = useApiFetch();
 
   // Vistas => 'list', 'selectType', 'form'
@@ -548,6 +548,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      inlineMode={inlineMode}
       title={modalTitle}
       showBackButton={showBackButton}
       onBack={handleBack}

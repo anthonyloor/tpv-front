@@ -13,6 +13,7 @@ const Modal = ({
   size = 'sm',
   height = 'small',
   showSeparator = true,
+  inlineMode = false,
 }) => {
   const [mounted, setMounted] = useState(isOpen);
   const [visible, setVisible] = useState(false);
@@ -59,6 +60,28 @@ const Modal = ({
     tall: 'max-h-[80vh]',
     full: 'h-full max-h-none',
   };
+
+  if (inlineMode) {
+    return (
+      <div className="modal-inline bg-white border-t shadow p-4">
+        <div className="flex items-center justify-between mb-2">
+          {showBackButton && (
+            <button onClick={onBack} className="text-blue-500">
+              Atrás
+            </button>
+          )}
+          <h2 className="font-bold text-xl flex-grow text-center">{title}</h2>
+          {showCloseButton && (
+            <button onClick={onClose} className="text-blue-500">
+              Cerrar
+            </button>
+          )}
+        </div>
+        {showSeparator && <hr className="my-2" />}
+        <div>{children}</div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -64,3 +64,9 @@ code {
 .animate-product {
   animation: productFlash 2s ease-out;
 }
+
+.modal-inline {
+  /* Se renderiza como bloque en el flujo, sin posición fija */
+  width: 100%;
+  margin-bottom: 1rem;
+}
