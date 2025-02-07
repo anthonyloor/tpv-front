@@ -57,7 +57,6 @@ const Modal = ({
             </button>
           )}
         </div>
-        {showSeparator && <hr className="my-2" />}
         <div className="px-4 pb-4">{children}</div>
       </div>
     );
