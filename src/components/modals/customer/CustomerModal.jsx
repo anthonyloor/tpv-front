@@ -223,16 +223,17 @@ const CustomerModal = ({
           value={clients}
           dataKey="id_customer"
           scrollable
-          scrollHeight="400px"
+          size={"large"}
+          scrollHeight="470px"
           paginator
-          rows={8}
-          rowsPerPageOptions={[8, 15, 20]}
+          rows={10}
+          rowsPerPageOptions={[10, 15, 30]}
           className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
           emptyMessage={
             errorMessage ? errorMessage : "No se encontraron clientes."
           }
           // Single click => Seleccionar
-          onRowClick={(e) => handleClientSelect(e.data)}
+          onRowDoubleClick={(e) => handleClientSelect(e.data)}
         >
           <Column
             field="id_customer"
@@ -240,8 +241,8 @@ const CustomerModal = ({
             style={{ width: "70px" }}
             sortable
           />
-          <Column field="firstname" header="Nombre" sortable />
-          <Column field="lastname" header="Apellidos" sortable />
+          <Column field="firstname" header="Nombre"/>
+          <Column field="lastname" header="Apellidos"/>
           <Column
             field="origin"
             header="Origen"
@@ -297,8 +298,8 @@ const CustomerModal = ({
       showCloseButton
       showBackButton={showBackButton}
       onBack={goBack}
-      size="lg"
-      height="tall"
+      size="2xl"
+      height="xl"
     >
       {step === "selectClient" && renderSelectClient()}
       {step === "selectAddress" && renderSelectAddress()}

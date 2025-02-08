@@ -511,8 +511,8 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
           selection={selectedMovements}
           onSelectionChange={(e) => setSelectedMovements(e.value)}
           paginator
-          rows={12}
-          rowsPerPageOptions={[12, 20, 30]}
+          rows={10}
+          rowsPerPageOptions={[10, 15, 30]}
           emptyMessage={loading ? "Cargando..." : "No hay movimientos."}
           className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
           onRowClick={(e) => handleRowClick(e.data)} // Click => toggle selection
@@ -523,14 +523,12 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
           <Column
             field="id_warehouse_movement"
             header="ID"
-            style={{ width: "70px" }}
-            sortable
+            style={{ width: "25px", textAlign: 'center' }}
           />
           <Column
             field="date_add"
-            header="Fecha creación"
-            style={{ width: "150px" }}
-            sortable
+            header="Fecha"
+            style={{ width: "125px", textAlign: 'center' }}
           />
           <Column
             field="description"
@@ -540,12 +538,26 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
           <Column
             field="type"
             header="Tipo"
-            style={{ width: "100px" }}
-            body={(rowData) =>
-              rowData.type
-                ? rowData.type.charAt(0).toUpperCase() + rowData.type.slice(1)
-                : ""
-            }
+            style={{ width: "140px" }}
+            body={(rowData) => {
+              let iconClass = "";
+              if (rowData.type === "traspaso") {
+                iconClass = "pi pi-arrow-right-arrow-left";
+              } else if (rowData.type === "entrada") {
+                iconClass = "pi pi-download";
+              } else if (rowData.type === "salida") {
+                iconClass = "pi pi-upload";
+              }
+              const typeText =
+                rowData.type &&
+                rowData.type.charAt(0).toUpperCase() + rowData.type.slice(1);
+              return (
+                <div className="flex flex-col items-center">
+                  <span>{typeText}</span>
+                  <i className={iconClass}></i>
+                </div>
+              );
+            }}
           />
           <Column field="status" header="Estado" style={{ width: "120px" }} />
         </DataTable>
@@ -563,7 +575,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
         <div className="space-y-4">
           <Button
             label="Traspaso entre Tiendas"
-            icon="pi pi-directions-alt"
+            icon="pi pi-arrow-right-arrow-left"
             className="w-full"
             onClick={() => selectMovementType("traspaso")}
           />
