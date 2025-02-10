@@ -1,6 +1,8 @@
 // src/components/Stock/StoreStockPanel.jsx
-import React, { useEffect, useState } from 'react';
-import { useApiFetch } from '../../components/utils/useApiFetch';
+
+import React, { useEffect, useState } from "react";
+import { useApiFetch } from "../../components/utils/useApiFetch";
+import { Card } from "primereact/card";
 
 function StoreStockPanel({ product }) {
   const apiFetch = useApiFetch();
@@ -8,10 +10,9 @@ function StoreStockPanel({ product }) {
   const [stocksByShop, setStocksByShop] = useState({});
 
   useEffect(() => {
-    // Cargamos la lista de tiendas al montar
-    apiFetch('https://apitpv.anthonyloor.com/shops', { method: 'GET' })
+    apiFetch("https://apitpv.anthonyloor.com/shops", { method: "GET" })
       .then((data) => setShops(data))
-      .catch((err) => console.error('Error al cargar tiendas:', err));
+      .catch((err) => console.error("Error al cargar tiendas:", err));
   }, [apiFetch]);
 
   useEffect(() => {
@@ -25,32 +26,42 @@ function StoreStockPanel({ product }) {
         map[s.id_shop] = s.quantity;
       });
       setStocksByShop(map);
-    } else {
-      // si no tenemos la info en product.stocks, podrías hacer fetch a otro endpoint,
-      // p.e. `apiFetch('/product_stock_by_shops?id='+product.id_product)` 
-      // y luego setStocksByShop(...) 
     }
   }, [product]);
 
   if (!product) {
     return (
-      <div className="text-gray-500 italic">
+      <div style={{ fontStyle: "italic", color: "var(--text-secondary)" }}>
         Haz clic en un producto para ver su stock en cada tienda
       </div>
     );
   }
 
   return (
-    <div className="p-4 ">
-      <h4 className="font-bold mb-2">Stock para: {product.product_name}</h4>
-      <div className="flex flex-wrap gap-3">
+    <div style={{ padding: "1rem" }}>
+      <h4 style={{ fontWeight: "bold", marginBottom: "1rem" }}>
+        Stock para: {product.product_name}
+      </h4>
+      <div className="p-d-flex p-flex-wrap" style={{ gap: "1rem" }}>
         {shops.map((shop) => {
           const qty = stocksByShop[shop.id_shop] ?? 0;
           return (
-            <div key={shop.id_shop} className="border p-2 rounded w-36">
-              <div className="font-semibold text-sm mb-1">{shop.name}</div>
-              <div className="text-lg font-bold">{qty}</div>
-            </div>
+            <Card
+              key={shop.id_shop}
+              title={shop.name}
+              style={{ width: "12rem", padding: "0.5rem" }}
+              className="p-shadow-2"
+            >
+              <div
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  textAlign: "center",
+                }}
+              >
+                {qty}
+              </div>
+            </Card>
           );
         })}
       </div>

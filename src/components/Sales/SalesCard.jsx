@@ -2,7 +2,7 @@
 
 import React, { useState, useContext } from "react";
 import ParkedCartsModal from "../modals/parked/ParkedCartsModal";
-import Modal from "../modals/Modal";
+import { Dialog } from "primereact/dialog";
 import { ClientContext } from "../../contexts/ClientContext";
 import AddressModal from "../modals/customer/AddressModal";
 import ClientModal from "../modals/customer/CustomerModal";
@@ -38,12 +38,12 @@ function SalesCard({
     resetToDefaultClientAndAddress,
   } = useContext(ClientContext);
 
-  // Estados para los modals de ticket aparcado
+  // Estados para modales de ticket aparcado
   const [isParkedCartsModalOpen, setIsParkedCartsModalOpen] = useState(false);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [ticketName, setTicketName] = useState("");
 
-  // Subtotales y totales
+  // Cálculos de totales
   const subtotalProducts = cartItems.reduce(
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
     0
@@ -96,7 +96,7 @@ function SalesCard({
     }
   };
 
-  // Lógica de Cliente y Dirección (movida del Navbar)
+  // Lógica de Cliente y Dirección
   const shop = JSON.parse(localStorage.getItem("shop"));
 
   const handleCreateNewCustomer = () => {
@@ -124,96 +124,133 @@ function SalesCard({
   };
 
   return (
-    <div className="p-4 h-full flex flex-col relative">
-      {/* Cabecera: SplitButton de Cliente / Dirección y SplitButton de Tickets */}
-      <div className="mb-4 flex items-center justify-between">
-        {/* SplitButton para Cliente / Dirección */}
-        <SplitButton
-          label={selectedClient.full_name}
-          icon="pi pi-users"
-          model={[
-            {
-              label: "Cambiar cliente",
-              icon: "pi pi-users",
-              command: () => setIsClientModalOpen(true),
-            },
-            {
-              label: "Cambiar dirección",
-              icon: "pi pi-map-marker",
-              command: () => setIsAddressModalOpen(true),
-            },
-            {
-              label: "Cliente por defecto",
-              icon: "pi pi-refresh",
-              command: resetToDefaultClientAndAddress,
-            },
-          ]}
-          className="p-button"
-        />
-
-        {/* SplitButton de Tickets */}
-        <SplitButton
-          label="Tickets"
-          icon="pi pi-receipt"
-          onClick={() => setIsParkedCartsModalOpen(true)}
-          model={[
-            {
-              label: "Tickets Aparcados",
-              icon: "pi pi-list",
-              command: () => setIsParkedCartsModalOpen(true),
-            },
-            {
-              label: "Guardar Ticket",
-              icon: "pi pi-file-plus",
-              command: handleParkCart,
-            },
-            {
-              label: "Borrar Ticket",
-              icon: "pi pi-trash",
-              command: handleClearCart,
-            },
-          ]}
-          className="p-button-warning"
-        />
+    <div
+      className="p-p-4"
+      style={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+      }}
+    >
+      {/* Cabecera: SplitButton de Cliente/Dirección y Tickets */}
+      <div className="p-d-flex p-jc-between p-ai-center p-mb-4">
+        <div style={{ flex: 1, marginRight: "1rem" }}>
+          <SplitButton
+            label={selectedClient.full_name}
+            icon="pi pi-users"
+            model={[
+              {
+                label: "Cambiar cliente",
+                icon: "pi pi-users",
+                command: () => setIsClientModalOpen(true),
+              },
+              {
+                label: "Cambiar dirección",
+                icon: "pi pi-map-marker",
+                command: () => setIsAddressModalOpen(true),
+              },
+              {
+                label: "Cliente por defecto",
+                icon: "pi pi-refresh",
+                command: resetToDefaultClientAndAddress,
+              },
+            ]}
+            className="p-button"
+            style={{ width: "100%" }}
+          />
+        </div>
+        <div>
+          <SplitButton
+            label="Tickets"
+            icon="pi pi-receipt"
+            onClick={() => setIsParkedCartsModalOpen(true)}
+            model={[
+              {
+                label: "Tickets Aparcados",
+                icon: "pi pi-list",
+                command: () => setIsParkedCartsModalOpen(true),
+              },
+              {
+                label: "Guardar Ticket",
+                icon: "pi pi-file-plus",
+                command: handleParkCart,
+              },
+              {
+                label: "Borrar Ticket",
+                icon: "pi pi-trash",
+                command: handleClearCart,
+              },
+            ]}
+            className="p-button-warning"
+          />
+        </div>
       </div>
 
-      <Divider className="border-t" />
+      <Divider />
 
       {/* Lista de productos */}
-      <div className="relative z-10 flex-grow overflow-auto">
-        <h4 className="font-bold text-lg mb-2">Productos en el Ticket</h4>
+      <div style={{ flex: 1, overflowY: "auto", position: "relative" }}>
+        <h4
+          style={{
+            fontWeight: "bold",
+            fontSize: "1.125rem",
+            marginBottom: "0.5rem",
+          }}
+        >
+          Productos en el Ticket
+        </h4>
         {cartItems.length > 0 ? (
-          <ul className="space-y-2">
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+            }}
+          >
             {cartItems.map((item) => {
               const totalItem = item.final_price_incl_tax * item.quantity;
-              const isHighlighted =
-                item.id_stock_available === recentlyAddedId;
+              const isHighlighted = item.id_stock_available === recentlyAddedId;
               return (
                 <li
                   key={item.id_stock_available}
-                  className={`border p-2 rounded flex flex-col md:flex-row md:justify-between md:items-center ${
-                    isHighlighted ? "animate-product" : ""
-                  }`}
+                  style={{
+                    border: "1px solid var(--surface-border)",
+                    padding: "0.75rem",
+                    borderRadius: "0.5rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                    backgroundColor: isHighlighted
+                      ? "var(--primary-color)"
+                      : "white",
+                    color: isHighlighted ? "white" : "inherit",
+                  }}
                 >
                   <div>
-                    <span className="font-bold">{item.quantity}x </span>
-                    {item.product_name} {item.combination_name}
+                    <strong>{item.quantity}x</strong> {item.product_name}{" "}
+                    {item.combination_name}
                   </div>
-                  <div className="text-right md:text-left md:w-32">
-                    <div>
-                      P/U: {item.final_price_incl_tax.toFixed(2)} €
-                    </div>
-                    <div className="font-semibold">
+                  <div style={{ textAlign: "right" }}>
+                    <div>P/U: {item.final_price_incl_tax.toFixed(2)} €</div>
+                    <div style={{ fontWeight: "bold" }}>
                       Total: {totalItem.toFixed(2)} €
                     </div>
                   </div>
-                  <div className="mt-2 md:mt-0 flex space-x-2">
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.5rem",
+                      marginTop: "0.5rem",
+                    }}
+                  >
                     <Button
                       label="-"
                       className="p-button-danger"
-                      onClick={() =>
-                        onDecreaseProduct(item.id_stock_available)
-                      }
+                      onClick={() => onDecreaseProduct(item.id_stock_available)}
                     />
                     <Button
                       label="X"
@@ -232,9 +269,33 @@ function SalesCard({
 
       {/* Descuentos aplicados */}
       {appliedDiscounts.length > 0 && (
-        <div className="mt-4 bg-green-50 p-3 rounded">
-          <h4 className="font-bold text-lg mb-2">Descuentos Aplicados</h4>
-          <ul className="space-y-2">
+        <div
+          style={{
+            marginTop: "1rem",
+            backgroundColor: "var(--surface-100)",
+            padding: "1rem",
+            borderRadius: "0.5rem",
+          }}
+        >
+          <h4
+            style={{
+              fontWeight: "bold",
+              fontSize: "1.125rem",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Descuentos Aplicados
+          </h4>
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+            }}
+          >
             {appliedDiscounts.map((disc, index) => {
               const label =
                 disc.reduction_percent > 0
@@ -243,20 +304,32 @@ function SalesCard({
               return (
                 <li
                   key={index}
-                  className="p-2 border rounded flex flex-col md:flex-row md:justify-between md:items-center"
+                  style={{
+                    padding: "0.75rem",
+                    border: "1px solid var(--surface-border)",
+                    borderRadius: "0.5rem",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                  }}
                 >
                   <div>
-                    <div className="font-bold">{disc.name || disc.code}</div>
+                    <strong>{disc.name || disc.code}</strong>
                     {disc.code && disc.name && (
-                      <div className="text-xs text-gray-600">
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "var(--text-secondary)",
+                        }}
+                      >
                         ({disc.code})
                       </div>
                     )}
                   </div>
-                  <div className="text-right md:text-left md:w-32 font-semibold">
+                  <div style={{ textAlign: "right", fontWeight: "bold" }}>
                     {label}
                   </div>
-                  <div className="mt-2 md:mt-0 flex space-x-2">
+                  <div style={{ marginTop: "0.5rem" }}>
                     <Button
                       label="Quitar"
                       className="p-button-danger"
@@ -271,30 +344,66 @@ function SalesCard({
       )}
 
       {/* Totales */}
-      <div className="mt-4 border-t pt-4">
-        <div className="flex justify-between items-center">
-          <span className="text-xl font-medium">Subtotal Productos:</span>
-          <span className="text-xl font-bold">
+      <div
+        style={{
+          marginTop: "1rem",
+          borderTop: "1px solid var(--surface-border)",
+          paddingTop: "1rem",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontSize: "1.25rem", fontWeight: 500 }}>
+            Subtotal Productos:
+          </span>
+          <span style={{ fontSize: "1.25rem", fontWeight: "bold" }}>
             {subtotalProducts.toFixed(2)} €
           </span>
         </div>
         {appliedDiscounts.length > 0 && (
-          <div className="flex justify-between items-center mt-2">
-            <span className="text-xl font-medium">Total Descuentos:</span>
-            <span className="text-xl font-bold text-red-600">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: "0.5rem",
+            }}
+          >
+            <span style={{ fontSize: "1.25rem", fontWeight: 500 }}>
+              Total Descuentos:
+            </span>
+            <span
+              style={{
+                fontSize: "1.25rem",
+                fontWeight: "bold",
+                color: "var(--red-500)",
+              }}
+            >
               {totalDiscounts.toFixed(2)} €
             </span>
           </div>
         )}
-        <div className="flex justify-between items-center mt-2">
-          <span className="text-2xl font-bold">TOTAL:</span>
-          <span className="text-2xl font-extrabold">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "0.5rem",
+          }}
+        >
+          <span style={{ fontSize: "2rem", fontWeight: "bold" }}>TOTAL:</span>
+          <span style={{ fontSize: "2rem", fontWeight: 800 }}>
             {Math.max(0, total).toFixed(2)} €
           </span>
         </div>
       </div>
 
-      {/* MODAL TICKETS APARCADOS */}
+      {/* Modal: Tickets Aparcados */}
       <ParkedCartsModal
         isOpen={isParkedCartsModalOpen}
         onClose={() => setIsParkedCartsModalOpen(false)}
@@ -303,25 +412,44 @@ function SalesCard({
         onDeleteCart={handleDeleteCart}
       />
 
-      {/* MODAL INTRODUCIR NOMBRE DEL TICKET */}
-      <Modal
-        isOpen={isNameModalOpen}
-        onClose={() => setIsNameModalOpen(false)}
-        title="Guardar Ticket Aparcado"
-        showCloseButton
+      {/* Modal: Introducir nombre del ticket */}
+      <Dialog
+        header="Guardar Ticket Aparcado"
+        visible={isNameModalOpen}
+        onHide={() => setIsNameModalOpen(false)}
+        modal
+        style={{ width: "30vw" }}
       >
-        <div className="p-4">
-          <label className="block mb-2 font-semibold">
+        <div style={{ padding: "1rem" }}>
+          <label
+            style={{
+              marginBottom: "0.5rem",
+              fontWeight: 600,
+              display: "block",
+            }}
+          >
             Nombre del Ticket:
           </label>
           <input
             type="text"
             value={ticketName}
             onChange={(e) => setTicketName(e.target.value)}
-            className="w-full border rounded p-2 mb-4"
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              border: "1px solid var(--surface-border)",
+              borderRadius: "4px",
+              marginBottom: "1rem",
+            }}
             placeholder="Introduce un nombre para el ticket"
           />
-          <div className="flex justify-end space-x-2">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
             <Button
               label="Cancelar"
               className="p-button-secondary"
@@ -334,9 +462,9 @@ function SalesCard({
             />
           </div>
         </div>
-      </Modal>
+      </Dialog>
 
-      {/* MODALES DE CLIENTE Y DIRECCIÓN */}
+      {/* Modales de Cliente y Dirección */}
       {isClientModalOpen && (
         <ClientModal
           isOpen={true}

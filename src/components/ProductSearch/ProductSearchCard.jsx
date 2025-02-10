@@ -1,16 +1,17 @@
 // src/components/ProductSearch/ProductSearchCard.jsx
 
 import React, { useState, useEffect, useContext } from "react";
-import Modal from "../modals/Modal";
+import { Dialog } from "primereact/dialog";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useApiFetch } from "../utils/useApiFetch";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { toast } from "sonner";
+import { Button } from "primereact/button";
 
 const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [isModalOpen, setModalOpen] = useState(false);
+  const [isImageModalOpen, setImageModalOpen] = useState(false);
   const [selectedProductImage, setSelectedProductImage] = useState("");
   const [currentShopId, setCurrentShopId] = useState(null);
   const [currentShopName, setCurrentShopName] = useState(null);
@@ -18,6 +19,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [clickedButtons, setClickedButtons] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
   const { configData } = useContext(ConfigContext);
   const { shopId, shopName } = useContext(AuthContext);
   const allowOutOfStockSales = configData
@@ -37,26 +39,20 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const handleKeyDown = async (event) => {
     // Si se presiona Enter y el término empieza con '#', buscar un vale descuento
     if (event.key === "Enter" && searchTerm.startsWith("#")) {
-      const code = searchTerm.slice(1); // Quitar el '#'
+      const code = searchTerm.slice(1);
       setIsLoading(true);
       try {
         const data = await apiFetch(
           `https://apitpv.anthonyloor.com/get_cart_rule?code=${encodeURIComponent(
             code
           )}`,
-          {
-            method: "GET",
-          }
+          { method: "GET" }
         );
-
-        // Verificar si el vale está activo
         if (!data.active) {
           alert("Vale descuento no válido, motivo: no activo");
           setSearchTerm("");
           return;
         }
-
-        // Verificar si el vale pertenece al cliente seleccionado (si se ha seleccionado uno)
         const client = JSON.parse(localStorage.getItem("selectedClient"));
         if (
           client &&
@@ -69,7 +65,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           setSearchTerm("");
           return;
         }
-
         if (data && onAddDiscount) {
           const discObj = {
             name: data.name || "",
@@ -83,14 +78,14 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         setSearchTerm("");
       } catch (error) {
         console.error("Error al buscar vale descuento:", error);
-        alert("Error al buscar el vale. Intenta de nuevo.");
+        alert("Error al buscar el vale. Inténtalo de nuevo.");
       } finally {
         setIsLoading(false);
       }
-      return; // Salir para no continuar con búsqueda de productos
+      return;
     }
 
-    // Lógica existente para búsqueda de productos
+    // Búsqueda de productos
     if (event.key === "Enter" && searchTerm.length >= 3) {
       setIsLoading(true);
       try {
@@ -126,7 +121,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   };
 
   const groupProductsByProductName = (products) => {
-    // Filtrar solo los productos donde los tres campos son nulos
     const validProducts = products.filter(
       (product) =>
         !(
@@ -225,7 +219,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       ean13_combination: product.id_product_attribute
         ? product.ean13_combination
         : product.ean13_combination_0,
-      price_incl_tax: priceWithIVA, // usando price directamente
+      price_incl_tax: priceWithIVA,
       final_price_incl_tax: priceWithIVA,
       tax_rate: 0.21,
       image_url: product.image_url,
@@ -246,7 +240,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
 
   const handleProductClick = (imageUrl) => {
     setSelectedProductImage(imageUrl);
-    setModalOpen(true);
+    setImageModalOpen(true);
   };
 
   const handleConfirmAdd = () => {
@@ -276,11 +270,23 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   };
 
   return (
-    <div className="p-4 h-full">
-      <div className="relative mb-4">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+    <div style={{ padding: "1rem", height: "100%" }}>
+      <div style={{ position: "relative", marginBottom: "1rem" }}>
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "0.75rem",
+            transform: "translateY(-50%)",
+            pointerEvents: "none",
+          }}
+        >
           <svg
-            className="h-5 w-5 text-gray-500"
+            style={{
+              height: "1.25rem",
+              width: "1.25rem",
+              color: "var(--text-secondary)",
+            }}
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -297,22 +303,40 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         <input
           type="text"
           placeholder="Buscar por referencia o código de barras..."
-          className="border rounded pl-10 pr-10 py-2 w-full"
           value={searchTerm}
           onChange={handleSearch}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
+          style={{
+            width: "100%",
+            padding: "0.5rem 2.5rem",
+            border: "1px solid var(--surface-border)",
+            borderRadius: "4px",
+          }}
         />
         {isLoading && (
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+          <div
+            style={{
+              position: "absolute",
+              right: "0.75rem",
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+            }}
+          >
             <svg
-              className="animate-spin h-5 w-5 text-gray-500"
+              style={{
+                height: "1.25rem",
+                width: "1.25rem",
+                animation: "spin 2s linear infinite",
+                color: "var(--text-secondary)",
+              }}
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
             >
               <circle
-                className="opacity-25"
+                style={{ opacity: 0.25 }}
                 cx="12"
                 cy="12"
                 r="10"
@@ -320,7 +344,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
                 strokeWidth="4"
               />
               <path
-                className="opacity-75"
+                style={{ opacity: 0.75 }}
                 fill="currentColor"
                 d="M4 12a8 8 0 0 1 8-8v8H4z"
               />
@@ -329,55 +353,154 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         )}
       </div>
 
-      <div className="overflow-y-auto">
-        <table className="min-w-full bg-white border rounded-lg">
-          <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10 border-b border-gray-200">
+      <div style={{ overflowY: "auto" }}>
+        <table
+          style={{
+            width: "100%",
+            backgroundColor: "white",
+            border: "1px solid var(--surface-border)",
+            borderRadius: "0.5rem",
+          }}
+        >
+          <thead
+            style={{
+              backgroundColor: "var(--surface-100)",
+              color: "var(--text-color)",
+              position: "sticky",
+              top: "0",
+              zIndex: 1,
+              borderBottom: "1px solid var(--surface-border)",
+            }}
+          >
             <tr>
-              <th className="py-3 px-4 text-left font-semibold">Combinación</th>
-              <th className="py-3 px-4 text-left font-semibold">Referencia</th>
-              <th className="py-3 px-4 text-left font-semibold">Cod. Barras</th>
-              <th className="py-3 px-4 text-left font-semibold">Precio</th>
-              <th className="py-3 px-4 text-left font-semibold">Cantidad</th>
-              <th className="py-3 px-4 text-left font-semibold"></th>
+              <th
+                style={{
+                  padding: "0.75rem",
+                  textAlign: "left",
+                  fontWeight: 600,
+                }}
+              >
+                Combinación
+              </th>
+              <th
+                style={{
+                  padding: "0.75rem",
+                  textAlign: "left",
+                  fontWeight: 600,
+                }}
+              >
+                Referencia
+              </th>
+              <th
+                style={{
+                  padding: "0.75rem",
+                  textAlign: "left",
+                  fontWeight: 600,
+                }}
+              >
+                Cod. Barras
+              </th>
+              <th
+                style={{
+                  padding: "0.75rem",
+                  textAlign: "left",
+                  fontWeight: 600,
+                }}
+              >
+                Precio
+              </th>
+              <th
+                style={{
+                  padding: "0.75rem",
+                  textAlign: "left",
+                  fontWeight: 600,
+                }}
+              >
+                Cantidad
+              </th>
+              <th
+                style={{
+                  padding: "0.75rem",
+                  textAlign: "left",
+                  fontWeight: 600,
+                }}
+              ></th>
             </tr>
           </thead>
           <tbody>
             {filteredProducts.map((productGroup) => (
               <React.Fragment key={productGroup.product_name}>
-                <tr className="bg-gray-50">
+                <tr style={{ backgroundColor: "var(--surface-50)" }}>
                   <td
                     colSpan="6"
-                    className="py-4 px-4 font-bold text-lg cursor-pointer"
+                    style={{
+                      padding: "1rem",
+                      fontWeight: "bold",
+                      fontSize: "1.125rem",
+                      cursor: "pointer",
+                    }}
                     onClick={() => handleProductClick(productGroup.image_url)}
                   >
                     {productGroup.product_name}
                   </td>
                 </tr>
                 {productGroup.combinations.map((product, index) => {
-                  const rowClass = index % 2 === 0 ? "bg-white" : "bg-gray-50";
+                  const rowBg = index % 2 === 0 ? "white" : "var(--surface-50)";
                   return (
                     <tr
                       key={`${product.id_product}_${product.id_product_attribute}`}
-                      className={rowClass}
+                      style={{ backgroundColor: rowBg }}
                     >
                       <td
                         onClick={() => onClickProduct?.(product)}
-                        className="cursor-pointer hover:bg-gray-100"
+                        style={{ cursor: "pointer", padding: "0.75rem" }}
                       >
                         {product.combination_name}
                       </td>
-                      <td className="py-3 px-4 text-gray-700">
+                      <td
+                        style={{
+                          padding: "0.75rem",
+                          color: "var(--text-color)",
+                        }}
+                      >
                         {product.reference_combination}
                       </td>
-                      <td className="py-3 px-4 text-gray-700">
+                      <td
+                        style={{
+                          padding: "0.75rem",
+                          color: "var(--text-color)",
+                        }}
+                      >
                         {product.ean13_combination}
                       </td>
-                      <td className="py-3 px-4">
+                      <td style={{ padding: "0.75rem" }}>
                         <span>{product.price} €</span>
                       </td>
-                      <td className="py-3 px-4 relative group text-center">
+                      <td
+                        style={{
+                          padding: "0.75rem",
+                          textAlign: "center",
+                          position: "relative",
+                        }}
+                      >
                         <span>{getStockForCurrentShop(product.stocks)}</span>
-                        <div className="absolute left-0 mt-1 hidden group-hover:block bg-white border border-gray-300 text-gray-700 text-xs rounded p-2 shadow-lg z-10">
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: "0",
+                            marginTop: "0.25rem",
+                            display: "none",
+                            backgroundColor: "white",
+                            border: "1px solid var(--surface-border)",
+                            color: "var(--text-color)",
+                            fontSize: "0.75rem",
+                            borderRadius: "4px",
+                            padding: "0.25rem",
+                            boxShadow: "var(--shadow-1)",
+                            zIndex: 10,
+                          }}
+                          className="hover-tooltip"
+                        >
                           {Array.isArray(product.stocks) ? (
                             product.stocks
                               .filter((s) => s.id_shop !== 1)
@@ -391,30 +514,19 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          className={`px-3 py-2 rounded transition-colors duration-300 ${
-                            clickedButtons[product.id_product_attribute]
-                              ? "bg-green-500"
-                              : "bg-blue-600 hover:bg-blue-700"
-                          } text-white`}
+                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                        <Button
+                          icon="pi pi-plus"
+                          style={{
+                            backgroundColor: clickedButtons[
+                              product.id_product_attribute
+                            ]
+                              ? "var(--success-color)"
+                              : "var(--primary-color)",
+                            color: "white",
+                          }}
                           onClick={() => handleAddToCartWithAnimation(product)}
-                        >
-                          <svg
-                            className="h-5 w-5"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M12 4v16m8-8H4"
-                            />
-                          </svg>
-                        </button>
+                        />
                       </td>
                     </tr>
                   );
@@ -425,34 +537,61 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         </table>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)}>
+      {/* Modal para imagen del producto */}
+      <Dialog
+        header=""
+        visible={isImageModalOpen}
+        onHide={() => setImageModalOpen(false)}
+        modal
+        style={{ width: "50vw" }}
+      >
         <img
           src={selectedProductImage}
           alt="Imagen del producto"
-          className="w-full h-auto"
+          style={{ width: "100%", height: "auto" }}
         />
-      </Modal>
+      </Dialog>
 
-      <Modal isOpen={confirmModalOpen} onClose={handleCancelAdd}>
-        <div className="p-4">
-          <h2 className="text-lg font-bold mb-4">Máximo de unidades</h2>
+      {/* Modal para confirmar producto sin stock */}
+      <Dialog
+        header="Máximo de unidades"
+        visible={confirmModalOpen}
+        onHide={handleCancelAdd}
+        modal
+        style={{ width: "30vw" }}
+      >
+        <div style={{ padding: "1rem" }}>
+          <h2
+            style={{
+              fontSize: "1.125rem",
+              fontWeight: "bold",
+              marginBottom: "1rem",
+            }}
+          >
+            Máximo de unidades
+          </h2>
           <p>¿Deseas vender sin stock?</p>
-          <div className="mt-4 flex justify-end space-x-2">
-            <button
-              className="bg-red-500 text-white px-4 py-2 rounded"
+          <div
+            style={{
+              marginTop: "1rem",
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
+            <Button
+              label="No"
+              className="p-button-danger"
               onClick={handleCancelAdd}
-            >
-              No
-            </button>
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded"
+            />
+            <Button
+              label="Sí"
+              className="p-button-success"
               onClick={handleConfirmAdd}
-            >
-              Sí
-            </button>
+            />
           </div>
         </div>
-      </Modal>
+      </Dialog>
     </div>
   );
 };

@@ -12,6 +12,7 @@ import ConfigurationModal from "../modals/configuration/ConfigurationModal";
 import SalesReportModal from "../reports/SalesReportModal";
 import CloseCashRegisterModal from "../modals/cashRegister/CloseCashRegisterModal";
 import ThemeSwitcher from "../ThemeSwitcher";
+import { Button } from "primereact/button";
 
 const NavbarCard = () => {
   const navigate = useNavigate();
@@ -55,10 +56,12 @@ const NavbarCard = () => {
     closeAllModals();
     setIsSalesReportModalOpen(true);
   };
+
   const openCashRegister = () => {
     closeAllModals();
     setIsCashRegisterModalOpen(true);
   };
+
   useEffect(() => {
     if (openCloseCashModal) {
       closeAllModals();
@@ -136,21 +139,23 @@ const NavbarCard = () => {
 
   // Parte derecha
   const end = (
-    <div className="flex items-center space-x-3 mr-4">
-      <div className="flex items-center space-x-1">
+    <div
+      className="p-d-flex p-ai-center"
+      style={{ gap: "1rem", marginRight: "1rem" }}
+    >
+      <div className="p-d-flex p-ai-center" style={{ gap: "0.5rem" }}>
         <i className="pi pi-user" />
-        <span className="font-semibold text-gray-700">{employeeName}</span>
+        <span style={{ fontWeight: "bold", color: "var(--text-color)" }}>
+          {employeeName}
+        </span>
       </div>
-      <button
+      <Button
+        icon="pi pi-sign-out"
         onClick={handleLogoutClick}
-        className="inline-flex items-center text-black hover:text-gray-600"
-      >
-        <i className="pi pi-sign-out" style={{ fontSize: "1.2rem" }}></i>
-      </button>
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        <ThemeSwitcher />
-        {/* Aquí puedes agregar otros elementos, como información del usuario */}
-      </div>
+        className="p-button-text"
+        style={{ fontSize: "1.2rem" }}
+      />
+      <ThemeSwitcher />
     </div>
   );
 

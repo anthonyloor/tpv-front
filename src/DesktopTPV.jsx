@@ -39,53 +39,109 @@ function DesktopTPV() {
   const [selectedProductForStock, setSelectedProductForStock] = useState(null);
 
   return (
-    <div className="grid grid-cols-3 grid-rows-[auto,1fr,1fr,1fr,auto] gap-2 p-2 h-screen">
-      <div className="col-span-3 bg-white shadow row-span-1 rounded-lg">
+    <div
+      className="p-grid"
+      style={{ height: "100vh", padding: "0.5rem", gap: "0.5rem" }}
+    >
+      {/* Fila 1: Navbar (fila completa) */}
+      <div
+        className="p-col-12"
+        style={{
+          backgroundColor: "white",
+          borderRadius: "0.5rem",
+          boxShadow: "var(--shadow-2)",
+        }}
+      >
         <NavbarCard />
       </div>
-      {/* SalesCard => col=1, row-span=3 */}
-      <div className="col-span-1 row-span-3 row-start-2 bg-white shadow overflow-auto rounded-lg">
-        <SalesCard
-          cartItems={cartItems}
-          setCartItems={setCartItems}
-          onRemoveProduct={handleRemoveProduct}
-          onDecreaseProduct={handleDecreaseProduct}
-          saveCurrentCartAsParked={saveCurrentCartAsParked}
-          getParkedCarts={getParkedCarts}
-          loadParkedCart={loadParkedCart}
-          deleteParkedCart={deleteParkedCart}
-          appliedDiscounts={appliedDiscounts}
-          removeDiscountByIndex={removeDiscountByIndex}
-          clearDiscounts={clearDiscounts}
-          recentlyAddedId={recentlyAddedId}
-        />
+
+      {/* Fila 2: SalesCard (1/3) y ProductSearchCard (2/3) */}
+      <div
+        className="p-col-12"
+        style={{
+          flex: 1,
+          display: "flex",
+          gap: "0.5rem",
+        }}
+      >
+        <div
+          className="p-col-4"
+          style={{
+            backgroundColor: "white",
+            borderRadius: "0.5rem",
+            boxShadow: "var(--shadow-2)",
+            overflowY: "auto",
+          }}
+        >
+          <SalesCard
+            cartItems={cartItems}
+            setCartItems={setCartItems}
+            onRemoveProduct={handleRemoveProduct}
+            onDecreaseProduct={handleDecreaseProduct}
+            saveCurrentCartAsParked={saveCurrentCartAsParked}
+            getParkedCarts={getParkedCarts}
+            loadParkedCart={loadParkedCart}
+            deleteParkedCart={deleteParkedCart}
+            appliedDiscounts={appliedDiscounts}
+            removeDiscountByIndex={removeDiscountByIndex}
+            clearDiscounts={clearDiscounts}
+            recentlyAddedId={recentlyAddedId}
+          />
+        </div>
+        <div
+          className="p-col-8"
+          style={{
+            backgroundColor: "white",
+            borderRadius: "0.5rem",
+            boxShadow: "var(--shadow-2)",
+            overflowY: "auto",
+          }}
+        >
+          <ProductSearchCard
+            onAddProduct={handleAddProduct}
+            onAddDiscount={addDiscount}
+            onClickProduct={(product) => setSelectedProductForStock(product)}
+          />
+        </div>
       </div>
 
-      {/* div3 => ProductSearchCard => col-span-2, row-span=3, row-start=2 */}
-      <div className="col-span-2 row-span-3 row-start-2 bg-white shadow overflow-auto rounded-lg">
-        <ProductSearchCard
-          onAddProduct={handleAddProduct}
-          onAddDiscount={addDiscount}
-          onClickProduct={(product) => setSelectedProductForStock(product)}
-        />
-      </div>
-
-      {/* div4 => Botones/Acciones de SalesCard => col=1, row-start=5 */}
-      <div className="col-span-1 row-start-5 bg-white shadow rounded-lg">
-        <SalesCardActions
-          cartItems={cartItems}
-          setCartItems={setCartItems}
-          appliedDiscounts={appliedDiscounts}
-          addDiscount={addDiscount}
-          removeDiscountByIndex={removeDiscountByIndex}
-          clearDiscounts={clearDiscounts}
-          handleAddProduct={handleAddProduct}
-        />
-      </div>
-
-      {/* div5 => Panel de stock en tiendas => col-span-2, row-start=5 */}
-      <div className="col-span-2 row-start-5 bg-white shadow p-2 rounded-lg">
-        <StoreStockPanel product={selectedProductForStock} />
+      {/* Fila 3: SalesCardActions (1/3) y StoreStockPanel (2/3) */}
+      <div
+        className="p-col-12"
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+        }}
+      >
+        <div
+          className="p-col-4"
+          style={{
+            backgroundColor: "white",
+            borderRadius: "0.5rem",
+            boxShadow: "var(--shadow-2)",
+          }}
+        >
+          <SalesCardActions
+            cartItems={cartItems}
+            setCartItems={setCartItems}
+            appliedDiscounts={appliedDiscounts}
+            addDiscount={addDiscount}
+            removeDiscountByIndex={removeDiscountByIndex}
+            clearDiscounts={clearDiscounts}
+            handleAddProduct={handleAddProduct}
+          />
+        </div>
+        <div
+          className="p-col-8"
+          style={{
+            backgroundColor: "white",
+            borderRadius: "0.5rem",
+            boxShadow: "var(--shadow-2)",
+            padding: "0.5rem",
+          }}
+        >
+          <StoreStockPanel product={selectedProductForStock} />
+        </div>
       </div>
     </div>
   );

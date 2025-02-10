@@ -1,3 +1,5 @@
+// src/components/modals/customer/CreateCustomerModal.jsx
+
 import React, { useState, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { AuthContext } from "../../../contexts/AuthContext";
@@ -9,6 +11,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   const [step, setStep] = useState(1);
   const apiFetch = useApiFetch();
   const { shopId } = useContext(AuthContext);
+
   const [customerData, setCustomerData] = useState({
     firstname: "",
     lastname: "",
@@ -17,6 +20,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
     id_shop: shopId,
     id_default_group: 3,
   });
+
   const [addressData, setAddressData] = useState({
     id_country: 6,
     id_state: "",
@@ -77,7 +81,9 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
     setAddressData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateCustomer = async () => {
+  // Paso 1: Crear cliente
+  const handleCreateCustomer = async (e) => {
+    e.preventDefault();
     try {
       const data = await apiFetch(
         "https://apitpv.anthonyloor.com/create_customer",
@@ -88,7 +94,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
       );
       if (data && data.id_customer) {
         setNewCustomerId(data.id_customer);
-        // Asumimos que los nombres y apellidos del address deben coincidir con los del cliente
+        // Se asume que los nombres y apellidos de la dirección deben coincidir con los del cliente
         setAddressData((prev) => ({
           ...prev,
           firstname: customerData.firstname,
@@ -105,7 +111,9 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
     }
   };
 
-  const handleCreateAddress = async () => {
+  // Paso 2: Crear dirección
+  const handleCreateAddress = async (e) => {
+    e.preventDefault();
     try {
       const addressPayload = { ...addressData, id_customer: newCustomerId };
       const createdAddress = await apiFetch(
@@ -115,7 +123,6 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
           body: JSON.stringify(addressPayload),
         }
       );
-
       if (onComplete) {
         const createdClient = { ...customerData, id_customer: newCustomerId };
         onComplete(createdClient, createdAddress);
@@ -130,11 +137,14 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   const renderStepContent = () => {
     if (step === 1) {
       return (
-        <div>
-          <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>
+        <form onSubmit={handleCreateCustomer}>
+          <h3
+            className="p-mb-3"
+            style={{ fontWeight: "bold", fontSize: "1.25rem" }}
+          >
             Paso 1: Crear Cliente
           </h3>
-          <div style={{ marginBottom: "0.5rem" }}>
+          <div className="p-field p-mb-3">
             <span className="p-float-label" style={{ width: "100%" }}>
               <InputText
                 name="firstname"
@@ -145,7 +155,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <label>Nombre</label>
             </span>
           </div>
-          <div style={{ marginBottom: "0.5rem" }}>
+          <div className="p-field p-mb-3">
             <span className="p-float-label" style={{ width: "100%" }}>
               <InputText
                 name="lastname"
@@ -156,8 +166,9 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <label>Apellidos</label>
             </span>
           </div>
-          <div style={{ marginBottom: "1rem" }}>
+          <div className="p-mb-3">
             <label
+              className="p-mb-0"
               style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
             >
               <input
@@ -169,7 +180,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <span>Cliente no web</span>
             </label>
           </div>
-          <div style={{ marginBottom: "0.5rem" }}>
+          <div className="p-field p-mb-3">
             <span className="p-float-label" style={{ width: "100%" }}>
               <InputText
                 type="email"
@@ -182,7 +193,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <label>Email</label>
             </span>
           </div>
-          <div style={{ marginBottom: "1rem" }}>
+          <div className="p-field p-mb-3">
             <span className="p-float-label" style={{ width: "100%" }}>
               <InputText
                 type="password"
@@ -196,16 +207,13 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
             </span>
           </div>
           {errorMessage && (
-            <div style={{ color: "var(--red-500)", marginBottom: "1rem" }}>
+            <div className="p-mb-3" style={{ color: "var(--red-500)" }}>
               {errorMessage}
             </div>
           )}
           <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "0.5rem",
-            }}
+            className="p-d-flex p-jc-end p-ai-center"
+            style={{ gap: "0.5rem" }}
           >
             <Button
               label="Cancelar"
@@ -214,19 +222,22 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
             />
             <Button
               label="Crear Cliente"
-              onClick={handleCreateCustomer}
+              type="submit"
               className="p-button-success"
             />
           </div>
-        </div>
+        </form>
       );
     } else if (step === 2) {
       return (
-        <div>
-          <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>
+        <form onSubmit={handleCreateAddress}>
+          <h3
+            className="p-mb-3"
+            style={{ fontWeight: "bold", fontSize: "1.25rem" }}
+          >
             Paso 2: Crear Dirección
           </h3>
-          <div style={{ marginBottom: "0.5rem" }}>
+          <div className="p-field p-mb-3">
             <span className="p-float-label" style={{ width: "100%" }}>
               <InputText
                 name="address1"
@@ -237,7 +248,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <label>Calle, Avenida, etc.</label>
             </span>
           </div>
-          <div style={{ marginBottom: "0.5rem" }}>
+          <div className="p-field p-mb-3">
             <span className="p-float-label" style={{ width: "100%" }}>
               <InputText
                 name="address2"
@@ -248,7 +259,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <label>Piso, puerta, etc.</label>
             </span>
           </div>
-          <div style={{ marginBottom: "0.5rem" }}>
+          <div className="p-field p-mb-3">
             <span className="p-float-label" style={{ width: "100%" }}>
               <InputText
                 name="postcode"
@@ -259,7 +270,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <label>Código Postal</label>
             </span>
           </div>
-          <div style={{ marginBottom: "0.5rem" }}>
+          <div className="p-field p-mb-3">
             <span className="p-float-label" style={{ width: "100%" }}>
               <InputText
                 name="city"
@@ -270,7 +281,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <label>Ciudad</label>
             </span>
           </div>
-          <div style={{ marginBottom: "1rem" }}>
+          <div className="p-field p-mb-3">
             <span className="p-float-label" style={{ width: "100%" }}>
               <InputText
                 name="phone_combined"
@@ -289,41 +300,34 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
             </span>
           </div>
           {addressData.isCompanyInvoice && (
-            <div
-              style={{
-                marginTop: "0.5rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-              }}
-            >
-              <span className="p-float-label" style={{ width: "100%" }}>
-                <InputText
-                  name="company"
-                  value={addressData.company || ""}
-                  onChange={handleAddressChange}
-                  style={{ width: "100%" }}
-                />
-                <label>Nombre de la empresa</label>
-              </span>
-              <span className="p-float-label" style={{ width: "100%" }}>
-                <InputText
-                  name="dni"
-                  value={addressData.dni || ""}
-                  onChange={handleAddressChange}
-                  style={{ width: "100%" }}
-                />
-                <label>DNI / CIF</label>
-              </span>
+            <div className="p-mb-3">
+              <div className="p-field p-mb-3">
+                <span className="p-float-label" style={{ width: "100%" }}>
+                  <InputText
+                    name="company"
+                    value={addressData.company || ""}
+                    onChange={handleAddressChange}
+                    style={{ width: "100%" }}
+                  />
+                  <label>Nombre de la empresa</label>
+                </span>
+              </div>
+              <div className="p-field p-mb-3">
+                <span className="p-float-label" style={{ width: "100%" }}>
+                  <InputText
+                    name="dni"
+                    value={addressData.dni || ""}
+                    onChange={handleAddressChange}
+                    style={{ width: "100%" }}
+                  />
+                  <label>DNI / CIF</label>
+                </span>
+              </div>
             </div>
           )}
           <div
-            style={{
-              marginTop: "1rem",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-            }}
+            className="p-d-flex p-ai-center p-mb-3"
+            style={{ gap: "0.5rem" }}
           >
             <input
               type="checkbox"
@@ -339,101 +343,14 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
             />
             <span>Empresa/Factura</span>
           </div>
-
-          {/* Mensaje de error en los valores */}
-          {errorMessage && <p className="text-red-500 mb-2">{errorMessage}</p>}
-
-          {/* Sección de campos de IDs */}
-          <div className="mt-4">
-            <h3 className="font-bold mb-2">Ubicación</h3>
-            <label htmlFor="id_state" className="block mb-1">
-              Estado
-            </label>
-            <select
-              name="id_state"
-              value={addressData.id_state || ""}
-              onChange={(e) => {
-                const newIdState = e.target.value;
-                // Opcional: asignar id_country en función de id_state
-                let id_country = "";
-                switch (newIdState) {
-                  case "313":
-                    id_country = "ES";
-                    break;
-                  // Agregar más condiciones si es necesario
-                  default:
-                    id_country = addressData.id_country || "";
-                }
-                setAddressData((prev) => ({
-                  ...prev,
-                  id_state: newIdState,
-                  id_country,
-                }));
-              }}
-              className="w-full p-2 border rounded mb-2"
-            >
-              <option value="">Seleccione un estado</option>
-              <option value="313">A Coruña</option>
-              <option value="314">Álava</option>
-              <option value="315">Albacete</option>
-              <option value="316">Alacant</option>
-              <option value="317">Almería</option>
-              <option value="318">Asturias</option>
-              <option value="319">Ávila</option>
-              <option value="320">Badajoz</option>
-              <option value="322">Barcelona</option>
-              <option value="323">Burgos</option>
-              <option value="324">Cáceres</option>
-              <option value="325">Cádiz</option>
-              <option value="326">Cantabria</option>
-              <option value="327">Castelló</option>
-              <option value="328">Ciudad Real</option>
-              <option value="329">Córdoba</option>
-              <option value="330">Cuenca</option>
-              <option value="331">Girona</option>
-              <option value="332">Granada</option>
-              <option value="333">Guadalajara</option>
-              <option value="334">Gipuzkoa</option>
-              <option value="335">Huelva</option>
-              <option value="336">Huesca</option>
-              <option value="337">Jaén</option>
-              <option value="338">La Rioja</option>
-              <option value="340">León</option>
-              <option value="341">Lleida</option>
-              <option value="342">Lugo</option>
-              <option value="344">Málaga</option>
-              <option value="345">Murcia</option>
-              <option value="346">Nafarroa</option>
-              <option value="347">Ourense</option>
-              <option value="348">Palencia</option>
-              <option value="349">Pontevedra</option>
-              <option value="350">Salamanca</option>
-              <option value="352">Segovia</option>
-              <option value="353">Sevilla</option>
-              <option value="354">Soria</option>
-              <option value="355">Tarragona</option>
-              <option value="356">Teruel</option>
-              <option value="357">Toledo</option>
-              <option value="358">València</option>
-              <option value="359">Valladolid</option>
-              <option value="360">Bizkaia</option>
-              <option value="361">Zamora</option>
-              <option value="362">Zaragoza</option>
-              <option value="343">Madrid</option>
-            </select>
-          </div>
           {errorMessage && (
-            <div style={{ color: "var(--red-500)", marginBottom: "1rem" }}>
+            <div className="p-mb-3" style={{ color: "var(--red-500)" }}>
               {errorMessage}
             </div>
           )}
           <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "0.5rem",
-              marginTop: "1rem",
-            }}
+            className="p-d-flex p-jc-end p-ai-center"
+            style={{ gap: "0.5rem" }}
           >
             <Button
               label="Cancelar"
@@ -442,23 +359,19 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
             />
             <Button
               label="Crear Dirección"
-              onClick={handleCreateAddress}
+              type="submit"
               className="p-button-success"
             />
           </div>
-        </div>
+        </form>
       );
     }
   };
 
   const footer = (
     <div
-      style={{
-        display: "flex",
-        justifyContent: "flex-end",
-        gap: "0.5rem",
-        marginTop: "1rem",
-      }}
+      className="p-d-flex p-jc-end"
+      style={{ gap: "0.5rem", marginTop: "1rem" }}
     >
       {step === 2 && (
         <Button
@@ -482,11 +395,8 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
       modal
     >
       <div
-        style={{
-          marginBottom: "1rem",
-          fontSize: "0.875rem",
-          color: "var(--text-secondary)",
-        }}
+        className="p-mb-3"
+        style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}
       >
         {step === 1
           ? "Paso 1: Crear Cliente -> Paso 2: Crear Dirección"

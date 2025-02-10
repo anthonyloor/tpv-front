@@ -12,6 +12,7 @@ import ConfigLoader from "./components/ConfigLoader";
 import SessionExpiredModal from "./components/modals/session/SessionExpiredModal";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
+import "primeflex/primeflex.css";
 import { isMobile } from "react-device-detect";
 import MobileDashboard from "./MobileDashboard";
 import DesktopTPV from "./DesktopTPV";
@@ -32,7 +33,6 @@ function App() {
   useEffect(() => {
     const storedShop = JSON.parse(localStorage.getItem("shop"));
     const storedEmployee = JSON.parse(localStorage.getItem("employee"));
-
     if (storedShop && storedEmployee) {
       setIsAuthenticated(true);
       setShopId(storedShop.id_shop);
