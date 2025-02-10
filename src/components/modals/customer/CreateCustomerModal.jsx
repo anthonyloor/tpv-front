@@ -1,7 +1,9 @@
 import React, { useState, useContext } from "react";
-import Modal from "../Modal";
+import { Dialog } from "primereact/dialog";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { InputText } from "primereact/inputtext";
+import { Button } from "primereact/button";
 
 const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   const [step, setStep] = useState(1);
@@ -34,7 +36,6 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   });
   const [errorMessage, setErrorMessage] = useState("");
   const [newCustomerId, setNewCustomerId] = useState(null);
-
   const [isNoWeb, setIsNoWeb] = useState(false);
 
   const generateRandomString = (length) => {
@@ -55,7 +56,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
       setCustomerData((prev) => ({
         ...prev,
         email,
-        password: localPart, // La contraseña es la primera parte del correo
+        password: localPart,
       }));
     } else {
       setCustomerData((prev) => ({
@@ -115,12 +116,10 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
         }
       );
 
-      // Llamar a onComplete con cliente y dirección creados si se proporcionó
       if (onComplete) {
         const createdClient = { ...customerData, id_customer: newCustomerId };
         onComplete(createdClient, createdAddress);
       }
-      // Si se crea correctamente la dirección, cerrar el modal o reiniciar el flujo
       onClose();
     } catch (error) {
       console.error(error);
@@ -132,145 +131,200 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
     if (step === 1) {
       return (
         <div>
-          <h3 className="font-bold mb-2">Paso 1: Crear Cliente</h3>
-          <input
-            type="text"
-            name="firstname"
-            placeholder="Nombre"
-            value={customerData.firstname}
-            onChange={handleCustomerChange}
-            className="w-full p-2 border rounded mb-2"
-          />
-          <input
-            type="text"
-            name="lastname"
-            placeholder="Apellidos"
-            value={customerData.lastname}
-            onChange={handleCustomerChange}
-            className="w-full p-2 border rounded mb-2"
-          />
-          <div className="mb-4">
-            <label className="inline-flex items-center">
+          <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>
+            Paso 1: Crear Cliente
+          </h3>
+          <div style={{ marginBottom: "0.5rem" }}>
+            <span className="p-float-label" style={{ width: "100%" }}>
+              <InputText
+                name="firstname"
+                value={customerData.firstname}
+                onChange={handleCustomerChange}
+                style={{ width: "100%" }}
+              />
+              <label>Nombre</label>
+            </span>
+          </div>
+          <div style={{ marginBottom: "0.5rem" }}>
+            <span className="p-float-label" style={{ width: "100%" }}>
+              <InputText
+                name="lastname"
+                value={customerData.lastname}
+                onChange={handleCustomerChange}
+                style={{ width: "100%" }}
+              />
+              <label>Apellidos</label>
+            </span>
+          </div>
+          <div style={{ marginBottom: "1rem" }}>
+            <label
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
               <input
                 type="checkbox"
-                className="form-checkbox"
                 checked={isNoWeb}
                 onChange={handleNoWebToggle}
+                style={{ cursor: "pointer" }}
               />
-              <span className="ml-2">Cliente no web</span>
+              <span>Cliente no web</span>
             </label>
           </div>
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={customerData.email}
-            disabled={isNoWeb}
-            onChange={handleCustomerChange}
-            className="w-full p-2 border rounded mb-2"
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Contraseña"
-            value={customerData.password}
-            disabled={isNoWeb}
-            onChange={handleCustomerChange}
-            className="w-full p-2 border rounded mb-2"
-          />
-          {errorMessage && <p className="text-red-500 mb-2">{errorMessage}</p>}
-          <div className="flex justify-end space-x-2">
-            <button
-              className="bg-gray-500 text-white px-4 py-2 rounded"
+          <div style={{ marginBottom: "0.5rem" }}>
+            <span className="p-float-label" style={{ width: "100%" }}>
+              <InputText
+                type="email"
+                name="email"
+                value={customerData.email}
+                onChange={handleCustomerChange}
+                disabled={isNoWeb}
+                style={{ width: "100%" }}
+              />
+              <label>Email</label>
+            </span>
+          </div>
+          <div style={{ marginBottom: "1rem" }}>
+            <span className="p-float-label" style={{ width: "100%" }}>
+              <InputText
+                type="password"
+                name="password"
+                value={customerData.password}
+                onChange={handleCustomerChange}
+                disabled={isNoWeb}
+                style={{ width: "100%" }}
+              />
+              <label>Contraseña</label>
+            </span>
+          </div>
+          {errorMessage && (
+            <div style={{ color: "var(--red-500)", marginBottom: "1rem" }}>
+              {errorMessage}
+            </div>
+          )}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
+            <Button
+              label="Cancelar"
               onClick={onClose}
-            >
-              Cancelar
-            </button>
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded"
+              className="p-button-text"
+            />
+            <Button
+              label="Crear Cliente"
               onClick={handleCreateCustomer}
-            >
-              Crear Cliente
-            </button>
+              className="p-button-success"
+            />
           </div>
         </div>
       );
     } else if (step === 2) {
       return (
         <div>
-          <h3 className="font-bold mb-2">Paso 2: Crear Dirección</h3>
-          {/* Repetir para otros campos de la dirección según sea necesario */}
-          <input
-            type="text"
-            name="address1"
-            placeholder="Calle, Avenida, etc."
-            value={addressData.address1}
-            onChange={handleAddressChange}
-            className="w-full p-2 border rounded mb-2"
-          />
-          <input
-            type="text"
-            name="address2"
-            placeholder="Piso, puerta, etc."
-            value={addressData.address2}
-            onChange={handleAddressChange}
-            className="w-full p-2 border rounded mb-2"
-          />
-          <input
-            type="text"
-            name="postcode"
-            placeholder="Código Postal"
-            value={addressData.postcode}
-            onChange={handleAddressChange}
-            className="w-full p-2 border rounded mb-2"
-          />
-          <input
-            type="text"
-            name="city"
-            placeholder="Ciudad"
-            value={addressData.city}
-            onChange={handleAddressChange}
-            className="w-full p-2 border rounded mb-2"
-          />
-          <input
-            type="text"
-            name="phone_combined"
-            placeholder="Teléfono / Móvil"
-            value={addressData.phone || addressData.phone_mobile}
-            onChange={(e) => {
-              const value = e.target.value;
-              // Actualizamos ambos campos en el estado
-              setAddressData((prev) => ({
-                ...prev,
-                phone: value,
-                phone_mobile: value,
-              }));
-            }}
-            className="w-full p-2 border rounded mb-2"
-          />
-
+          <h3 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>
+            Paso 2: Crear Dirección
+          </h3>
+          <div style={{ marginBottom: "0.5rem" }}>
+            <span className="p-float-label" style={{ width: "100%" }}>
+              <InputText
+                name="address1"
+                value={addressData.address1}
+                onChange={handleAddressChange}
+                style={{ width: "100%" }}
+              />
+              <label>Calle, Avenida, etc.</label>
+            </span>
+          </div>
+          <div style={{ marginBottom: "0.5rem" }}>
+            <span className="p-float-label" style={{ width: "100%" }}>
+              <InputText
+                name="address2"
+                value={addressData.address2}
+                onChange={handleAddressChange}
+                style={{ width: "100%" }}
+              />
+              <label>Piso, puerta, etc.</label>
+            </span>
+          </div>
+          <div style={{ marginBottom: "0.5rem" }}>
+            <span className="p-float-label" style={{ width: "100%" }}>
+              <InputText
+                name="postcode"
+                value={addressData.postcode}
+                onChange={handleAddressChange}
+                style={{ width: "100%" }}
+              />
+              <label>Código Postal</label>
+            </span>
+          </div>
+          <div style={{ marginBottom: "0.5rem" }}>
+            <span className="p-float-label" style={{ width: "100%" }}>
+              <InputText
+                name="city"
+                value={addressData.city}
+                onChange={handleAddressChange}
+                style={{ width: "100%" }}
+              />
+              <label>Ciudad</label>
+            </span>
+          </div>
+          <div style={{ marginBottom: "1rem" }}>
+            <span className="p-float-label" style={{ width: "100%" }}>
+              <InputText
+                name="phone_combined"
+                value={addressData.phone || addressData.phone_mobile}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setAddressData((prev) => ({
+                    ...prev,
+                    phone: value,
+                    phone_mobile: value,
+                  }));
+                }}
+                style={{ width: "100%" }}
+              />
+              <label>Teléfono / Móvil</label>
+            </span>
+          </div>
           {addressData.isCompanyInvoice && (
-            <div className="mt-2 space-y-2">
-              <input
-                type="text"
-                name="company"
-                placeholder="Nombre de la empresa"
-                value={addressData.company || ""}
-                onChange={handleAddressChange}
-                className="w-full p-2 border rounded"
-              />
-              <input
-                type="text"
-                name="dni"
-                placeholder="DNI / CIF"
-                value={addressData.dni || ""}
-                onChange={handleAddressChange}
-                className="w-full p-2 border rounded"
-              />
+            <div
+              style={{
+                marginTop: "0.5rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem",
+              }}
+            >
+              <span className="p-float-label" style={{ width: "100%" }}>
+                <InputText
+                  name="company"
+                  value={addressData.company || ""}
+                  onChange={handleAddressChange}
+                  style={{ width: "100%" }}
+                />
+                <label>Nombre de la empresa</label>
+              </span>
+              <span className="p-float-label" style={{ width: "100%" }}>
+                <InputText
+                  name="dni"
+                  value={addressData.dni || ""}
+                  onChange={handleAddressChange}
+                  style={{ width: "100%" }}
+                />
+                <label>DNI / CIF</label>
+              </span>
             </div>
           )}
-
-          <label className="flex items-center space-x-2">
+          <div
+            style={{
+              marginTop: "1rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
             <input
               type="checkbox"
               name="isCompanyInvoice"
@@ -281,10 +335,10 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
                   isCompanyInvoice: e.target.checked,
                 }))
               }
-              className="form-checkbox"
+              style={{ cursor: "pointer" }}
             />
             <span>Empresa/Factura</span>
-          </label>
+          </div>
 
           {/* Mensaje de error en los valores */}
           {errorMessage && <p className="text-red-500 mb-2">{errorMessage}</p>}
@@ -368,44 +422,78 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <option value="343">Madrid</option>
             </select>
           </div>
-
-          <div className="flex justify-end space-x-2">
-            <button
-              className="bg-gray-500 text-white px-4 py-2 rounded"
+          {errorMessage && (
+            <div style={{ color: "var(--red-500)", marginBottom: "1rem" }}>
+              {errorMessage}
+            </div>
+          )}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+              marginTop: "1rem",
+            }}
+          >
+            <Button
+              label="Cancelar"
               onClick={onClose}
-            >
-              Cancelar
-            </button>
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded"
+              className="p-button-text"
+            />
+            <Button
+              label="Crear Dirección"
               onClick={handleCreateAddress}
-            >
-              Crear Dirección
-            </button>
+              className="p-button-success"
+            />
           </div>
         </div>
       );
     }
   };
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={step === 1 ? "Crear Cliente" : "Crear Dirección"}
-      showCloseButton
-      showBackButton={step === 2}
-      onBack={() => (step === 2 ? setStep(1) : onClose())}
-      size="lg"
-      height="lg"
+  const footer = (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "flex-end",
+        gap: "0.5rem",
+        marginTop: "1rem",
+      }}
     >
-      <div className="mb-4 text-sm text-gray-500">
+      {step === 2 && (
+        <Button
+          label="Atrás"
+          icon="pi pi-arrow-left"
+          onClick={() => setStep(1)}
+          className="p-button-text"
+        />
+      )}
+      <Button label="Cerrar" onClick={onClose} className="p-button-text" />
+    </div>
+  );
+
+  return (
+    <Dialog
+      header={step === 1 ? "Crear Cliente" : "Crear Dirección"}
+      visible={isOpen}
+      onHide={onClose}
+      footer={footer}
+      style={{ width: "60vw", minHeight: "60vh" }}
+      modal
+    >
+      <div
+        style={{
+          marginBottom: "1rem",
+          fontSize: "0.875rem",
+          color: "var(--text-secondary)",
+        }}
+      >
         {step === 1
           ? "Paso 1: Crear Cliente -> Paso 2: Crear Dirección"
           : "Paso 2: Crear Dirección"}
       </div>
       {renderStepContent()}
-    </Modal>
+    </Dialog>
   );
 };
 

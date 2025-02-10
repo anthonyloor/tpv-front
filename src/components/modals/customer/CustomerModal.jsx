@@ -1,7 +1,7 @@
 // src/components/modals/customer/CustomerModal.jsx
 
 import React, { useState, useEffect, useRef } from "react";
-import Modal from "../Modal";
+import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Toolbar } from "primereact/toolbar";
@@ -18,11 +18,9 @@ const CustomerModal = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [step, setStep] = useState("selectClient");
   const [selectedClient, setSelectedClient] = useState(null);
-
   const [addresses, setAddresses] = useState([]);
   const [storeAddress, setStoreAddress] = useState(null);
 
-  // Referencia a la DataTable (opcional, para export, etc.)
   const dt = useRef(null);
 
   useEffect(() => {
@@ -166,9 +164,8 @@ const CustomerModal = ({
     showBackButton = true;
   }
 
-  // Toolbar (ejemplo) - parte izquierda
   const leftToolbarTemplate = () => (
-    <div className="flex flex-wrap gap-2">
+    <div style={{ display: "flex", gap: "0.5rem" }}>
       <Button
         label=""
         icon="pi pi-refresh"
@@ -180,15 +177,13 @@ const CustomerModal = ({
     </div>
   );
 
-  // (opcional) parte derecha
   const rightToolbarTemplate = () => (
-    <div className="flex flex-wrap gap-2">
+    <div style={{ display: "flex", gap: "0.5rem" }}>
       <Button
         label="Crear Cliente"
         icon="pi pi-user-plus"
         severity="success"
         onClick={() => {
-          // Cierra modal actual y dispara onCreateNewCustomer
           onClose();
           onCreateNewCustomer && onCreateNewCustomer();
         }}
@@ -198,41 +193,41 @@ const CustomerModal = ({
 
   const renderSelectClient = () => {
     return (
-      <div className="p-4">
-        <div className="mb-2">
+      <div style={{ padding: "1rem" }}>
+        <div style={{ marginBottom: "0.5rem" }}>
           <input
             type="text"
             placeholder="Buscar cliente..."
             value={searchTerm}
             onChange={handleSearchChange}
-            className="w-full p-2 border border-gray-300 rounded"
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              border: "1px solid var(--surface-border)",
+              borderRadius: "4px",
+            }}
           />
         </div>
         {errorMessage && (
-          <div className="mb-4 text-red-600">{errorMessage}</div>
+          <div style={{ marginBottom: "1rem", color: "var(--red-500)" }}>
+            {errorMessage}
+          </div>
         )}
-
-        <Toolbar
-          className="mb-2"
-          left={leftToolbarTemplate}
-          right={rightToolbarTemplate}
-        />
-
+        <Toolbar left={leftToolbarTemplate} right={rightToolbarTemplate} />
         <DataTable
           ref={dt}
           value={clients}
           dataKey="id_customer"
           scrollable
-          size={"large"}
+          size="large"
           scrollHeight="470px"
           paginator
           rows={10}
           rowsPerPageOptions={[10, 15, 30]}
-          className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
           emptyMessage={
             errorMessage ? errorMessage : "No se encontraron clientes."
           }
-          // Single click => Seleccionar
+          className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
           onRowDoubleClick={(e) => handleClientSelect(e.data)}
         >
           <Column
@@ -241,47 +236,56 @@ const CustomerModal = ({
             style={{ width: "70px" }}
             sortable
           />
-          <Column field="firstname" header="Nombre"/>
-          <Column field="lastname" header="Apellidos"/>
+          <Column field="firstname" header="Nombre" />
+          <Column field="lastname" header="Apellidos" />
           <Column
             field="origin"
             header="Origen"
             style={{ width: "150px" }}
-            body={(rowData) => {
-              return rowData.origin;
-            }}
+            body={(rowData) => rowData.origin}
           />
         </DataTable>
       </div>
     );
   };
 
-  // ==================== Lista de direcciones ====================
   const renderSelectAddress = () => {
     return (
-      <div className="p-4">
-        <div className="grid grid-cols-1 gap-4">
+      <div style={{ padding: "1rem" }}>
+        <div style={{ display: "grid", gap: "1rem" }}>
           <div
-            className="border p-4 rounded cursor-pointer hover:bg-gray-100"
+            style={{
+              border: "1px solid var(--surface-border)",
+              padding: "1rem",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
             onClick={() => handleAddressSelect(storeAddress)}
           >
-            <h3 className="font-bold">{storeAddress.alias}</h3>
-            <p>{storeAddress.address1}</p>
+            <h3 style={{ fontWeight: "bold", margin: 0 }}>
+              {storeAddress?.alias}
+            </h3>
+            <p style={{ margin: "0.5rem 0 0" }}>{storeAddress?.address1}</p>
           </div>
           {addresses.map((address) => (
             <div
               key={address.id_address}
-              className="border p-4 rounded cursor-pointer hover:bg-gray-100"
+              style={{
+                border: "1px solid var(--surface-border)",
+                padding: "1rem",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
               onClick={() => handleAddressSelect(address)}
             >
-              <h3 className="font-bold">{address.alias}</h3>
-              <p>
+              <h3 style={{ fontWeight: "bold", margin: 0 }}>{address.alias}</h3>
+              <p style={{ margin: "0.5rem 0 0" }}>
                 {address.address1} {address.address2}
               </p>
-              <p>
+              <p style={{ margin: "0.5rem 0 0" }}>
                 {address.postcode} {address.city}
               </p>
-              <p>{address.phone}</p>
+              <p style={{ margin: "0.5rem 0 0" }}>{address.phone}</p>
             </div>
           ))}
         </div>
@@ -289,21 +293,44 @@ const CustomerModal = ({
     );
   };
 
-  // ==================== Render principal ====================
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={title}
-      showCloseButton
-      showBackButton={showBackButton}
-      onBack={goBack}
-      size="2xl"
-      height="xl"
+  let content = null;
+  if (step === "selectClient") {
+    content = renderSelectClient();
+  } else if (step === "selectAddress") {
+    content = renderSelectAddress();
+  }
+
+  const footer = (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        marginTop: "1rem",
+      }}
     >
-      {step === "selectClient" && renderSelectClient()}
-      {step === "selectAddress" && renderSelectAddress()}
-    </Modal>
+      {showBackButton && (
+        <Button
+          label="Atrás"
+          icon="pi pi-arrow-left"
+          onClick={goBack}
+          className="p-button-text"
+        />
+      )}
+      <Button label="Cerrar" onClick={onClose} className="p-button-text" />
+    </div>
+  );
+
+  return (
+    <Dialog
+      header={title}
+      visible={isOpen}
+      onHide={onClose}
+      footer={footer}
+      style={{ width: "80vw", minHeight: "70vh" }}
+      modal
+    >
+      {content}
+    </Dialog>
   );
 };
 

@@ -1,7 +1,8 @@
 // src/components/modals/customer/AddressModal.jsx
 
 import React, { useState, useEffect } from "react";
-import Modal from "../Modal";
+import { Dialog } from "primereact/dialog";
+import { Button } from "primereact/button";
 
 const AddressModal = ({
   isOpen,
@@ -38,11 +39,10 @@ const AddressModal = ({
               .sort((a, b) => new Date(b.date_upd) - new Date(a.date_upd));
             setAddresses(validAddresses);
           })
-          .catch((error) => {
-            console.error("Error direcciones:", error);
-          });
+          .catch((error) => console.error("Error direcciones:", error));
 
-        const storeAddressData = {
+        // Configuramos la dirección de tienda
+        setStoreAddress({
           id_address: "store",
           alias: "Vender en tienda",
           address1: `Calle ${shop.name}`,
@@ -50,8 +50,7 @@ const AddressModal = ({
           postcode: "",
           city: "",
           phone: "",
-        };
-        setStoreAddress(storeAddressData);
+        });
       };
       fetchClientAddresses(clientId);
     }
@@ -62,42 +61,61 @@ const AddressModal = ({
     onClose();
   };
 
+  const footer = (
+    <div style={{ textAlign: "right" }}>
+      <Button label="Cerrar" onClick={onClose} className="p-button-text" />
+    </div>
+  );
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Seleccionar Dirección"
-      size="lg"
-      height="md"
+    <Dialog
+      header="Seleccionar Dirección"
+      visible={isOpen}
+      onHide={onClose}
+      footer={footer}
+      style={{ width: "50vw" }}
+      modal
     >
-      <div className="p-4">
-        <div className="grid grid-cols-1 gap-4">
+      <div style={{ padding: "1rem" }}>
+        <div style={{ display: "grid", gap: "1rem" }}>
           <div
-            className="border p-4 rounded cursor-pointer hover:bg-gray-100"
+            style={{
+              border: "1px solid var(--surface-border)",
+              padding: "1rem",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
             onClick={() => handleAddressSelect(storeAddress)}
           >
-            <h3 className="font-bold">{storeAddress?.alias}</h3>
-            <p>{storeAddress?.address1}</p>
+            <h3 style={{ fontWeight: "bold", margin: 0 }}>
+              {storeAddress?.alias}
+            </h3>
+            <p style={{ margin: "0.5rem 0 0" }}>{storeAddress?.address1}</p>
           </div>
           {addresses.map((address) => (
             <div
               key={address.id_address}
-              className="border p-4 rounded cursor-pointer hover:bg-gray-100"
+              style={{
+                border: "1px solid var(--surface-border)",
+                padding: "1rem",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
               onClick={() => handleAddressSelect(address)}
             >
-              <h3 className="font-bold">{address.alias}</h3>
-              <p>
+              <h3 style={{ fontWeight: "bold", margin: 0 }}>{address.alias}</h3>
+              <p style={{ margin: "0.5rem 0 0" }}>
                 {address.address1} {address.address2}
               </p>
-              <p>
+              <p style={{ margin: "0.5rem 0 0" }}>
                 {address.postcode} {address.city}
               </p>
-              <p>{address.phone}</p>
+              <p style={{ margin: "0.5rem 0 0" }}>{address.phone}</p>
             </div>
           ))}
         </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 };
 
