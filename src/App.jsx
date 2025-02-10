@@ -71,10 +71,7 @@ function App() {
 
   if (!isShopLoaded) {
     return (
-      <div
-        className="p-d-flex p-jc-center p-ai-center"
-        style={{ minHeight: "100vh" }}
-      >
+      <div className="flex items-center justify-center min-h-screen">
         <ProgressSpinner />
       </div>
     );
@@ -82,8 +79,8 @@ function App() {
 
   return (
     <div
-      className="p-d-flex p-flex-column"
-      style={{ backgroundColor: "var(--surface-200)", minHeight: "100vh" }}
+      className="flex flex-col min-h-screen"
+      style={{ backgroundColor: "var(--surface-200)" }}
     >
       <Toaster position="top-center" expand={true} />
       <Routes>

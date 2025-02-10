@@ -39,40 +39,15 @@ function DesktopTPV() {
   const [selectedProductForStock, setSelectedProductForStock] = useState(null);
 
   return (
-    <div
-      className="p-grid"
-      style={{ height: "100vh", padding: "0.5rem", gap: "0.5rem" }}
-    >
-      {/* Fila 1: Navbar (fila completa) */}
-      <div
-        className="p-col-12"
-        style={{
-          backgroundColor: "white",
-          borderRadius: "0.5rem",
-          boxShadow: "var(--shadow-2)",
-        }}
-      >
+    <div className="flex flex-col min-h-screen p-2 gap-2">
+      {/* Fila 1: Navbar */}
+      <div className="w-full">
         <NavbarCard />
       </div>
 
-      {/* Fila 2: SalesCard (1/3) y ProductSearchCard (2/3) */}
-      <div
-        className="p-col-12"
-        style={{
-          flex: 1,
-          display: "flex",
-          gap: "0.5rem",
-        }}
-      >
-        <div
-          className="p-col-4"
-          style={{
-            backgroundColor: "white",
-            borderRadius: "0.5rem",
-            boxShadow: "var(--shadow-2)",
-            overflowY: "auto",
-          }}
-        >
+      {/* Fila 2: SalesCard (1/3) + ProductSearchCard (2/3) */}
+      <div className="flex flex-auto gap-2">
+        <div className="w-1/3 bg-white rounded shadow-md overflow-y-auto">
           <SalesCard
             cartItems={cartItems}
             setCartItems={setCartItems}
@@ -88,15 +63,7 @@ function DesktopTPV() {
             recentlyAddedId={recentlyAddedId}
           />
         </div>
-        <div
-          className="p-col-8"
-          style={{
-            backgroundColor: "white",
-            borderRadius: "0.5rem",
-            boxShadow: "var(--shadow-2)",
-            overflowY: "auto",
-          }}
-        >
+        <div className="w-2/3 bg-white rounded shadow-md overflow-y-auto">
           <ProductSearchCard
             onAddProduct={handleAddProduct}
             onAddDiscount={addDiscount}
@@ -105,22 +72,9 @@ function DesktopTPV() {
         </div>
       </div>
 
-      {/* Fila 3: SalesCardActions (1/3) y StoreStockPanel (2/3) */}
-      <div
-        className="p-col-12"
-        style={{
-          display: "flex",
-          gap: "0.5rem",
-        }}
-      >
-        <div
-          className="p-col-4"
-          style={{
-            backgroundColor: "white",
-            borderRadius: "0.5rem",
-            boxShadow: "var(--shadow-2)",
-          }}
-        >
+      {/* Fila 3: SalesCardActions (1/3) + StoreStockPanel (2/3) */}
+      <div className="flex gap-2">
+        <div className="w-1/3 bg-white rounded shadow-md">
           <SalesCardActions
             cartItems={cartItems}
             setCartItems={setCartItems}
@@ -131,15 +85,7 @@ function DesktopTPV() {
             handleAddProduct={handleAddProduct}
           />
         </div>
-        <div
-          className="p-col-8"
-          style={{
-            backgroundColor: "white",
-            borderRadius: "0.5rem",
-            boxShadow: "var(--shadow-2)",
-            padding: "0.5rem",
-          }}
-        >
+        <div className="w-2/3 bg-white rounded shadow-md p-2">
           <StoreStockPanel product={selectedProductForStock} />
         </div>
       </div>
