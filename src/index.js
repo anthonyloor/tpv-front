@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import { MantineProvider } from "@mantine/core";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import AuthProvider from "./contexts/AuthContext";
@@ -16,20 +15,11 @@ root.render(
     <AuthProvider>
       <Router>
         <ConfigProvider>
-          <MantineProvider
-            withGlobalStyles
-            withNormalizeCSS
-            theme={{
-              colorScheme: "light", // o 'dark'
-              // puedes personalizar colores, tipografías, radius, etc.
-            }}
-          >
             <ClientProvider>
               <PinProvider>
                 <App />
               </PinProvider>
             </ClientProvider>
-          </MantineProvider>
         </ConfigProvider>
       </Router>
     </AuthProvider>

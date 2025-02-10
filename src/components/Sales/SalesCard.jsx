@@ -8,6 +8,8 @@ import AddressModal from "../modals/customer/AddressModal";
 import ClientModal from "../modals/customer/CustomerModal";
 import CreateCustomerModal from "../modals/customer/CreateCustomerModal";
 import { SplitButton } from "primereact/splitbutton";
+import { Button } from "primereact/button";
+import { Divider } from "primereact/divider";
 
 function SalesCard({
   cartItems,
@@ -23,7 +25,7 @@ function SalesCard({
   loadParkedCart,
   deleteParkedCart,
 }) {
-  // -- ESTADOS para las lógicas de cliente y dirección (antes en NavbarCard) --
+  // Estados para cliente y dirección
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
@@ -36,7 +38,7 @@ function SalesCard({
     resetToDefaultClientAndAddress,
   } = useContext(ClientContext);
 
-  // Manejo de modals aparcar ticket
+  // Estados para los modals de ticket aparcado
   const [isParkedCartsModalOpen, setIsParkedCartsModalOpen] = useState(false);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [ticketName, setTicketName] = useState("");
@@ -94,7 +96,7 @@ function SalesCard({
     }
   };
 
-  // ------------------ Lógica movida del Navbar: Cliente y Dirección ------------------
+  // Lógica de Cliente y Dirección (movida del Navbar)
   const shop = JSON.parse(localStorage.getItem("shop"));
 
   const handleCreateNewCustomer = () => {
@@ -120,87 +122,62 @@ function SalesCard({
     setIsAddressModalOpen(false);
     localStorage.setItem("selectedAddress", JSON.stringify(address));
   };
-  // -------------------------------------------------------------------------------
 
   return (
     <div className="p-4 h-full flex flex-col relative">
-      {/* Cabecera: CLIENTE / DIRECCIÓN (movido desde Navbar) + Botones aparcar */}
+      {/* Cabecera: SplitButton de Cliente / Dirección y SplitButton de Tickets */}
       <div className="mb-4 flex items-center justify-between">
-        {/* -- Bloque Cliente y Dirección -- */}
-        <div className="flex items-center space-x-2">
-          <span className="font-semibold">{selectedClient.full_name}</span>
-          <button
-            className="bg-gray-200 p-2 rounded"
-            onClick={() => setIsClientModalOpen(true)}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-              className="h-5 w-5"
-            >
-              <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122Z" />
-            </svg>
-          </button>
+        {/* SplitButton para Cliente / Dirección */}
+        <SplitButton
+          label={selectedClient.full_name}
+          icon="pi pi-users"
+          model={[
+            {
+              label: "Cambiar cliente",
+              icon: "pi pi-users",
+              command: () => setIsClientModalOpen(true),
+            },
+            {
+              label: "Cambiar dirección",
+              icon: "pi pi-map-marker",
+              command: () => setIsAddressModalOpen(true),
+            },
+            {
+              label: "Cliente por defecto",
+              icon: "pi pi-refresh",
+              command: resetToDefaultClientAndAddress,
+            },
+          ]}
+          className="p-button"
+        />
 
-          {selectedClient.id_customer !== 0 && (
-            <button
-              className="bg-gray-200 p-2 rounded font-bold text-black"
-              onClick={resetToDefaultClientAndAddress}
-            >
-              P
-            </button>
-          )}
-
-          {selectedClient.id_customer !== 0 && (
-            <>
-              <span className="font-semibold">
-                {selectedAddress ? selectedAddress.alias : "Sin dirección"}
-              </span>
-              <button
-                className="bg-gray-200 p-2 rounded"
-                onClick={() => setIsAddressModalOpen(true)}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                >
-                  <path d="M12 2.25C7.168 2.25 3.25 6.168 3.25 11c0 6.1 7.034 10.993 8.377 11.78a.75.75 0 1 0 .746 0C13.716 21.993 20.75 17.1 20.75 11c0-4.832-3.918-8.75-8.75-8.75zm0 13a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5z" />
-                </svg>
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* -- Botones de aparcar adaptados -- */}
-        <div className="flex space-x-2">
-          <SplitButton
-            label="Tickets"
-            icon="pi pi-receipt"
-            onClick={() => setIsParkedCartsModalOpen(true)}
-            model={[
-              {
-                label: "Tickets Aparcados",
-                icon: "pi pi-list",
-                command: () => setIsParkedCartsModalOpen(true),
-              },
-              {
-                label: "Guardar Ticket",
-                icon: "pi pi-file-plus",
-                command: handleParkCart,
-              },
-              {
-                label: "Borrar Ticket",
-                icon: "pi pi-trash",
-                command: handleClearCart,
-              },
-            ]}
-            className="p-button-warning"
-          />
-        </div>
+        {/* SplitButton de Tickets */}
+        <SplitButton
+          label="Tickets"
+          icon="pi pi-receipt"
+          onClick={() => setIsParkedCartsModalOpen(true)}
+          model={[
+            {
+              label: "Tickets Aparcados",
+              icon: "pi pi-list",
+              command: () => setIsParkedCartsModalOpen(true),
+            },
+            {
+              label: "Guardar Ticket",
+              icon: "pi pi-file-plus",
+              command: handleParkCart,
+            },
+            {
+              label: "Borrar Ticket",
+              icon: "pi pi-trash",
+              command: handleClearCart,
+            },
+          ]}
+          className="p-button-warning"
+        />
       </div>
+
+      <Divider className="border-t" />
 
       {/* Lista de productos */}
       <div className="relative z-10 flex-grow overflow-auto">
@@ -209,7 +186,8 @@ function SalesCard({
           <ul className="space-y-2">
             {cartItems.map((item) => {
               const totalItem = item.final_price_incl_tax * item.quantity;
-              const isHighlighted = item.id_stock_available === recentlyAddedId;
+              const isHighlighted =
+                item.id_stock_available === recentlyAddedId;
               return (
                 <li
                   key={item.id_stock_available}
@@ -222,24 +200,26 @@ function SalesCard({
                     {item.product_name} {item.combination_name}
                   </div>
                   <div className="text-right md:text-left md:w-32">
-                    <div>P/U: {item.final_price_incl_tax.toFixed(2)} €</div>
+                    <div>
+                      P/U: {item.final_price_incl_tax.toFixed(2)} €
+                    </div>
                     <div className="font-semibold">
                       Total: {totalItem.toFixed(2)} €
                     </div>
                   </div>
                   <div className="mt-2 md:mt-0 flex space-x-2">
-                    <button
-                      className="bg-red-500 text-white px-2 py-1 rounded"
-                      onClick={() => onDecreaseProduct(item.id_stock_available)}
-                    >
-                      -
-                    </button>
-                    <button
-                      className="bg-red-500 text-white px-2 py-1 rounded"
+                    <Button
+                      label="-"
+                      className="p-button-danger"
+                      onClick={() =>
+                        onDecreaseProduct(item.id_stock_available)
+                      }
+                    />
+                    <Button
+                      label="X"
+                      className="p-button-danger"
                       onClick={() => onRemoveProduct(item.id_stock_available)}
-                    >
-                      X
-                    </button>
+                    />
                   </div>
                 </li>
               );
@@ -268,19 +248,20 @@ function SalesCard({
                   <div>
                     <div className="font-bold">{disc.name || disc.code}</div>
                     {disc.code && disc.name && (
-                      <div className="text-xs text-gray-600">({disc.code})</div>
+                      <div className="text-xs text-gray-600">
+                        ({disc.code})
+                      </div>
                     )}
                   </div>
                   <div className="text-right md:text-left md:w-32 font-semibold">
                     {label}
                   </div>
                   <div className="mt-2 md:mt-0 flex space-x-2">
-                    <button
-                      className="bg-red-500 text-white px-2 py-1 rounded"
+                    <Button
+                      label="Quitar"
+                      className="p-button-danger"
                       onClick={() => removeDiscountByIndex(index)}
-                    >
-                      Quitar
-                    </button>
+                    />
                   </div>
                 </li>
               );
@@ -330,7 +311,9 @@ function SalesCard({
         showCloseButton
       >
         <div className="p-4">
-          <label className="block mb-2 font-semibold">Nombre del Ticket:</label>
+          <label className="block mb-2 font-semibold">
+            Nombre del Ticket:
+          </label>
           <input
             type="text"
             value={ticketName}
@@ -339,23 +322,21 @@ function SalesCard({
             placeholder="Introduce un nombre para el ticket"
           />
           <div className="flex justify-end space-x-2">
-            <button
-              className="bg-gray-300 text-black px-4 py-2 rounded"
+            <Button
+              label="Cancelar"
+              className="p-button-secondary"
               onClick={() => setIsNameModalOpen(false)}
-            >
-              Cancelar
-            </button>
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded"
+            />
+            <Button
+              label="Guardar"
+              className="p-button-success"
               onClick={handleSaveParkedCart}
-            >
-              Guardar
-            </button>
+            />
           </div>
         </div>
       </Modal>
 
-      {/* MODALES MOVIDOS DEL NAVBAR (CLIENTE Y DIRECCIÓN) */}
+      {/* MODALES DE CLIENTE Y DIRECCIÓN */}
       {isClientModalOpen && (
         <ClientModal
           isOpen={true}
@@ -370,7 +351,7 @@ function SalesCard({
           isOpen={true}
           onClose={() => setShowCreateCustomerModal(false)}
           onComplete={(newClient, newAddress) => {
-            // Manejar selección automática del cliente y dirección
+            // Selección automática del cliente y dirección
             handleSelectClientAndAddress(newClient, newAddress);
           }}
         />
