@@ -125,17 +125,15 @@ function SalesCard({
 
   return (
     <div
-      className="p-p-4"
+      className="h-full flex flex-col p-4 relative"
       style={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        position: "relative",
+        backgroundColor: "var(--surface-0)",
+        color: "var(--text-color)",
       }}
     >
       {/* Cabecera: SplitButton de Cliente/Dirección y Tickets */}
-      <div className="p-d-flex p-jc-between p-ai-center p-mb-4">
-        <div style={{ flex: 1, marginRight: "1rem" }}>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <div className="flex-1">
           <SplitButton
             label={selectedClient.full_name}
             icon="pi pi-users"
@@ -156,8 +154,7 @@ function SalesCard({
                 command: resetToDefaultClientAndAddress,
               },
             ]}
-            className="p-button"
-            style={{ width: "100%" }}
+            className="w-full"
           />
         </div>
         <div>
@@ -187,66 +184,40 @@ function SalesCard({
         </div>
       </div>
 
-      <Divider />
+      <Divider style={{ borderColor: "var(--surface-border)" }} />
 
       {/* Lista de productos */}
-      <div style={{ flex: 1, overflowY: "auto", position: "relative" }}>
-        <h4
-          style={{
-            fontWeight: "bold",
-            fontSize: "1.125rem",
-            marginBottom: "0.5rem",
-          }}
-        >
-          Productos en el Ticket
-        </h4>
+      <div className="flex-1 overflow-auto relative">
+        <h4 className="font-bold text-lg mb-2">Productos en el Ticket</h4>
         {cartItems.length > 0 ? (
-          <ul
-            style={{
-              listStyle: "none",
-              padding: 0,
-              margin: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.5rem",
-            }}
-          >
+          <ul className="flex flex-col gap-2">
             {cartItems.map((item) => {
               const totalItem = item.final_price_incl_tax * item.quantity;
               const isHighlighted = item.id_stock_available === recentlyAddedId;
+
               return (
                 <li
                   key={item.id_stock_available}
+                  className="border p-3 flex flex-col gap-2 rounded"
                   style={{
-                    border: "1px solid var(--surface-border)",
-                    padding: "0.75rem",
-                    borderRadius: "0.5rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.5rem",
+                    borderColor: "var(--surface-border)",
                     backgroundColor: isHighlighted
                       ? "var(--primary-color)"
-                      : "white",
-                    color: isHighlighted ? "white" : "inherit",
+                      : "var(--surface-0)",
+                    color: isHighlighted ? "#fff" : "var(--text-color)",
                   }}
                 >
                   <div>
                     <strong>{item.quantity}x</strong> {item.product_name}{" "}
                     {item.combination_name}
                   </div>
-                  <div style={{ textAlign: "right" }}>
+                  <div className="text-right">
                     <div>P/U: {item.final_price_incl_tax.toFixed(2)} €</div>
-                    <div style={{ fontWeight: "bold" }}>
+                    <div className="font-bold">
                       Total: {totalItem.toFixed(2)} €
                     </div>
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "0.5rem",
-                      marginTop: "0.5rem",
-                    }}
-                  >
+                  <div className="flex gap-2 mt-1">
                     <Button
                       label="-"
                       className="p-button-danger"
@@ -270,66 +241,42 @@ function SalesCard({
       {/* Descuentos aplicados */}
       {appliedDiscounts.length > 0 && (
         <div
+          className="p-3 rounded mt-4"
           style={{
-            marginTop: "1rem",
-            backgroundColor: "var(--surface-100)",
-            padding: "1rem",
-            borderRadius: "0.5rem",
+            backgroundColor: "var(--surface-50)",
+            color: "var(--text-color)",
           }}
         >
-          <h4
-            style={{
-              fontWeight: "bold",
-              fontSize: "1.125rem",
-              marginBottom: "0.5rem",
-            }}
-          >
-            Descuentos Aplicados
-          </h4>
-          <ul
-            style={{
-              listStyle: "none",
-              padding: 0,
-              margin: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.5rem",
-            }}
-          >
+          <h4 className="font-bold text-lg mb-2">Descuentos Aplicados</h4>
+          <ul className="flex flex-col gap-2">
             {appliedDiscounts.map((disc, index) => {
               const label =
                 disc.reduction_percent > 0
                   ? `${disc.reduction_percent}%`
                   : `${disc.reduction_amount?.toFixed(2) || "0.00"} €`;
+
               return (
                 <li
                   key={index}
+                  className="border rounded p-3 flex flex-col gap-2"
                   style={{
-                    padding: "0.75rem",
-                    border: "1px solid var(--surface-border)",
-                    borderRadius: "0.5rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.5rem",
+                    borderColor: "var(--surface-border)",
+                    backgroundColor: "var(--surface-0)",
                   }}
                 >
                   <div>
                     <strong>{disc.name || disc.code}</strong>
                     {disc.code && disc.name && (
                       <div
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--text-secondary)",
-                        }}
+                        className="text-xs"
+                        style={{ color: "var(--text-secondary)" }}
                       >
                         ({disc.code})
                       </div>
                     )}
                   </div>
-                  <div style={{ textAlign: "right", fontWeight: "bold" }}>
-                    {label}
-                  </div>
-                  <div style={{ marginTop: "0.5rem" }}>
+                  <div className="text-right font-bold">{label}</div>
+                  <div>
                     <Button
                       label="Quitar"
                       className="p-button-danger"
@@ -345,59 +292,29 @@ function SalesCard({
 
       {/* Totales */}
       <div
-        style={{
-          marginTop: "1rem",
-          borderTop: "1px solid var(--surface-border)",
-          paddingTop: "1rem",
-        }}
+        className="mt-4 pt-4 border-t"
+        style={{ borderColor: "var(--surface-border)" }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span style={{ fontSize: "1.25rem", fontWeight: 500 }}>
-            Subtotal Productos:
-          </span>
-          <span style={{ fontSize: "1.25rem", fontWeight: "bold" }}>
+        <div className="flex justify-between items-center">
+          <span className="text-xl font-medium">Subtotal Productos:</span>
+          <span className="text-xl font-bold">
             {subtotalProducts.toFixed(2)} €
           </span>
         </div>
         {appliedDiscounts.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: "0.5rem",
-            }}
-          >
-            <span style={{ fontSize: "1.25rem", fontWeight: 500 }}>
-              Total Descuentos:
-            </span>
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-xl font-medium">Total Descuentos:</span>
             <span
-              style={{
-                fontSize: "1.25rem",
-                fontWeight: "bold",
-                color: "var(--red-500)",
-              }}
+              className="text-xl font-bold"
+              style={{ color: "var(--red-500)" }}
             >
               {totalDiscounts.toFixed(2)} €
             </span>
           </div>
         )}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginTop: "0.5rem",
-          }}
-        >
-          <span style={{ fontSize: "2rem", fontWeight: "bold" }}>TOTAL:</span>
-          <span style={{ fontSize: "2rem", fontWeight: 800 }}>
+        <div className="flex justify-between items-center mt-2">
+          <span className="text-2xl font-bold">TOTAL:</span>
+          <span className="text-2xl font-extrabold">
             {Math.max(0, total).toFixed(2)} €
           </span>
         </div>
@@ -418,38 +335,23 @@ function SalesCard({
         visible={isNameModalOpen}
         onHide={() => setIsNameModalOpen(false)}
         modal
-        style={{ width: "30vw" }}
+        style={{ width: "30vw", backgroundColor: "var(--surface-0)" }}
       >
-        <div style={{ padding: "1rem" }}>
-          <label
-            style={{
-              marginBottom: "0.5rem",
-              fontWeight: 600,
-              display: "block",
-            }}
-          >
-            Nombre del Ticket:
-          </label>
+        <div className="p-4" style={{ color: "var(--text-color)" }}>
+          <label className="block font-semibold mb-2">Nombre del Ticket:</label>
           <input
             type="text"
             value={ticketName}
             onChange={(e) => setTicketName(e.target.value)}
+            className="w-full p-2 border rounded mb-4"
             style={{
-              width: "100%",
-              padding: "0.5rem",
-              border: "1px solid var(--surface-border)",
-              borderRadius: "4px",
-              marginBottom: "1rem",
+              borderColor: "var(--surface-border)",
+              backgroundColor: "var(--surface-50)",
+              color: "var(--text-color)",
             }}
             placeholder="Introduce un nombre para el ticket"
           />
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "0.5rem",
-            }}
-          >
+          <div className="flex justify-end gap-2">
             <Button
               label="Cancelar"
               className="p-button-secondary"
@@ -467,7 +369,7 @@ function SalesCard({
       {/* Modales de Cliente y Dirección */}
       {isClientModalOpen && (
         <ClientModal
-          isOpen={true}
+          isOpen
           onClose={() => setIsClientModalOpen(false)}
           handleSelectClientAndAddress={handleSelectClientAndAddress}
           onCreateNewCustomer={handleCreateNewCustomer}
@@ -476,7 +378,7 @@ function SalesCard({
 
       {showCreateCustomerModal && (
         <CreateCustomerModal
-          isOpen={true}
+          isOpen
           onClose={() => setShowCreateCustomerModal(false)}
           onComplete={(newClient, newAddress) => {
             // Selección automática del cliente y dirección

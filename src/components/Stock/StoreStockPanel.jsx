@@ -31,36 +31,35 @@ function StoreStockPanel({ product }) {
 
   if (!product) {
     return (
-      <div style={{ fontStyle: "italic", color: "var(--text-secondary)" }}>
+      <div className="italic" style={{ color: "var(--text-secondary)" }}>
         Haz clic en un producto para ver su stock en cada tienda
       </div>
     );
   }
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <h4 style={{ fontWeight: "bold", marginBottom: "1rem" }}>
-        Stock para: {product.product_name}
-      </h4>
-      <div className="p-d-flex p-flex-wrap" style={{ gap: "1rem" }}>
+    <div
+      className="p-4"
+      style={{
+        backgroundColor: "var(--surface-0)",
+        color: "var(--text-color)",
+      }}
+    >
+      <h4 className="font-bold mb-3">Stock para: {product.product_name}</h4>
+      <div className="flex flex-wrap gap-4">
         {shops.map((shop) => {
           const qty = stocksByShop[shop.id_shop] ?? 0;
           return (
             <Card
               key={shop.id_shop}
               title={shop.name}
-              style={{ width: "12rem", padding: "0.5rem" }}
-              className="p-shadow-2"
+              className="p-shadow-2 w-48"
+              style={{
+                backgroundColor: "var(--surface-card)",
+                color: "var(--text-color)",
+              }}
             >
-              <div
-                style={{
-                  fontSize: "1.5rem",
-                  fontWeight: "bold",
-                  textAlign: "center",
-                }}
-              >
-                {qty}
-              </div>
+              <div className="text-center text-2xl font-bold">{qty}</div>
             </Card>
           );
         })}

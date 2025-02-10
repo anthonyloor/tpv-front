@@ -37,7 +37,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   };
 
   const handleKeyDown = async (event) => {
-    // Si se presiona Enter y el término empieza con '#', buscar un vale descuento
+    // Si la búsqueda empieza con "#", se entiende que es un vale descuento
     if (event.key === "Enter" && searchTerm.startsWith("#")) {
       const code = searchTerm.slice(1);
       setIsLoading(true);
@@ -270,23 +270,22 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   };
 
   return (
-    <div style={{ padding: "1rem", height: "100%" }}>
-      <div style={{ position: "relative", marginBottom: "1rem" }}>
+    <div
+      className="p-4 h-full flex flex-col"
+      style={{
+        backgroundColor: "var(--surface-0)",
+        color: "var(--text-color)",
+      }}
+    >
+      {/* Buscador */}
+      <div className="relative mb-4">
+        {/* Icono lupa a la izquierda */}
         <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "0.75rem",
-            transform: "translateY(-50%)",
-            pointerEvents: "none",
-          }}
+          className="absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none"
+          style={{ color: "var(--text-secondary)" }}
         >
           <svg
-            style={{
-              height: "1.25rem",
-              width: "1.25rem",
-              color: "var(--text-secondary)",
-            }}
+            className="h-5 w-5"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -307,36 +306,27 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           onChange={handleSearch}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
+          className="w-full pl-9 pr-9 py-2 border rounded"
           style={{
-            width: "100%",
-            padding: "0.5rem 2.5rem",
-            border: "1px solid var(--surface-border)",
-            borderRadius: "4px",
+            borderColor: "var(--surface-border)",
+            backgroundColor: "var(--surface-50)",
+            color: "var(--text-color)",
           }}
         />
+        {/* Spinner de carga */}
         {isLoading && (
           <div
-            style={{
-              position: "absolute",
-              right: "0.75rem",
-              top: "50%",
-              transform: "translateY(-50%)",
-              pointerEvents: "none",
-            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: "var(--text-secondary)" }}
           >
             <svg
-              style={{
-                height: "1.25rem",
-                width: "1.25rem",
-                animation: "spin 2s linear infinite",
-                color: "var(--text-secondary)",
-              }}
+              className="animate-spin h-5 w-5"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
             >
               <circle
-                style={{ opacity: 0.25 }}
+                className="opacity-25"
                 cx="12"
                 cy="12"
                 r="10"
@@ -344,7 +334,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
                 strokeWidth="4"
               />
               <path
-                style={{ opacity: 0.75 }}
+                className="opacity-75"
                 fill="currentColor"
                 d="M4 12a8 8 0 0 1 8-8v8H4z"
               />
@@ -353,178 +343,87 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         )}
       </div>
 
-      <div style={{ overflowY: "auto" }}>
+      {/* Listado de productos */}
+      <div className="flex-1 overflow-auto">
         <table
+          className="w-full border rounded"
           style={{
-            width: "100%",
-            backgroundColor: "white",
-            border: "1px solid var(--surface-border)",
-            borderRadius: "0.5rem",
+            borderColor: "var(--surface-border)",
+            backgroundColor: "var(--surface-0)",
+            color: "var(--text-color)",
           }}
         >
           <thead
+            className="sticky top-0 z-10 border-b"
             style={{
               backgroundColor: "var(--surface-100)",
               color: "var(--text-color)",
-              position: "sticky",
-              top: "0",
-              zIndex: 1,
-              borderBottom: "1px solid var(--surface-border)",
+              borderColor: "var(--surface-border)",
             }}
           >
             <tr>
-              <th
-                style={{
-                  padding: "0.75rem",
-                  textAlign: "left",
-                  fontWeight: 600,
-                }}
-              >
-                Combinación
-              </th>
-              <th
-                style={{
-                  padding: "0.75rem",
-                  textAlign: "left",
-                  fontWeight: 600,
-                }}
-              >
-                Referencia
-              </th>
-              <th
-                style={{
-                  padding: "0.75rem",
-                  textAlign: "left",
-                  fontWeight: 600,
-                }}
-              >
-                Cod. Barras
-              </th>
-              <th
-                style={{
-                  padding: "0.75rem",
-                  textAlign: "left",
-                  fontWeight: 600,
-                }}
-              >
-                Precio
-              </th>
-              <th
-                style={{
-                  padding: "0.75rem",
-                  textAlign: "left",
-                  fontWeight: 600,
-                }}
-              >
-                Cantidad
-              </th>
-              <th
-                style={{
-                  padding: "0.75rem",
-                  textAlign: "left",
-                  fontWeight: 600,
-                }}
-              ></th>
+              <th className="py-2 px-3 text-left font-semibold">Combinación</th>
+              <th className="py-2 px-3 text-left font-semibold">Referencia</th>
+              <th className="py-2 px-3 text-left font-semibold">Cod. Barras</th>
+              <th className="py-2 px-3 text-left font-semibold">Precio</th>
+              <th className="py-2 px-3 text-left font-semibold">Cantidad</th>
+              <th className="py-2 px-3 text-left font-semibold"></th>
             </tr>
           </thead>
           <tbody>
             {filteredProducts.map((productGroup) => (
               <React.Fragment key={productGroup.product_name}>
-                <tr style={{ backgroundColor: "var(--surface-50)" }}>
+                {/* Fila "título" con nombre del producto */}
+                <tr
+                  style={{
+                    backgroundColor: "var(--surface-50)",
+                    color: "var(--text-color)",
+                  }}
+                >
                   <td
-                    colSpan="6"
-                    style={{
-                      padding: "1rem",
-                      fontWeight: "bold",
-                      fontSize: "1.125rem",
-                      cursor: "pointer",
-                    }}
+                    colSpan={6}
+                    className="py-3 px-4 font-bold text-lg cursor-pointer"
                     onClick={() => handleProductClick(productGroup.image_url)}
                   >
                     {productGroup.product_name}
                   </td>
                 </tr>
                 {productGroup.combinations.map((product, index) => {
-                  const rowBg = index % 2 === 0 ? "white" : "var(--surface-50)";
+                  const rowBg =
+                    index % 2 === 0 ? "var(--surface-0)" : "var(--surface-50)";
+                  const isClicked =
+                    clickedButtons[product.id_product_attribute];
+
                   return (
                     <tr
                       key={`${product.id_product}_${product.id_product_attribute}`}
-                      style={{ backgroundColor: rowBg }}
+                      style={{
+                        backgroundColor: rowBg,
+                        color: "var(--text-color)",
+                      }}
                     >
                       <td
+                        className="py-2 px-3 cursor-pointer"
                         onClick={() => onClickProduct?.(product)}
-                        style={{ cursor: "pointer", padding: "0.75rem" }}
                       >
                         {product.combination_name}
                       </td>
-                      <td
-                        style={{
-                          padding: "0.75rem",
-                          color: "var(--text-color)",
-                        }}
-                      >
+                      <td className="py-2 px-3">
                         {product.reference_combination}
                       </td>
-                      <td
-                        style={{
-                          padding: "0.75rem",
-                          color: "var(--text-color)",
-                        }}
-                      >
-                        {product.ean13_combination}
+                      <td className="py-2 px-3">{product.ean13_combination}</td>
+                      <td className="py-2 px-3">{product.price} €</td>
+                      <td className="py-2 px-3 text-center relative">
+                        {getStockForCurrentShop(product.stocks)}
                       </td>
-                      <td style={{ padding: "0.75rem" }}>
-                        <span>{product.price} €</span>
-                      </td>
-                      <td
-                        style={{
-                          padding: "0.75rem",
-                          textAlign: "center",
-                          position: "relative",
-                        }}
-                      >
-                        <span>{getStockForCurrentShop(product.stocks)}</span>
-                        <div
-                          style={{
-                            position: "absolute",
-                            left: "0",
-                            marginTop: "0.25rem",
-                            display: "none",
-                            backgroundColor: "white",
-                            border: "1px solid var(--surface-border)",
-                            color: "var(--text-color)",
-                            fontSize: "0.75rem",
-                            borderRadius: "4px",
-                            padding: "0.25rem",
-                            boxShadow: "var(--shadow-1)",
-                            zIndex: 10,
-                          }}
-                          className="hover-tooltip"
-                        >
-                          {Array.isArray(product.stocks) ? (
-                            product.stocks
-                              .filter((s) => s.id_shop !== 1)
-                              .map((stock, stockIndex) => (
-                                <div key={`${stock.shop_name}_${stockIndex}`}>
-                                  {stock.shop_name}: {stock.quantity}
-                                </div>
-                              ))
-                          ) : (
-                            <div>No hay información de stock</div>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                      <td className="py-2 px-3 text-center">
                         <Button
                           icon="pi pi-plus"
-                          style={{
-                            backgroundColor: clickedButtons[
-                              product.id_product_attribute
-                            ]
-                              ? "var(--success-color)"
-                              : "var(--primary-color)",
-                            color: "white",
-                          }}
+                          className={`${
+                            isClicked
+                              ? "bg-green-600 hover:bg-green-700"
+                              : "bg-blue-600 hover:bg-blue-700"
+                          } text-white border-none`}
                           onClick={() => handleAddToCartWithAnimation(product)}
                         />
                       </td>
@@ -539,17 +438,20 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
 
       {/* Modal para imagen del producto */}
       <Dialog
-        header=""
+        header="Imagen del Producto"
         visible={isImageModalOpen}
         onHide={() => setImageModalOpen(false)}
         modal
-        style={{ width: "50vw" }}
+        style={{ width: "50vw", backgroundColor: "var(--surface-0)" }}
       >
-        <img
-          src={selectedProductImage}
-          alt="Imagen del producto"
-          style={{ width: "100%", height: "auto" }}
-        />
+        <div className="p-2" style={{ color: "var(--text-color)" }}>
+          <img
+            src={selectedProductImage}
+            alt="Imagen del producto"
+            className="w-full h-auto"
+            style={{ borderRadius: "0.25rem" }}
+          />
+        </div>
       </Dialog>
 
       {/* Modal para confirmar producto sin stock */}
@@ -558,27 +460,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         visible={confirmModalOpen}
         onHide={handleCancelAdd}
         modal
-        style={{ width: "30vw" }}
+        style={{ width: "30vw", backgroundColor: "var(--surface-0)" }}
       >
-        <div style={{ padding: "1rem" }}>
-          <h2
-            style={{
-              fontSize: "1.125rem",
-              fontWeight: "bold",
-              marginBottom: "1rem",
-            }}
-          >
-            Máximo de unidades
-          </h2>
+        <div className="p-4" style={{ color: "var(--text-color)" }}>
+          <h2 className="text-lg font-bold mb-4">Máximo de unidades</h2>
           <p>¿Deseas vender sin stock?</p>
-          <div
-            style={{
-              marginTop: "1rem",
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "0.5rem",
-            }}
-          >
+          <div className="mt-4 flex justify-end gap-2">
             <Button
               label="No"
               className="p-button-danger"

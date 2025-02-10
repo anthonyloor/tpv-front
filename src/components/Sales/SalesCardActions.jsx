@@ -11,7 +11,7 @@ import TicketViewModal from "../modals/ticket/TicketViewModal";
 import useFinalizeSale from "../../hooks/useFinalizeSale";
 import { AuthContext } from "../../contexts/AuthContext";
 
-// Función auxiliar para simular el consumo de importe de un vale
+// Función auxiliar: simula consumo de importe de un vale
 function simulateDiscountConsumption(cartItems, appliedDiscounts) {
   const subtotalInclTax = cartItems.reduce(
     (acc, item) => acc + item.final_price_incl_tax * item.quantity,
@@ -58,7 +58,7 @@ const SalesCardActions = ({
   const { idProfile } = useContext(AuthContext);
   const { isLoading, finalizeSale } = useFinalizeSale();
 
-  // Estados para la visualización de modales
+  // Modales
   const [isReturnsModalOpen, setIsReturnsModalOpen] = useState(false);
   const [isReprintModalOpen, setIsReprintModalOpen] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -72,15 +72,16 @@ const SalesCardActions = ({
   const [cartRuleModalOpen, setCartRuleModalOpen] = useState(false);
   const [newCartRuleCode, setNewCartRuleCode] = useState(null);
 
-  // Estados de pago
+  // Métodos de pago
   const [selectedMethods, setSelectedMethods] = useState([]);
   const [amounts, setAmounts] = useState({ efectivo: "", tarjeta: "", bizum: "" });
   const [changeAmount, setChangeAmount] = useState(0);
 
-  // Para previsualización de "leftover"
+  // Vale leftover
   const [leftoverPreview, setLeftoverPreview] = useState([]);
   const [leftoverInfo, setLeftoverInfo] = useState([]);
 
+  // Cálculo de totales
   const subtotalProducts = cartItems.reduce(
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
     0
@@ -97,7 +98,7 @@ const SalesCardActions = ({
   });
   const total = subtotalProducts - totalDiscounts;
 
-  // Handlers para abrir y cerrar modales
+  // Abrir/Cerrar modales
   const openReturnsModal = () => setIsReturnsModalOpen(true);
   const closeReturnsModal = () => setIsReturnsModalOpen(false);
   const openReprintModal = () => setIsReprintModalOpen(true);
@@ -156,15 +157,15 @@ const SalesCardActions = ({
           leftoverArray,
           newCartRuleCode,
         }) => {
+          // Guardar estado
           setTicketOrderId(orderId);
           setGiftTicketTM(giftTicket);
           setChangeAmount(changeAmount);
           setTicketModalOpen(true);
           setPrintOnOpen(print);
 
-          if (newCartRuleCode) {
-            setNewCartRuleCode(newCartRuleCode);
-          }
+          // Nuevo cart rule
+          if (newCartRuleCode) setNewCartRuleCode(newCartRuleCode);
           setLeftoverInfo(leftoverArray);
 
           // Limpiar carrito y descuentos
@@ -187,25 +188,30 @@ const SalesCardActions = ({
     );
   };
 
-  const handleCloseTicketNormal = async () => {
+  const handleCloseTicketNormal = () => {
     setTicketModalOpen(false);
     if (newCartRuleCode) {
       setCartRuleModalOpen(true);
     }
   };
+  const closeCartRuleModal = () => setCartRuleModalOpen(false);
 
+  // Cantidad total introducida en los métodos de pago
   const totalEntered = Object.values(amounts).reduce(
     (sum, val) => sum + (parseFloat(val) || 0),
     0
   );
 
+  // Toggle de métodos
   const togglePaymentMethod = (method) => {
     if (selectedMethods.includes(method)) {
+      // Quitar
       const updated = { ...amounts, [method]: "" };
       setSelectedMethods((prev) => prev.filter((m) => m !== method));
       setAmounts(updated);
       updateChangeAmount(updated);
     } else {
+      // Agregar
       setSelectedMethods((prev) => [...prev, method]);
       if (method === "tarjeta" || method === "bizum") {
         const remain = Math.max(0, total) - totalEntered;
@@ -234,48 +240,58 @@ const SalesCardActions = ({
     setChangeAmount(newChange);
   };
 
-  const closeCartRuleModal = () => setCartRuleModalOpen(false);
-
   return (
-    <div style={{ padding: "1rem" }}>
-      {/* Primera fila: Devoluciones y Reimprimir */}
-      <div className="p-d-flex p-jc-between p-mb-2">
-        <Button
-          label="Devoluciones"
-          className="p-button-secondary"
-          style={{ flex: 1, marginRight: "0.5rem" }}
-          onClick={openReturnsModal}
-        />
-        <Button
-          label="Reimprimir"
-          className="p-button-secondary"
-          style={{ flex: 1 }}
-          onClick={openReprintModal}
-        />
+    <div
+      className="h-full flex gap-4 p-2"
+      style={{
+        backgroundColor: "var(--surface-0)",
+        color: "var(--text-color)",
+      }}
+    >
+      {/* Columna Izquierda */}
+      <div className="flex-1 flex flex-col gap-2">
+        {/* 1) Devoluciones y Reimprimir */}
+        <div className="flex gap-2">
+          <Button
+            label="Devoluciones"
+            severity="warning"
+            className="flex-1"
+            onClick={openReturnsModal}
+          />
+          <Button
+            label="Reimprimir"
+            severity="secondary"
+            className="flex-1"
+            onClick={openReprintModal}
+          />
+        </div>
+
+        {/* 2) Añadir Manual y Descuento */}
+        <div className="flex gap-2">
+          <Button
+            label="Añadir Manual"
+            severity="success"
+            className="flex-1"
+            onClick={handleAddManual}
+          />
+          <Button
+            label="Descuento"
+            severity="help"
+            className="flex-1"
+            onClick={handleDescuentoClick}
+          />
+        </div>
+        {/* Espacio extra si quisieras más botones en la columna izquierda */}
+        <div className="mt-2" />
       </div>
 
-      {/* Segunda fila: Añadir Manual y Descuento */}
-      <div className="p-d-flex p-jc-between p-mb-2">
-        <Button
-          label="Añadir Manual"
-          className="p-button-success"
-          style={{ flex: 1, marginRight: "0.5rem" }}
-          onClick={handleAddManual}
-        />
-        <Button
-          label="Descuento"
-          className="p-button-help"
-          style={{ flex: 1 }}
-          onClick={handleDescuentoClick}
-        />
-      </div>
-
-      {/* Botón Finalizar Venta */}
-      <div className="p-d-flex p-jc-end">
+      {/* Columna Derecha: Botón Finalizar Venta */}
+      <div className="flex flex-col justify-center items-end">
         <Button
           label={isLoading ? "Procesando..." : "Finalizar Venta"}
-          className="p-button-primary"
-          style={{ padding: "1rem 2rem", fontSize: "1.125rem", fontWeight: "bold" }}
+          severity="danger"
+          className="font-bold"
+          style={{ width: "12rem", height: "100%", fontSize: "1.125rem" }}
           disabled={
             cartItems.length === 0 ||
             isLoading ||
@@ -285,7 +301,7 @@ const SalesCardActions = ({
         />
       </div>
 
-      {/* Modal: Final Sale */}
+      {/* Dialog: Finalizar Venta */}
       <Dialog
         header="Finalizar Venta"
         visible={isFinalSaleModalOpen}
@@ -293,79 +309,48 @@ const SalesCardActions = ({
         modal
         style={{ width: "70vw", minHeight: "70vh" }}
       >
-        <div style={{ padding: "1.5rem" }}>
+        <div
+          className="p-6 flex flex-col gap-4"
+          style={{ backgroundColor: "var(--surface-0)", color: "var(--text-color)" }}
+        >
           {/* Resumen de Totales */}
-          <div
-            style={{
-              marginBottom: "1rem",
-              borderBottom: "1px solid var(--surface-border)",
-              paddingBottom: "1rem",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "1.125rem" }}>Subtotal Productos:</span>
-              <span style={{ fontSize: "1.125rem", fontWeight: "bold" }}>
+          <div className="border-b pb-4" style={{ borderColor: "var(--surface-border)" }}>
+            <div className="flex justify-between">
+              <span className="text-base">Subtotal Productos:</span>
+              <span className="text-base font-bold">
                 {subtotalProducts.toFixed(2)} €
               </span>
             </div>
             {appliedDiscounts.length > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: "0.5rem",
-                }}
-              >
-                <span style={{ fontSize: "1.125rem" }}>Descuentos:</span>
-                <span
-                  style={{
-                    fontSize: "1.125rem",
-                    fontWeight: "bold",
-                    color: "var(--red-500)",
-                  }}
-                >
+              <div className="flex justify-between mt-2">
+                <span className="text-base">Descuentos:</span>
+                <span className="text-base font-bold" style={{ color: "var(--red-500)" }}>
                   -{totalDiscounts.toFixed(2)} €
                 </span>
               </div>
             )}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginTop: "0.5rem",
-              }}
-            >
-              <span style={{ fontSize: "2rem", fontWeight: "bold" }}>TOTAL:</span>
-              <span style={{ fontSize: "2rem", fontWeight: 800 }}>
+            <div className="flex justify-between mt-2">
+              <span className="text-2xl font-bold">TOTAL:</span>
+              <span className="text-2xl font-extrabold">
                 {Math.max(0, total).toFixed(2)} €
               </span>
             </div>
           </div>
 
           {/* Métodos de Pago */}
-          <div
-            style={{
-              marginBottom: "1rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem",
-            }}
-          >
+          <div className="flex flex-col gap-4">
             {["efectivo", "tarjeta", "bizum"].map((method) => (
-              <div
-                key={method}
-                style={{ display: "flex", alignItems: "center", gap: "1rem" }}
-              >
+              <div key={method} className="flex items-center gap-2">
                 <Button
                   label={method.charAt(0).toUpperCase() + method.slice(1)}
-                  className={
-                    selectedMethods.includes(method) && total > 0
+                  severity={
+                    selectedMethods.includes(method)
                       ? method === "efectivo"
-                        ? "p-button-success"
-                        : "p-button-primary"
-                      : "p-button-secondary"
+                        ? "success"
+                        : "primary"
+                      : "secondary"
                   }
-                  style={{ flex: 1 }}
+                  className="flex-1"
                   onClick={() => total > 0 && togglePaymentMethod(method)}
                   disabled={total <= 0}
                 />
@@ -375,11 +360,11 @@ const SalesCardActions = ({
                   value={amounts[method]}
                   onChange={(e) => handleAmountChange(method, e.target.value)}
                   disabled={!selectedMethods.includes(method) || total <= 0}
+                  className="flex-1 p-2 border rounded"
                   style={{
-                    flex: 2,
-                    padding: "0.5rem",
-                    border: "1px solid var(--surface-border)",
-                    borderRadius: "4px",
+                    borderColor: "var(--surface-border)",
+                    backgroundColor: "var(--surface-50)",
+                    color: "var(--text-color)",
                   }}
                 />
               </div>
@@ -388,13 +373,9 @@ const SalesCardActions = ({
 
           <Button
             label={isLoading ? "Procesando..." : "Confirmar Venta"}
-            className="p-button-primary"
-            style={{
-              width: "100%",
-              padding: "1rem",
-              fontSize: "1.125rem",
-              fontWeight: "bold",
-            }}
+            severity="danger"
+            className="w-full font-bold"
+            style={{ padding: "1rem", fontSize: "1.125rem" }}
             disabled={
               (Math.max(0, total) > 0 && totalEntered < Math.max(0, total)) ||
               isLoading
@@ -405,7 +386,7 @@ const SalesCardActions = ({
       </Dialog>
 
       {/* TicketViewModal para ticket normal */}
-      {ticketModalOpen && ticketOrderId && (
+      {ticketOrderId && (
         <TicketViewModal
           isOpen={ticketModalOpen}
           onClose={handleCloseTicketNormal}
@@ -434,7 +415,7 @@ const SalesCardActions = ({
         />
       )}
 
-      {/* Otros modales */}
+      {/* Modales varios */}
       <ReturnsExchangesModal
         isOpen={isReturnsModalOpen}
         onClose={closeReturnsModal}

@@ -137,23 +137,21 @@ const NavbarCard = () => {
     },*/
   ];
 
-  // Parte derecha
+  // Parte derecha del Menubar
   const end = (
     <div
-      className="p-d-flex p-ai-center"
-      style={{ gap: "1rem", marginRight: "1rem" }}
+      className="flex items-center gap-4 mr-4"
+      style={{ color: "var(--text-color)" }}
     >
-      <div className="p-d-flex p-ai-center" style={{ gap: "0.5rem" }}>
+      <div className="flex items-center gap-2">
         <i className="pi pi-user" />
-        <span style={{ fontWeight: "bold", color: "var(--text-color)" }}>
-          {employeeName}
-        </span>
+        <span className="font-bold">{employeeName}</span>
       </div>
       <Button
         icon="pi pi-sign-out"
         onClick={handleLogoutClick}
-        className="p-button-text"
-        style={{ fontSize: "1.2rem" }}
+        className="p-button-text text-lg"
+        style={{ color: "var(--text-color)" }}
       />
       <ThemeSwitcher />
     </div>
@@ -161,7 +159,15 @@ const NavbarCard = () => {
 
   return (
     <>
-      <Menubar model={items} end={end} />
+      <Menubar
+        model={items}
+        end={end}
+        style={{
+          backgroundColor: "var(--surface-0)",
+          borderColor: "var(--surface-border)",
+          color: "var(--text-color)",
+        }}
+      />
 
       {/* 1) TransfersModal */}
       {isTransfersModalOpen && (
