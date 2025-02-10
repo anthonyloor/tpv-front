@@ -8,10 +8,12 @@ import { ConfigProvider } from "./contexts/ConfigContext";
 import { ClientProvider } from "./contexts/ClientContext";
 import { BrowserRouter as Router } from "react-router-dom";
 import PinProvider from "./contexts/PinContext";
+import { PrimeReactProvider } from "primereact/api";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
+    <PrimeReactProvider>
     <AuthProvider>
       <Router>
         <ConfigProvider>
@@ -23,6 +25,7 @@ root.render(
         </ConfigProvider>
       </Router>
     </AuthProvider>
+    </PrimeReactProvider>
   </React.StrictMode>
 );
 

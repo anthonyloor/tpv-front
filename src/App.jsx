@@ -10,12 +10,12 @@ import { AuthContext } from "./contexts/AuthContext";
 import PrivateRoute from "./components/base/PrivateRoute";
 import ConfigLoader from "./components/ConfigLoader";
 import SessionExpiredModal from "./components/modals/session/SessionExpiredModal";
-import "primereact/resources/themes/md-light-indigo/theme.css"; // Tema Material
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 import { isMobile } from "react-device-detect";
 import MobileDashboard from "./MobileDashboard";
 import DesktopTPV from "./DesktopTPV";
+import { ProgressSpinner } from "primereact/progressspinner";
 
 function App() {
   const {
@@ -71,14 +71,20 @@ function App() {
 
   if (!isShopLoaded) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        Cargando...
+      <div
+        className="p-d-flex p-jc-center p-ai-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <ProgressSpinner />
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-light min-h-screen flex flex-col">
+    <div
+      className="p-d-flex p-flex-column"
+      style={{ backgroundColor: "var(--surface-200)", minHeight: "100vh" }}
+    >
       <Toaster position="top-center" expand={true} />
       <Routes>
         {/* Rutas de login */}

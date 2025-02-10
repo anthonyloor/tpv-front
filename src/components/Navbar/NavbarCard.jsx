@@ -11,6 +11,7 @@ import TransfersModal from "../modals/transfers/TransfersModal";
 import ConfigurationModal from "../modals/configuration/ConfigurationModal";
 import SalesReportModal from "../reports/SalesReportModal";
 import CloseCashRegisterModal from "../modals/cashRegister/CloseCashRegisterModal";
+import ThemeSwitcher from "../ThemeSwitcher";
 
 const NavbarCard = () => {
   const navigate = useNavigate();
@@ -146,6 +147,10 @@ const NavbarCard = () => {
       >
         <i className="pi pi-sign-out" style={{ fontSize: "1.2rem" }}></i>
       </button>
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <ThemeSwitcher />
+        {/* Aquí puedes agregar otros elementos, como información del usuario */}
+      </div>
     </div>
   );
 
