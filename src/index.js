@@ -3,6 +3,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
+import "primeflex/primeflex.css";
+import "primeicons/primeicons.css";
+import "primereact/resources/primereact.min.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import AuthProvider from "./contexts/AuthContext";
