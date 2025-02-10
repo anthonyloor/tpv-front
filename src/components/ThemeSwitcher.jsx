@@ -11,18 +11,18 @@ const ThemeSwitcher = () => {
     }
   };
 
-  const switchToLight = () => {
-    switchTheme("lara-light-indigo");
-  };
-
-  const switchToDark = () => {
-    switchTheme("lara-dark-indigo");
-  };
-
   return (
     <div style={{ display: "flex", gap: "0.5rem" }}>
-      <Button label="Claro" onClick={switchToLight} className="p-button-text" />
-      <Button label="Oscuro" onClick={switchToDark} className="p-button-text" />
+      <Button
+        label="Claro"
+        onClick={() => switchTheme("lara-light-indigo")}
+        className="p-button-text"
+      />
+      <Button
+        label="Oscuro"
+        onClick={() => switchTheme("lara-dark-indigo")}
+        className="p-button-text"
+      />
     </div>
   );
 };

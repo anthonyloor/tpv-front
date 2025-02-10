@@ -1,3 +1,5 @@
+// index.js
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
@@ -14,17 +16,17 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
     <PrimeReactProvider>
-    <AuthProvider>
-      <Router>
-        <ConfigProvider>
+      <AuthProvider>
+        <Router>
+          <ConfigProvider>
             <ClientProvider>
               <PinProvider>
                 <App />
               </PinProvider>
             </ClientProvider>
-        </ConfigProvider>
-      </Router>
-    </AuthProvider>
+          </ConfigProvider>
+        </Router>
+      </AuthProvider>
     </PrimeReactProvider>
   </React.StrictMode>
 );
