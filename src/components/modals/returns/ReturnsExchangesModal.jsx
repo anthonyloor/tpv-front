@@ -1,11 +1,12 @@
 // src/components/modals/returns/ReturnsExchangesModal.jsx
 
 import React, { useState } from "react";
-import Modal from "../Modal";
-import TicketViewModal from "../ticket/TicketViewModal";
-import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+import TicketViewModal from "../ticket/TicketViewModal";
+import { useApiFetch } from "../../../components/utils/useApiFetch";
 
 const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   const [orderId, setOrderId] = useState("");
@@ -41,6 +42,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         setOrderData(null);
         return;
       }
+      // Añadir uniqueLineId a cada detalle
       const details = data.order_details.map((item) => ({
         ...item,
         uniqueLineId: `${item.product_id}-${item.product_attribute_id}`,
@@ -51,6 +53,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       setSelectedRows([]);
       setReturnQuantities({});
 
+      // Comprobamos si ya hay “rectificaciones” previas
       const allOrdersData = await apiFetch(
         "https://apitpv.anthonyloor.com/get_orders",
         { method: "GET" }
@@ -71,6 +74,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
           }
         }
       }
+      // Construir mapa de productos ya devueltos
       const returnedMap = {};
       if (rectificationOrders.length > 0 && data.order_details) {
         for (let prod of data.order_details) {
@@ -98,10 +102,13 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   };
 
   const handleSelectionChange = (e) => {
+    // Filtramos los que ya aparezcan como “Ya devuelto”
     const filtered = e.value.filter(
       (prod) => !returnedProductMap[prod.uniqueLineId]
     );
     setSelectedRows(filtered);
+
+    // Inicializamos la cantidad de devolución
     filtered.forEach((prod) => {
       const key = prod.uniqueLineId;
       if (!returnQuantities[key]) {
@@ -126,6 +133,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     const currentQty = returnQuantities[key] ?? rowData.product_quantity;
     const isSelected = selectedRows.some((p) => p.uniqueLineId === key);
 
+    // Si ya se devolvió
     if (returnedProductMap[key]) {
       return (
         <span
@@ -142,10 +150,12 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       );
     }
 
+    // Si no está seleccionado, mostramos un guión
     if (!isSelected) {
       return <span className="text-gray-400">-</span>;
     }
 
+    // Campo para modificar la cantidad a devolver
     return (
       <input
         type="number"
@@ -160,6 +170,8 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
 
   const handleAceptar = () => {
     if (!orderData || selectedRows.length === 0) return;
+
+    // 1) Añadimos “Rectificación del ticket #xxx” como línea
     const rectificacionProduct = {
       id_product: 0,
       id_product_attribute: 0,
@@ -177,9 +189,11 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     };
     onAddProduct(rectificacionProduct, null, null, false, 1);
 
+    // 2) Añadir las líneas con cantidades negativas
     selectedRows.forEach((prod) => {
       const key = prod.uniqueLineId;
       const qtyToReturn = returnQuantities[key] ?? prod.product_quantity;
+
       const productForCart = {
         id_product: prod.product_id,
         id_product_attribute: prod.product_attribute_id,
@@ -199,32 +213,31 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     });
 
     alert("Rectificación añadida y productos devueltos al carrito.");
+
+    // 3) Limpiar estado local
     setOrderId("");
     setOrderData(null);
     setError(null);
     setSelectedRows([]);
     setReturnQuantities({});
-    setReturnedProductMap(new Set());
+    setReturnedProductMap({});
     onClose();
   };
 
   const canProceed = !!orderData && selectedRows.length > 0;
   const displayData = isLoading ? skeletonData : orderData?.order_details || [];
 
-  if (!isOpen) return null;
-
   return (
     <>
-      <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        title="Devoluciones / Cambios"
-        showCloseButton
-        showBackButton={false}
-        size="3xl"
-        height="tall"
+      <Dialog
+        visible={isOpen}
+        onHide={onClose}
+        header="Devoluciones / Cambios"
+        modal
+        style={{ width: "80vw", maxWidth: "800px" }}
       >
         <div className="w-full mx-auto space-y-4">
+          {/* Input para buscar ticket */}
           <div className="flex items-end space-x-2">
             <input
               type="text"
@@ -237,7 +250,10 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               className="border rounded p-2 w-full"
             />
           </div>
+
           {error && <p className="text-red-500 text-sm">{error}</p>}
+
+          {/* Tabla con DataTable */}
           <div className="border border-gray-300 rounded-md p-2 bg-white shadow-sm">
             <DataTable
               value={displayData}
@@ -313,32 +329,35 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               <Column
                 header="Devolver"
                 body={
-                  isLoading ? () => (
-                    <div className="animate-pulse bg-gray-200 h-3 w-8 ml-auto rounded" />
-                  ) : devolverBodyTemplate
+                  isLoading
+                    ? () => (
+                        <div className="animate-pulse bg-gray-200 h-3 w-8 ml-auto rounded" />
+                      )
+                    : devolverBodyTemplate
                 }
                 style={{ width: "90px", textAlign: "center" }}
               />
             </DataTable>
           </div>
+
+          {/* Botón Aceptar */}
           <div className="flex justify-end">
-            <button
-              className={`px-4 py-2 rounded text-white font-semibold transition-colors ${
-                canProceed
-                  ? "bg-blue-600 hover:bg-blue-700"
-                  : "bg-gray-300 cursor-not-allowed"
-              }`}
+            <Button
+              label="Aceptar"
+              className={
+                canProceed ? "p-button p-button-primary" : "p-button-disabled"
+              }
               disabled={!canProceed}
               onClick={handleAceptar}
-            >
-              Aceptar
-            </button>
+            />
           </div>
         </div>
-      </Modal>
+      </Dialog>
+
+      {/* Si se clica en un ticket devuelto -> abrimos TicketViewModal */}
       {viewTicketId && (
         <TicketViewModal
-          isOpen={true}
+          isOpen
           onClose={() => setViewTicketId(null)}
           mode="ticket"
           orderId={viewTicketId}

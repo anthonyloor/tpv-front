@@ -1,37 +1,41 @@
 // src/components/modals/reprint/ReprintModal.jsx
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Modal from '../Modal';
-import { useApiFetch } from '../../../components/utils/useApiFetch';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Button } from 'primereact/button';
-import TicketViewModal from '../ticket/TicketViewModal';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Dialog } from "primereact/dialog";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+import { useApiFetch } from "../../../components/utils/useApiFetch";
+import TicketViewModal from "../ticket/TicketViewModal";
 
-const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
+const ReprintModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
-  const [mode, setMode] = useState('recent');
-  const [orderId, setOrderId] = useState('');
+  const [mode, setMode] = useState("recent");
+  const [orderId, setOrderId] = useState("");
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [allOrders, setAllOrders] = useState([]);
   const [searchedOrder, setSearchedOrder] = useState(null);
-  const rows = 4;
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketGift, setTicketGift] = useState(false);
   const [viewTicketOrderId, setViewTicketOrderId] = useState(null);
+
+  const rows = 4;
 
   const loadRecentOrders = useCallback(async () => {
     try {
       setError(null);
       setIsLoading(true);
-      setMode('recent');
-      const data = await apiFetch('https://apitpv.anthonyloor.com/get_orders', { method: 'GET' });
+      setMode("recent");
+      const data = await apiFetch("https://apitpv.anthonyloor.com/get_orders", {
+        method: "GET",
+      });
       setAllOrders(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error cargando ventas recientes:', err);
-      setError('No se pudo obtener la lista de ventas recientes.');
+      console.error("Error cargando ventas recientes:", err);
+      setError("No se pudo obtener la lista de ventas recientes.");
       setAllOrders([]);
     } finally {
       setIsLoading(false);
@@ -43,41 +47,46 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
     try {
       setError(null);
       setIsLoading(true);
-      setMode('search');
+      setMode("search");
       const data = await apiFetch(
-        `https://apitpv.anthonyloor.com/get_order?id_order=${encodeURIComponent(orderId)}`,
-        { method: 'GET' }
+        `https://apitpv.anthonyloor.com/get_order?id_order=${encodeURIComponent(
+          orderId
+        )}`,
+        { method: "GET" }
       );
       setSearchedOrder(data);
     } catch (err) {
-      console.error('Error buscando la orden:', err);
-      setError('No se encontró la orden con ese ID o ocurrió un error.');
+      console.error("Error buscando la orden:", err);
+      setError("No se encontró la orden con ese ID o ocurrió un error.");
       setSearchedOrder(null);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Cuando se abre, cargamos las ventas recientes
   useEffect(() => {
-    if (isOpen) loadRecentOrders();
-    else {
+    if (isOpen) {
+      loadRecentOrders();
+    } else {
       setAllOrders([]);
       setSearchedOrder(null);
-      setOrderId('');
+      setOrderId("");
       setError(null);
       setSelectedOrderId(null);
       setIsLoading(false);
-      setMode('recent');
+      setMode("recent");
     }
   }, [isOpen, loadRecentOrders]);
 
+  // Pulsar en “Ticket Normal” o “Ticket Regalo”
   const handleReprintClick = (gift = false) => {
     if (!selectedOrderId) {
-      alert('Selecciona una venta para reimprimir.');
+      alert("Selecciona una venta para reimprimir.");
       return;
     }
     let saleToReprint = null;
-    if (mode === 'recent') {
+    if (mode === "recent") {
       saleToReprint = allOrders.find((o) => o.id_order === selectedOrderId);
     } else {
       if (searchedOrder && searchedOrder.id_order === selectedOrderId) {
@@ -85,7 +94,7 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
       }
     }
     if (!saleToReprint) {
-      alert('No se encontró la venta seleccionada.');
+      alert("No se encontró la venta seleccionada.");
       return;
     }
     setTicketModalOpen(true);
@@ -93,9 +102,10 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
     setTicketGift(gift);
   };
 
+  // Fila “custom” expandible
   const CustomRow = ({ sale, isLoading }) => {
     const [expanded, setExpanded] = useState(false);
-    const [maxHeight, setMaxHeight] = useState('0px');
+    const [maxHeight, setMaxHeight] = useState("0px");
     const contentRef = useRef(null);
 
     const toggleExpand = () => {
@@ -109,13 +119,15 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
         const scrollHeight = contentRef.current.scrollHeight;
         setMaxHeight(`${scrollHeight}px`);
       } else {
-        setMaxHeight('0px');
+        setMaxHeight("0px");
       }
     }, [expanded, sale.order_details]);
 
     const isSelected = sale.id_order === selectedOrderId;
     const handleSelect = () => {
-      if (!isLoading) setSelectedOrderId(sale.id_order);
+      if (!isLoading) {
+        setSelectedOrderId(sale.id_order);
+      }
     };
 
     return (
@@ -130,7 +142,9 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
             ) : (
               <>
                 <div className="font-semibold">ID Venta: {sale.id_order}</div>
-                <div className="text-gray-600">ID Cliente: {sale.id_customer}</div>
+                <div className="text-gray-600">
+                  ID Cliente: {sale.id_customer}
+                </div>
               </>
             )}
           </div>
@@ -156,6 +170,7 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
               </>
             )}
 
+            {/* Radio para seleccionar la venta */}
             <div>
               <input
                 type="radio"
@@ -165,22 +180,25 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
               />
             </div>
 
-            {(!isLoading && sale.order_details?.length > 0) && (
+            {/* Botón expandir si hay detalles */}
+            {!isLoading && sale.order_details?.length > 0 && (
               <Button
-                label={expanded ? 'Ocultar' : 'Ver Detalles'}
-                icon={`pi ${expanded ? 'pi-chevron-up' : 'pi-chevron-down'}`}
+                label={expanded ? "Ocultar" : "Ver Detalles"}
+                icon={`pi ${expanded ? "pi-chevron-up" : "pi-chevron-down"}`}
                 className="p-button-text p-button-sm"
                 onClick={toggleExpand}
               />
             )}
           </div>
         </div>
+
+        {/* Contenido expandible */}
         <div
           ref={contentRef}
           className="overflow-hidden transition-all duration-300"
           style={{
             maxHeight,
-            marginTop: expanded ? '0.5rem' : '0',
+            marginTop: expanded ? "0.5rem" : "0",
           }}
         >
           <div className="border rounded p-2 bg-gray-50">
@@ -202,7 +220,8 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
                 </thead>
                 <tbody>
                   {sale.order_details?.map((item, idx) => {
-                    const total = item.unit_price_tax_incl * item.product_quantity;
+                    const total =
+                      item.unit_price_tax_incl * item.product_quantity;
                     return (
                       <tr key={idx} className="border-b last:border-b-0">
                         <td className="py-1 px-2">{item.product_name}</td>
@@ -227,14 +246,16 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
     );
   };
 
+  // Datos “esqueleto”
   const skeletonData = new Array(rows).fill(null).map((_, idx) => ({
     id_order: `skeleton-${idx}`,
-    id_customer: '',
-    payment: '',
+    id_customer: "",
+    payment: "",
     total_paid: 0,
     order_details: [],
   }));
 
+  // Body para la DataTable, una sola columna con el CustomRow
   const singleColumnBodyTemplate = (sale) => {
     return <CustomRow sale={sale} isLoading={isLoading} />;
   };
@@ -243,27 +264,24 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
   if (isLoading) {
     displayData = skeletonData;
   } else {
-    if (mode === 'recent') {
+    if (mode === "recent") {
       displayData = allOrders;
     } else {
       displayData = searchedOrder ? [searchedOrder] : [];
     }
   }
 
-  if (!isOpen) return null;
-
   return (
     <>
-      <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        title="Reimprimir Ticket"
-        showCloseButton
-        showBackButton={false}
-        size={size}
-        height={height}
+      <Dialog
+        visible={isOpen}
+        onHide={onClose}
+        header="Reimprimir Ticket"
+        modal
+        style={{ width: "70vw", maxWidth: "900px" }}
       >
         <div className="w-full mx-auto space-y-4">
+          {/* Input para buscar ticket */}
           <div className="flex space-x-2 items-end">
             <div className="flex-1">
               <input
@@ -272,7 +290,7 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSearchOrder();
+                  if (e.key === "Enter") handleSearchOrder();
                 }}
                 className="border rounded p-2 w-full"
               />
@@ -281,6 +299,7 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
 
           {error && <div className="text-red-500 font-semibold">{error}</div>}
 
+          {/* Tabla con las órdenes (recientes o la buscada) */}
           <DataTable
             value={displayData}
             className="p-datatable-sm"
@@ -289,15 +308,16 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
             dataKey="id_order"
             emptyMessage={
               isLoading
-                ? ''
-                : mode === 'recent'
-                ? 'No hay ventas recientes.'
-                : 'No se encontró esa venta.'
+                ? ""
+                : mode === "recent"
+                ? "No hay ventas recientes."
+                : "No se encontró esa venta."
             }
           >
             <Column body={singleColumnBodyTemplate} />
           </DataTable>
 
+          {/* Botones para reimprimir */}
           <div className="flex justify-end space-x-2">
             <Button
               label="Ticket Normal"
@@ -313,8 +333,9 @@ const ReprintModal = ({ isOpen, onClose, size = 'lg', height = 'tall' }) => {
             />
           </div>
         </div>
-      </Modal>
+      </Dialog>
 
+      {/* TicketViewModal para la reimpresión */}
       {ticketModalOpen && viewTicketOrderId && (
         <TicketViewModal
           isOpen={ticketModalOpen}

@@ -1,7 +1,7 @@
 // src/components/modals/transfers/TransfersModal.jsx
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import Modal from "../Modal";
+import { Dialog } from "primereact/dialog";
 import TransferForm from "./TransferForm";
 import { useApiFetch } from "../../utils/useApiFetch";
 
@@ -11,7 +11,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Toolbar } from "primereact/toolbar";
 
-const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
+const TransfersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
 
   // Vistas => 'list', 'selectType', 'form'
@@ -42,7 +42,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   // Para mostrar/ocultar contenedor de filtros
   const [showFilters, setShowFilters] = useState(false);
 
-  // Referencia para DataTable (CSV export)
+  // DataTable ref
   const dt = useRef(null);
 
   // Reset filtros
@@ -79,7 +79,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
         }
       );
       if (Array.isArray(data)) {
-        // Formateamos los campos de fecha si vienen informados
+        // Formateamos campos de fecha
         const formattedData = data.map((mov) => ({
           ...mov,
           date_add: formatDate(mov.date_add),
@@ -102,7 +102,6 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     }
   }, [apiFetch, resetFilters]);
 
-  // Al abrir => list => refrescar
   useEffect(() => {
     if (isOpen) {
       setCurrentView("list");
@@ -116,7 +115,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     setSelectedMovements([]);
     try {
       if (filterId.trim() !== "") {
-        // get_warehouse_movement ?id=...
+        // buscar 1 movement
         const url = `https://apitpv.anthonyloor.com/get_warehouse_movement?id_warehouse_movement=${encodeURIComponent(
           filterId.trim()
         )}`;
@@ -186,7 +185,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     return result;
   };
 
-  // Doble click => abrir el detalle (llamar a get_warehouse_movement)
+  // Doble click => abrir detalle
   const handleRowDoubleClick = async (movement) => {
     try {
       setLoading(true);
@@ -205,7 +204,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     }
   };
 
-  // Single click => alternar en selectedMovements
+  // Selección multiple con single click
   const handleRowClick = (movement) => {
     let _selected = [...selectedMovements];
     const index = _selected.findIndex(
@@ -221,7 +220,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     setSelectedMovements(_selected);
   };
 
-  // Botones
+  // Botones de la toolbar
   const handleCreateTransfer = () => {
     setSelectedMovement(null);
     setMovementType(null);
@@ -265,8 +264,6 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     });
   };
 
-  // === Secciones de UI con prime react
-
   // Toolbar => parte izquierda
   const leftToolbarTemplate = () => {
     return (
@@ -307,12 +304,11 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     );
   };
 
-  // Render principal del "list" => la DataTable con toolbar
+  // Render principal del "list"
   const renderMovementList = () => {
     const disableById = filterId.trim() !== "";
     const disableByDate = !!(filterDateFrom || filterDateTo);
 
-    // Sección de Filtros
     const renderFilters = () => {
       if (!showFilters) return null;
       return (
@@ -330,7 +326,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
                 onChange={(e) => {
                   setFilterId(e.target.value);
                   if (e.target.value.trim()) {
-                    // Se rellena ID => vaciamos fecha/título/tipo/estado
+                    // Se rellena ID => vaciamos otros
                     setFilterDateFrom("");
                     setFilterDateTo("");
                     setFilterTitle("");
@@ -489,7 +485,6 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
 
     return (
       <div>
-        {/* Toolbar con los botones de crear, imprimir, eliminar, refrescar + export CSV */}
         <Toolbar
           className="mb-4"
           left={leftToolbarTemplate}
@@ -497,7 +492,6 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
         />
 
         {renderFilters()}
-        {/* Botón para ocultar/mostrar el panel de filtros */}
 
         <DataTable
           ref={dt}
@@ -507,7 +501,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
           scrollHeight="540px"
           dataKey="id_warehouse_movement"
           selectionMode="multiple"
-          metaKeySelection={false} // Para toggle con click normal
+          metaKeySelection={false}
           selection={selectedMovements}
           onSelectionChange={(e) => setSelectedMovements(e.value)}
           paginator
@@ -515,20 +509,19 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
           rowsPerPageOptions={[10, 15, 30]}
           emptyMessage={loading ? "Cargando..." : "No hay movimientos."}
           className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
-          onRowClick={(e) => handleRowClick(e.data)} // Click => toggle selection
-          onRowDoubleClick={(e) => handleRowDoubleClick(e.data)} // DblClick => abrir
-          // Podrías añadir un "globalFilter" si quisieras un input global
+          onRowClick={(e) => handleRowClick(e.data)}
+          onRowDoubleClick={(e) => handleRowDoubleClick(e.data)}
         >
           <Column selectionMode="multiple" headerStyle={{ width: "3em" }} />
           <Column
             field="id_warehouse_movement"
             header="ID"
-            style={{ width: "25px", textAlign: 'center' }}
+            style={{ width: "25px", textAlign: "center" }}
           />
           <Column
             field="date_add"
             header="Fecha"
-            style={{ width: "125px", textAlign: 'center' }}
+            style={{ width: "125px", textAlign: "center" }}
           />
           <Column
             field="description"
@@ -554,7 +547,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
               return (
                 <div className="flex flex-col items-center">
                   <span>{typeText}</span>
-                  <i className={iconClass}></i>
+                  <i className={iconClass} />
                 </div>
               );
             }}
@@ -565,7 +558,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     );
   };
 
-  // Vista: Seleccionar tipo de movimiento (traspaso, entrada, salida)
+  // Vista: Seleccionar tipo
   const renderSelectType = () => {
     return (
       <div>
@@ -596,7 +589,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     );
   };
 
-  // Vista: Formulario de TransferForm
+  // Vista: Formulario TransferForm
   const renderForm = () => {
     return (
       <div>
@@ -609,7 +602,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
     );
   };
 
-  // Título modal
+  // Título del Dialog
   let modalTitle = "";
   if (currentView === "list") {
     modalTitle = "Gestión de Stock";
@@ -648,18 +641,26 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      inlineMode={inlineMode}
-      title={modalTitle}
-      showBackButton={showBackButton}
-      onBack={handleBack}
-      size="3xl"
-      height="xl"
+    <Dialog
+      visible={isOpen}
+      onHide={onClose}
+      header={modalTitle}
+      modal
+      style={{ width: "85vw", maxWidth: "1200px" }}
     >
+      {/* Botón "Atrás" si no estamos en la vista "list" */}
+      {showBackButton && (
+        <div className="mb-3">
+          <Button
+            label="Atrás"
+            icon="pi pi-arrow-left"
+            className="p-button-text"
+            onClick={handleBack}
+          />
+        </div>
+      )}
       {content}
-    </Modal>
+    </Dialog>
   );
 };
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useContext } from "react";
 import { Dialog } from "primereact/dialog";
+import { InputText } from "primereact/inputtext";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useApiFetch } from "../utils/useApiFetch";
 import { ConfigContext } from "../../contexts/ConfigContext";
@@ -279,41 +280,27 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     >
       {/* Buscador */}
       <div className="relative mb-4">
-        {/* Icono lupa a la izquierda */}
-        <div
-          className="absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none"
-          style={{ color: "var(--text-secondary)" }}
-        >
-          <svg
-            className="h-5 w-5"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15z"
+        <span className="p-input-icon-left w-full">
+          <div className="p-input-icon-left">
+            <i
+              className="pi pi-search absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none"
+              style={{ color: "var(--text-secondary)" }}
             />
-          </svg>
-        </div>
-        <input
-          type="text"
-          placeholder="Buscar por referencia o código de barras..."
-          value={searchTerm}
-          onChange={handleSearch}
-          onKeyDown={handleKeyDown}
-          disabled={isLoading}
-          className="w-full pl-9 pr-9 py-2 border rounded"
-          style={{
-            borderColor: "var(--surface-border)",
-            backgroundColor: "var(--surface-50)",
-            color: "var(--text-color)",
-          }}
-        />
-        {/* Spinner de carga */}
+          </div>
+          <InputText
+            placeholder="Buscar por referencia o código de barras..."
+            value={searchTerm}
+            onChange={handleSearch}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            className="w-full pl-9 pr-9"
+            style={{
+              borderColor: "var(--surface-border)",
+              backgroundColor: "var(--surface-50)",
+              color: "var(--text-color)",
+            }}
+          />
+        </span>
         {isLoading && (
           <div
             className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"

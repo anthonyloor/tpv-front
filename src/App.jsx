@@ -1,4 +1,4 @@
-// App.jsx
+// src/App.jsx
 
 import React, { useEffect, useContext, useState } from "react";
 import { Toaster } from "sonner";

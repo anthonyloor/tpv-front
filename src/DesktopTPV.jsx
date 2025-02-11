@@ -12,9 +12,7 @@ import { ConfigContext } from "./contexts/ConfigContext";
 
 function DesktopTPV() {
   const { configData } = useContext(ConfigContext);
-  const allowOutOfStockSales = configData
-    ? configData.allow_out_of_stock_sales
-    : false;
+  const allowOutOfStockSales = configData?.allow_out_of_stock_sales || false;
 
   const {
     cartItems,
@@ -67,13 +65,14 @@ function DesktopTPV() {
           <ProductSearchCard
             onAddProduct={handleAddProduct}
             onAddDiscount={addDiscount}
-            onClickProduct={(product) => setSelectedProductForStock(product)}
+            onClickProduct={setSelectedProductForStock}
           />
         </div>
       </div>
 
       {/* Fila 3: SalesCardActions (1/3) + StoreStockPanel (2/3) */}
       <div className="flex gap-2">
+        {/* Col 1 => SalesCardActions */}
         <div className="w-1/3 bg-white rounded shadow-md">
           <SalesCardActions
             cartItems={cartItems}
@@ -85,6 +84,7 @@ function DesktopTPV() {
             handleAddProduct={handleAddProduct}
           />
         </div>
+        {/* Col 2 => StoreStockPanel */}
         <div className="w-2/3 bg-white rounded shadow-md p-2">
           <StoreStockPanel product={selectedProductForStock} />
         </div>

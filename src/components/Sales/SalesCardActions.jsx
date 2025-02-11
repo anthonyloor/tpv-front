@@ -46,7 +46,7 @@ function simulateDiscountConsumption(cartItems, appliedDiscounts) {
   return { leftoverArray, finalTotal: remaining, totalDiscounts };
 }
 
-const SalesCardActions = ({
+function SalesCardActions({
   cartItems,
   setCartItems,
   appliedDiscounts,
@@ -54,7 +54,7 @@ const SalesCardActions = ({
   removeDiscountByIndex,
   clearDiscounts,
   handleAddProduct,
-}) => {
+}) {
   const { idProfile } = useContext(AuthContext);
   const { isLoading, finalizeSale } = useFinalizeSale();
 
@@ -74,7 +74,11 @@ const SalesCardActions = ({
 
   // Métodos de pago
   const [selectedMethods, setSelectedMethods] = useState([]);
-  const [amounts, setAmounts] = useState({ efectivo: "", tarjeta: "", bizum: "" });
+  const [amounts, setAmounts] = useState({
+    efectivo: "",
+    tarjeta: "",
+    bizum: "",
+  });
   const [changeAmount, setChangeAmount] = useState(0);
 
   // Vale leftover
@@ -103,7 +107,8 @@ const SalesCardActions = ({
   const closeReturnsModal = () => setIsReturnsModalOpen(false);
   const openReprintModal = () => setIsReprintModalOpen(true);
   const closeReprintModal = () => setIsReprintModalOpen(false);
-  const handleAddManual = () => console.log("[AddManual] Clic en añadir manual");
+  const handleAddManual = () =>
+    console.log("[AddManual] Clic en añadir manual");
 
   const handleDescuentoClick = () => {
     if (idProfile === 1) {
@@ -120,7 +125,10 @@ const SalesCardActions = ({
 
   const handleFinalSale = () => {
     if (cartItems.length === 0) return;
-    const { leftoverArray } = simulateDiscountConsumption(cartItems, appliedDiscounts);
+    const { leftoverArray } = simulateDiscountConsumption(
+      cartItems,
+      appliedDiscounts
+    );
     setLeftoverPreview(leftoverArray);
     console.log("[handleFinalSale] Subtotal:", subtotalProducts);
     console.log("[handleFinalSale] totalDiscounts:", totalDiscounts);
@@ -181,7 +189,7 @@ const SalesCardActions = ({
           setFinalSaleModalOpen(false);
         },
         onError: () => {
-          alert("Error al finalizar la venta. Inténtalo de nuevo.");
+          alert("Error al finalizar la venta.");
         },
       },
       true
@@ -236,31 +244,35 @@ const SalesCardActions = ({
       0
     );
     const newChange = totalEnteredAmount - finalTotal;
-    console.log("[updateChangeAmount]", finalTotal, totalEnteredAmount, newChange);
+    console.log(
+      "[updateChangeAmount]",
+      finalTotal,
+      totalEnteredAmount,
+      newChange
+    );
     setChangeAmount(newChange);
   };
 
   return (
     <div
-      className="h-full flex gap-4 p-2"
+      className="flex gap-4 p-4"
       style={{
         backgroundColor: "var(--surface-0)",
-        color: "var(--text-color)",
       }}
     >
-      {/* Columna Izquierda */}
-      <div className="flex-1 flex flex-col gap-2">
+      {/* Columna Izquierda: 2 filas de 2 botones */}
+      <div className="w-md space-y-2">
         {/* 1) Devoluciones y Reimprimir */}
         <div className="flex gap-2">
           <Button
             label="Devoluciones"
-            severity="warning"
+            icon="pi pi-undo"
             className="flex-1"
             onClick={openReturnsModal}
           />
           <Button
             label="Reimprimir"
-            severity="secondary"
+            icon="pi pi-print"
             className="flex-1"
             onClick={openReprintModal}
           />
@@ -270,28 +282,26 @@ const SalesCardActions = ({
         <div className="flex gap-2">
           <Button
             label="Añadir Manual"
-            severity="success"
+            icon="pi pi-plus"
             className="flex-1"
             onClick={handleAddManual}
           />
           <Button
             label="Descuento"
-            severity="help"
+            icon="pi pi-percentage"
             className="flex-1"
             onClick={handleDescuentoClick}
           />
         </div>
-        {/* Espacio extra si quisieras más botones en la columna izquierda */}
-        <div className="mt-2" />
       </div>
 
       {/* Columna Derecha: Botón Finalizar Venta */}
-      <div className="flex flex-col justify-center items-end">
+      <div className="w-xs flex items-center">
         <Button
           label={isLoading ? "Procesando..." : "Finalizar Venta"}
-          severity="danger"
-          className="font-bold"
-          style={{ width: "12rem", height: "100%", fontSize: "1.125rem" }}
+          icon="pi pi-check"
+          className="p-button-primary w-full"
+          style={{ height: "100%", fontSize: "1.125rem" }}
           disabled={
             cartItems.length === 0 ||
             isLoading ||
@@ -311,10 +321,16 @@ const SalesCardActions = ({
       >
         <div
           className="p-6 flex flex-col gap-4"
-          style={{ backgroundColor: "var(--surface-0)", color: "var(--text-color)" }}
+          style={{
+            backgroundColor: "var(--surface-0)",
+            color: "var(--text-color)",
+          }}
         >
           {/* Resumen de Totales */}
-          <div className="border-b pb-4" style={{ borderColor: "var(--surface-border)" }}>
+          <div
+            className="border-b pb-4"
+            style={{ borderColor: "var(--surface-border)" }}
+          >
             <div className="flex justify-between">
               <span className="text-base">Subtotal Productos:</span>
               <span className="text-base font-bold">
@@ -324,7 +340,10 @@ const SalesCardActions = ({
             {appliedDiscounts.length > 0 && (
               <div className="flex justify-between mt-2">
                 <span className="text-base">Descuentos:</span>
-                <span className="text-base font-bold" style={{ color: "var(--red-500)" }}>
+                <span
+                  className="text-base font-bold"
+                  style={{ color: "var(--red-500)" }}
+                >
                   -{totalDiscounts.toFixed(2)} €
                 </span>
               </div>
@@ -373,8 +392,7 @@ const SalesCardActions = ({
 
           <Button
             label={isLoading ? "Procesando..." : "Confirmar Venta"}
-            severity="danger"
-            className="w-full font-bold"
+            className="p-button-success mt-3"
             style={{ padding: "1rem", fontSize: "1.125rem" }}
             disabled={
               (Math.max(0, total) > 0 && totalEntered < Math.max(0, total)) ||
@@ -396,8 +414,6 @@ const SalesCardActions = ({
           giftTicket={giftTicketTM}
           changeAmount={changeAmount}
           showCloseButton
-          size="lg"
-          height="tall"
         />
       )}
 
@@ -421,12 +437,7 @@ const SalesCardActions = ({
         onClose={closeReturnsModal}
         onAddProduct={handleAddProduct}
       />
-      <ReprintModal
-        isOpen={isReprintModalOpen}
-        size="lg"
-        height="tall"
-        onClose={closeReprintModal}
-      />
+      <ReprintModal isOpen={isReprintModalOpen} onClose={closeReprintModal} />
       <PinValidationModal
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
@@ -442,6 +453,6 @@ const SalesCardActions = ({
       />
     </div>
   );
-};
+}
 
 export default SalesCardActions;

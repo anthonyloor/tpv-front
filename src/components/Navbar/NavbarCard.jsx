@@ -169,7 +169,7 @@ const NavbarCard = () => {
         }}
       />
 
-      {/* 1) TransfersModal */}
+      {/* (1) TransfersModal */}
       {isTransfersModalOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <TransfersModal
@@ -180,7 +180,7 @@ const NavbarCard = () => {
         </PortalOrNormal>
       )}
 
-      {/* 2) ConfigurationModal */}
+      {/* (2) ConfigurationModal */}
       {isConfigurationModalOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <ConfigurationModal
@@ -192,7 +192,7 @@ const NavbarCard = () => {
         </PortalOrNormal>
       )}
 
-      {/* 3) SalesReportModal */}
+      {/* (3) SalesReportModal */}
       {isSalesReportModalOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <SalesReportModal
@@ -203,7 +203,7 @@ const NavbarCard = () => {
         </PortalOrNormal>
       )}
 
-      {/* 4) CloseCashRegisterModal */}
+      {/* (4) CloseCashRegisterModal */}
       {isCashRegisterModalOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <CloseCashRegisterModal
