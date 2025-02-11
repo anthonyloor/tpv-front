@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
+import { Card } from "primereact/card";
+import CreateAddressModal from "./CreateAddressModal";
 
 const AddressModal = ({
   isOpen,
@@ -13,54 +15,89 @@ const AddressModal = ({
 }) => {
   const [addresses, setAddresses] = useState([]);
   const [storeAddress, setStoreAddress] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isCreateAddressOpen, setIsCreateAddressOpen] = useState(false);
 
+  // Al abrir, cargamos direcciones
   useEffect(() => {
     if (isOpen) {
-      const fetchClientAddresses = (id_customer) => {
-        const token = localStorage.getItem("token");
-        fetch(
-          `https://apitpv.anthonyloor.com/get_addresses?customer=${id_customer}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({}),
-          }
-        )
-          .then((response) => {
-            if (!response.ok) throw new Error("Error al obtener direcciones");
-            return response.json();
-          })
-          .then((data) => {
-            const validAddresses = data
-              .filter((address) => !address.deleted && address.active)
-              .sort((a, b) => new Date(b.date_upd) - new Date(a.date_upd));
-            setAddresses(validAddresses);
-          })
-          .catch((error) => console.error("Error direcciones:", error));
-
-        // Configuramos la dirección de tienda
-        setStoreAddress({
-          id_address: "store",
-          alias: "Vender en tienda",
-          address1: `Calle ${shop.name}`,
-          address2: "",
-          postcode: "",
-          city: "",
-          phone: "",
-        });
-      };
       fetchClientAddresses(clientId);
     }
-  }, [isOpen, clientId, shop.name]);
+  }, [isOpen, clientId]);
 
-  const handleAddressSelect = (address) => {
+  const fetchClientAddresses = (id_customer) => {
+    const token = localStorage.getItem("token");
+    fetch(
+      `https://apitpv.anthonyloor.com/get_addresses?customer=${id_customer}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      }
+    )
+      .then((response) => {
+        if (response.status === 404) {
+          // Significa que no hay direcciones
+          setAddresses([]);
+          return Promise.resolve([]);
+        }
+        if (!response.ok) {
+          throw new Error("Error al obtener direcciones");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const validAddresses = (data || [])
+          .filter((address) => !address.deleted && address.active)
+          .sort((a, b) => new Date(b.date_upd) - new Date(a.date_upd));
+        setAddresses(validAddresses);
+        setErrorMessage("");
+      })
+      .catch((error) => {
+        console.error("Error direcciones:", error);
+        setErrorMessage("No se pudo cargar la lista de direcciones.");
+        setAddresses([]);
+      });
+
+    // Dirección "tienda"
+    setStoreAddress({
+      id_address: "store",
+      alias: "Vender en tienda",
+      address1: `Calle ${shop?.name}`,
+      address2: "",
+      postcode: "",
+      city: "",
+      phone: "",
+    });
+  };
+
+  // Seleccionar
+  const handleAddressSelectInternal = (address) => {
     handleSelectAddress(address);
     onClose();
   };
 
+  // Abrir createAddress
+  const handleOpenCreateAddress = () => {
+    setIsCreateAddressOpen(true);
+  };
+
+  // Al crear dirección => refrescamos la lista
+  const handleAddressCreated = (newAddressData) => {
+    setIsCreateAddressOpen(false);
+    if (newAddressData) {
+      // Opcional: si quieres seleccionar la dirección recién creada al volver:
+      // handleSelectAddress(newAddressData);
+      // onClose();
+      // O si prefieres recargar la lista:
+      fetchClientAddresses(clientId);
+    }
+  };
+
+  // Footer del Dialog principal
   const footer = (
     <div style={{ textAlign: "right" }}>
       <Button label="Cerrar" onClick={onClose} className="p-button-text" />
@@ -68,54 +105,79 @@ const AddressModal = ({
   );
 
   return (
-    <Dialog
-      header="Seleccionar Dirección"
-      visible={isOpen}
-      onHide={onClose}
-      footer={footer}
-      style={{ width: "50vw" }}
-      modal
-    >
-      <div style={{ padding: "1rem" }}>
-        <div style={{ display: "grid", gap: "1rem" }}>
-          <div
-            style={{
-              border: "1px solid var(--surface-border)",
-              padding: "1rem",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-            onClick={() => handleAddressSelect(storeAddress)}
-          >
-            <h3 style={{ fontWeight: "bold", margin: 0 }}>
-              {storeAddress?.alias}
-            </h3>
-            <p style={{ margin: "0.5rem 0 0" }}>{storeAddress?.address1}</p>
-          </div>
-          {addresses.map((address) => (
-            <div
-              key={address.id_address}
-              style={{
-                border: "1px solid var(--surface-border)",
-                padding: "1rem",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-              onClick={() => handleAddressSelect(address)}
-            >
-              <h3 style={{ fontWeight: "bold", margin: 0 }}>{address.alias}</h3>
-              <p style={{ margin: "0.5rem 0 0" }}>
-                {address.address1} {address.address2}
-              </p>
-              <p style={{ margin: "0.5rem 0 0" }}>
-                {address.postcode} {address.city}
-              </p>
-              <p style={{ margin: "0.5rem 0 0" }}>{address.phone}</p>
+    <>
+      <Dialog
+        header="Seleccionar Dirección"
+        visible={isOpen}
+        onHide={onClose}
+        footer={footer}
+        style={{ width: "50vw" }}
+        modal
+      >
+        <div style={{ padding: "1rem" }}>
+          {errorMessage && (
+            <p style={{ marginBottom: "1rem", color: "var(--red-500)" }}>
+              {errorMessage}
+            </p>
+          )}
+
+          {/* Crear dirección si no hay direcciones */}
+          {addresses.length === 0 && (
+            <div className="mb-3" style={{ textAlign: "center" }}>
+              <p>No hay direcciones creadas para este cliente.</p>
+              <Button
+                label="Crear dirección"
+                icon="pi pi-plus"
+                onClick={handleOpenCreateAddress}
+                className="p-button-success"
+              />
             </div>
+          )}
+
+          {/* Dirección de tienda */}
+          {storeAddress && (
+            <Card
+              title={storeAddress.alias}
+              subTitle={storeAddress.address1}
+              style={{ cursor: "pointer" }}
+              className="mb-3"
+              onClick={() => handleAddressSelectInternal(storeAddress)}
+            >
+              <p className="m-0">
+                {storeAddress.postcode} {storeAddress.city}
+              </p>
+              <p className="m-0">{storeAddress.phone}</p>
+            </Card>
+          )}
+
+          {/* Lista de direcciones en Card */}
+          {addresses.map((addr) => (
+            <Card
+              key={addr.id_address}
+              title={addr.alias}
+              subTitle={`${addr.address1} ${addr.address2 || ""}`}
+              style={{ cursor: "pointer", marginBottom: "1rem" }}
+              onClick={() => handleAddressSelectInternal(addr)}
+            >
+              <p className="m-0">
+                {addr.postcode} {addr.city}
+              </p>
+              <p className="m-0">{addr.phone}</p>
+            </Card>
           ))}
         </div>
-      </div>
-    </Dialog>
+      </Dialog>
+
+      {/* Dialog para Crear Direccion */}
+      {isCreateAddressOpen && (
+        <CreateAddressModal
+          isOpen
+          onClose={() => setIsCreateAddressOpen(false)}
+          clientId={clientId}
+          onAddressCreated={handleAddressCreated}
+        />
+      )}
+    </>
   );
 };
 
