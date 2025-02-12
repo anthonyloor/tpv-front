@@ -1,6 +1,7 @@
 // src/DesktopTPV.jsx
 
-import React, { useState, useContext } from "react";
+import React, { useContext, useState } from "react";
+import { ConfigContext } from "./contexts/ConfigContext";
 import NavbarCard from "./components/Navbar/NavbarCard";
 import SalesCard from "./components/Sales/SalesCard";
 import ProductSearchCard from "./components/ProductSearch/ProductSearchCard";
@@ -8,7 +9,6 @@ import SalesCardActions from "./components/Sales/SalesCardActions";
 import StoreStockPanel from "./components/Stock/StoreStockPanel";
 import useCart from "./hooks/useCart";
 import useDiscounts from "./hooks/useDiscounts";
-import { ConfigContext } from "./contexts/ConfigContext";
 
 function DesktopTPV() {
   const { configData } = useContext(ConfigContext);
@@ -37,56 +37,53 @@ function DesktopTPV() {
   const [selectedProductForStock, setSelectedProductForStock] = useState(null);
 
   return (
-    <div className="flex flex-col min-h-screen p-2 gap-2">
-      {/* Fila 1: Navbar */}
-      <div className="w-full">
+    <div className="flex flex-col h-screen overflow-hidden p-2 gap-2">
+      <div className="flex-none bg-white rounded shadow">
         <NavbarCard />
       </div>
 
-      {/* Fila 2: SalesCard (1/3) + ProductSearchCard (2/3) */}
-      <div className="flex flex-auto gap-2">
-        <div className="w-1/3 bg-white rounded shadow-md overflow-y-auto">
-          <SalesCard
-            cartItems={cartItems}
-            setCartItems={setCartItems}
-            onRemoveProduct={handleRemoveProduct}
-            onDecreaseProduct={handleDecreaseProduct}
-            saveCurrentCartAsParked={saveCurrentCartAsParked}
-            getParkedCarts={getParkedCarts}
-            loadParkedCart={loadParkedCart}
-            deleteParkedCart={deleteParkedCart}
-            appliedDiscounts={appliedDiscounts}
-            removeDiscountByIndex={removeDiscountByIndex}
-            clearDiscounts={clearDiscounts}
-            recentlyAddedId={recentlyAddedId}
-          />
+      <div className="flex-auto flex flex-col gap-2 rounded overflow-hidden">
+        <div className="flex-1 flex overflow-hidden rounded gap-2">
+          <div className="flex flex-col w-[30%] bg-white shadow rounded overflow-hidden">
+            <SalesCard
+              cartItems={cartItems}
+              setCartItems={setCartItems}
+              onRemoveProduct={handleRemoveProduct}
+              onDecreaseProduct={handleDecreaseProduct}
+              saveCurrentCartAsParked={saveCurrentCartAsParked}
+              getParkedCarts={getParkedCarts}
+              loadParkedCart={loadParkedCart}
+              deleteParkedCart={deleteParkedCart}
+              appliedDiscounts={appliedDiscounts}
+              removeDiscountByIndex={removeDiscountByIndex}
+              clearDiscounts={clearDiscounts}
+              recentlyAddedId={recentlyAddedId}
+            />
+          </div>
+          <div className="flex flex-col w-[70%] bg-white rounded shadow overflow-hidden">
+            <ProductSearchCard
+              onAddProduct={handleAddProduct}
+              onAddDiscount={addDiscount}
+              onClickProduct={setSelectedProductForStock}
+            />
+          </div>
         </div>
-        <div className="w-2/3 bg-white rounded shadow-md overflow-y-auto">
-          <ProductSearchCard
-            onAddProduct={handleAddProduct}
-            onAddDiscount={addDiscount}
-            onClickProduct={setSelectedProductForStock}
-          />
-        </div>
-      </div>
 
-      {/* Fila 3: SalesCardActions (1/3) + StoreStockPanel (2/3) */}
-      <div className="flex gap-2">
-        {/* Col 1 => SalesCardActions */}
-        <div className="w-1/3 bg-white rounded shadow-md">
-          <SalesCardActions
-            cartItems={cartItems}
-            setCartItems={setCartItems}
-            appliedDiscounts={appliedDiscounts}
-            addDiscount={addDiscount}
-            removeDiscountByIndex={removeDiscountByIndex}
-            clearDiscounts={clearDiscounts}
-            handleAddProduct={handleAddProduct}
-          />
-        </div>
-        {/* Col 2 => StoreStockPanel */}
-        <div className="w-2/3 bg-white rounded shadow-md p-2">
-          <StoreStockPanel product={selectedProductForStock} />
+        <div className="flex-none flex gap-2">
+          <div className="flex flex-col w-[30%] bg-white rounded shadow overflow-hidden">
+            <SalesCardActions
+              cartItems={cartItems}
+              setCartItems={setCartItems}
+              appliedDiscounts={appliedDiscounts}
+              addDiscount={addDiscount}
+              removeDiscountByIndex={removeDiscountByIndex}
+              clearDiscounts={clearDiscounts}
+              handleAddProduct={handleAddProduct}
+            />
+          </div>
+          <div className="flex flex-col w-[70%] bg-white rounded shadow overflow-hidden">
+            <StoreStockPanel product={selectedProductForStock} />
+          </div>
         </div>
       </div>
     </div>

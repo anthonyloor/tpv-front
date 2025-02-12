@@ -167,6 +167,7 @@ const NavbarCard = () => {
           borderColor: "var(--surface-border)",
           color: "var(--text-color)",
         }}
+        className="border rounded"
       />
 
       {/* (1) TransfersModal */}
