@@ -480,10 +480,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         visible={confirmModalOpen}
         onHide={handleCancelAdd}
         modal
-        style={{ width: "30vw", backgroundColor: "var(--surface-0)" }}
+        closable={false}
+        draggable={false}
+        resizable={false}
+        style={{ width: "20vw", backgroundColor: "var(--surface-0)" }}
       >
-        <div className="p-4" style={{ color: "var(--text-color)" }}>
-          <h2 className="text-lg font-bold mb-4">Máximo de unidades</h2>
+        <div className="p-2" style={{ color: "var(--text-color)" }}>
           <p>¿Deseas vender sin stock?</p>
           <div className="mt-4 flex justify-end gap-2">
             <Button

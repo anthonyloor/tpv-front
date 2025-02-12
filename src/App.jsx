@@ -9,7 +9,7 @@ import NotFoundPage from "./components/pages/NotFoundPage";
 import { AuthContext } from "./contexts/AuthContext";
 import PrivateRoute from "./components/base/PrivateRoute";
 import ConfigLoader from "./components/ConfigLoader";
-import SessionExpiredModal from "./components/modals/session/SessionExpiredModal";
+import SessionExpiredDialog from "./components/modals/session/SessionExpiredDialog";
 import { isMobile } from "react-device-detect";
 import MobileDashboard from "./MobileDashboard";
 import DesktopTPV from "./DesktopTPV";
@@ -106,7 +106,7 @@ function App() {
           path="/:shopRoute/app"
           element={
             <PrivateRoute>
-              <SessionExpiredModal />
+              <SessionExpiredDialog />
               <ConfigLoader />
               {isMobile ? <MobileDashboard /> : <DesktopTPV />}
             </PrivateRoute>
