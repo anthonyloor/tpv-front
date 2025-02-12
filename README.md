@@ -1,107 +1,43 @@
-# Proyecto TPV con PrimeReact y Tailwind
+# Proyecto TPV con PrimeReact y Tailwind CSS
 
-Este proyecto es una aplicación de Punto de Venta (TPV) que utiliza PrimeReact para los componentes de la interfaz (botones, diálogos, tablas, etc.) y TailwindCSS para estilos adicionales. El objetivo principal es proporcionar un flujo de trabajo fluido para la gestión de clientes, direcciones, creación de nuevos clientes/direcciones, tickets aparcados, entre otras funcionalidades.
+Este proyecto es una aplicación de Punto de Venta (TPV) que utiliza PrimeReact para los componentes de la interfaz de usuario y Tailwind CSS para la gestión de estilos. El objetivo es proporcionar una solución eficiente y visualmente atractiva para la gestión de ventas y stock.
 
-## Tecnologías y Librerías
+## Tecnologías Utilizadas
 
-- **React:** Librería base para la construcción de la interfaz de usuario.
-- **PrimeReact:**
-  - Componentes UI: Diálogos, pasos (Steps), tablas (DataTable), barras de herramientas (Toolbar), botones (Button), inputs (InputText), iconos (primeicons), etc.
-  - Temas: Se aplican temas (lara-light-indigo, lara-dark-indigo, etc.) para alternar entre modo claro y oscuro.
-  - Transiciones: Algunos componentes incluyen animaciones o transiciones incorporadas.
-- **TailwindCSS:**
-  - Utilizado para utilidades rápidas en el layout, márgenes, paddings, tipografía, etc.
-  - Se ha desactivado preflight en algunos casos para no sobrescribir estilos de PrimeReact.
-- **PrimeFlex:** Librería de utilidades CSS (flex, grid, espaciado) complementaria a PrimeReact.
-- **Otros:**
-  - `react-router-dom` para enrutamiento.
-  - `useApiFetch` (hook personalizado) para llamadas a la API.
-  - `sonner` para notificaciones.
-  - Contextos (AuthContext, ClientContext, ConfigContext) para gestionar autenticación, configuración y cliente seleccionado.
+- **React:** Biblioteca de JavaScript para construir interfaces de usuario.
+- **PrimeReact:** Conjunto de componentes de interfaz de usuario ricos y personalizables para React.
+- **Tailwind CSS:** Framework de CSS utilitario para un diseño rápido y flexible.
+- **PrimeFlex:** Sistema de diseño basado en Flexbox, complementario a PrimeReact.
+- **react-router-dom:** Para la gestión de la navegación dentro de la aplicación.
+- **useApiFetch:** Hook personalizado para simplificar las llamadas a la API.
+- **sonner:** Biblioteca para mostrar notificaciones de forma elegante.
+- **Contextos (AuthContext, ClientContext, ConfigContext):** Para la gestión del estado global de la aplicación, como la autenticación, la información del cliente y la configuración.
 
-## Diseño y Estilo
+## Estructura del Proyecto
 
-- **Tema de PrimeReact:**  
-  El HTML principal carga un `<link id="theme-link" ...>` que apunta al archivo de tema de PrimeReact, controlando el aspecto global (colores, botones, inputs, diálogos, etc.).
-- **TailwindCSS:**  
-  Se utiliza en conjunto con PrimeReact para definir la maquetación mediante clases utilitarias (flex, grid, p-4, etc.), manteniendo PrimeReact como proveedor de los componentes UI principales.
+La estructura del proyecto está organizada en componentes reutilizables, cada uno con una responsabilidad específica. Algunos de los componentes clave incluyen:
 
-- **Modo Claro/Oscuro:**  
-  Soporta la alternancia entre temas claros y oscuros (por ejemplo, `lara-light-indigo/theme.css` y `lara-dark-indigo/theme.css`) mediante el intercambio dinámico del `<link>` en el HTML.
+- **Componentes de la Interfaz de Usuario:** Implementados con PrimeReact, ofrecen una amplia gama de funcionalidades, desde la visualización de datos hasta la interacción del usuario.
+- **Componentes de Estilo:** Definen la apariencia visual de la aplicación, utilizando Tailwind CSS para una fácil personalización y mantenimiento.
+- **Componentes de Lógica de Negocio:** Contienen la lógica específica de la aplicación, como la gestión de ventas, el control de stock y la interacción con la API.
 
-- **Diálogos (Dialog):**  
-  La aplicación utiliza diálogos superpuestos para flujos como la selección de cliente, direcciones, creación de clientes, etc.
+## Configuración y Personalización
 
-- **Steps (Paso a Paso):**  
-  Se utiliza el componente `Steps` de PrimeReact para crear wizards (o steppers), por ejemplo, en el flujo de selección y creación de clientes y direcciones.
+- **Temas de PrimeReact:** La aplicación permite cambiar entre diferentes temas de PrimeReact para adaptarse a las preferencias del usuario o a los requisitos de la marca.
+- **Estilos de Tailwind CSS:** Tailwind CSS se utiliza para personalizar aún más la apariencia de la aplicación, permitiendo un control preciso sobre cada elemento visual.
+- **Desactivación de Preflight:** En algunos casos, se ha desactivado la característica "preflight" de Tailwind CSS para evitar conflictos con los estilos predeterminados de PrimeReact.
 
-## Estructura de Componentes Relevantes
+## Componentes Destacados
 
-A continuación se listan los componentes principales relacionados con la gestión de clientes y direcciones:
+- **CustomerStepperModal:** Proporciona un flujo paso a paso para la selección o creación de clientes y direcciones.
+- **CreateCustomerModal y CreateAddressModal:** Permiten la creación de nuevos clientes y direcciones de forma modular.
+- **SalesCardActions:** Ofrece acciones rápidas para la gestión de ventas, como la aplicación de descuentos y la finalización de la venta.
+- **StoreStockPanel:** Muestra información detallada sobre el stock de un producto en diferentes tiendas.
 
-1. **CustomerStepperModal.jsx**
+## Integración de PrimeReact y Tailwind CSS
 
-   - **Propósito:**  
-     Proporciona un flujo tipo wizard en dos pasos para:
-     1. Seleccionar o crear un cliente.
-     2. Seleccionar o crear una dirección.
-   - **Uso de PrimeReact:**
-     - `<Dialog>` para mostrar el modal principal.
-     - `<Steps>` para indicar y navegar entre los pasos.
-     - `<Toolbar>` para los botones de acciones (crear, editar, eliminar).
-     - `<DataTable>` y `<Column>` para listar los clientes.
-   - **Flujo de trabajo:**  
-     El usuario busca o crea un cliente, luego selecciona o crea una dirección. Al confirmar, se ejecuta un callback que notifica al componente padre la combinación de cliente y dirección elegida.
+La combinación de PrimeReact y Tailwind CSS permite crear una interfaz de usuario rica y flexible. PrimeReact proporciona los componentes de interfaz de usuario, mientras que Tailwind CSS se encarga de los estilos y el diseño. La desactivación de "preflight" en Tailwind CSS asegura que los estilos de PrimeReact se mantengan intactos.
 
-2. **CreateCustomerModal.jsx y CreateAddressModal.jsx**
+## Conclusión
 
-   - **Propósito:**  
-     Permiten la creación de nuevos clientes y direcciones, integrándose en el flujo del CustomerStepperModal.
-   - **CreateCustomerModal.jsx:**
-     - Se abre un diálogo en dos pasos:
-       - Paso 1: Recoger los datos básicos del cliente (nombre, apellidos, email, contraseña, etc.).
-       - Paso 2: Recoger los datos de la dirección (calle, ciudad, teléfono, etc.).
-     - Utiliza componentes como:
-       - `<Dialog>` para el modal.
-       - `<InputText>` para la entrada de datos.
-       - `<Button>` para la navegación interna (Atrás, Crear Cliente, Crear Dirección).
-     - Emplea el callback `onComplete(newClient, newAddress)` para devolver el cliente (y la dirección, si procede).
-   - **CreateAddressModal.jsx:**
-     - Ofrece un diálogo sencillo para crear una dirección asociada a un cliente (se recibe `clientId` como parámetro).
-     - Utiliza:
-       - `<Dialog>` para el modal.
-       - `<InputText>` para los campos necesarios.
-       - `<Button>` para confirmar o cancelar la acción.
-     - Notifica al componente padre mediante `onAddressCreated(newAddress)` sobre la nueva dirección creada.
-
-3. **AddressModal.jsx**
-
-   - **Propósito:**  
-     Muestra un diálogo con todas las direcciones asociadas a un cliente específico, permitiendo al usuario seleccionar una de ellas.
-   - **Uso:**
-     - `<Dialog>` se usa para el modal.
-     - `<Card>` presenta cada dirección de forma ordenada.
-     - Incluye un botón “Crear dirección” que abre el CreateAddressModal en caso de que se requiera agregar una nueva.
-
-4. **ClientInfoDialog.jsx**
-
-   - **Propósito:**  
-     Muestra un diálogo con la información detallada de un cliente, permitiendo al usuario ver datos adicionales al hacer clic en cualquiera de ellos.
-   - **Uso:**
-     - Se utiliza `<Dialog>` para mostrar la información en un modal.
-
-5. **CustomerModal.jsx (Antiguo / Reemplazado)**
-
-   - **Propósito:**  
-     Representaba una versión previa para la selección de cliente y dirección sin usar el paso a paso (wizard).
-   - **Notas:**  
-     Actualmente, en la mayoría de casos se ha sustituido por el CustomerStepperModal, pero puede mantenerse para flujos más simples si es necesario.
-
-6. **SalesCard.jsx (Ejemplo de uso)**
-   - **Propósito:**  
-     Forma parte de la pantalla principal del TPV, donde se muestran los productos agregados al carrito, descuentos, totales, entre otros.
-   - **Relevancia:**
-     - Gestiona la selección de clientes y direcciones a través de la apertura de CustomerStepperModal o AddressModal.
-     - Integra componentes como `<SplitButton>` para acciones adicionales y `<Dialog>` para la gestión de tickets aparcados (guardar, cargar, borrar).
-
-Este README resume la arquitectura y el diseño general del proyecto TPV, destacando la integración de PrimeReact y TailwindCSS para lograr una interfaz de usuario moderna y responsive.
+Este proyecto TPV es un ejemplo de cómo combinar las fortalezas de PrimeReact y Tailwind CSS para crear una aplicación de gestión de ventas eficiente y visualmente atractiva. La estructura modular y la fácil personalización permiten adaptar la aplicación a diferentes necesidades y requisitos.
