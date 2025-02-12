@@ -1,6 +1,6 @@
 // src/components/ProductSearch/ProductSearchCard.jsx
 
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { AuthContext } from "../../contexts/AuthContext";
@@ -18,109 +18,22 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const [currentShopName, setCurrentShopName] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
-  const [clickedButtons, setClickedButtons] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   const { configData } = useContext(ConfigContext);
   const { shopId, shopName } = useContext(AuthContext);
-  const allowOutOfStockSales = configData
-    ? configData.allow_out_of_stock_sales
-    : false;
+  const allowOutOfStockSales = configData?.allow_out_of_stock_sales || false;
   const apiFetch = useApiFetch();
+
+  // Ref para el input de búsqueda
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     setCurrentShopId(shopId);
     setCurrentShopName(shopName);
   }, [shopId, shopName]);
 
-  const handleSearch = (event) => {
-    setSearchTerm(event.target.value.toLowerCase());
-  };
-
-  const handleKeyDown = async (event) => {
-    // Si la búsqueda empieza con "#", se entiende que es un vale descuento
-    if (event.key === "Enter" && searchTerm.startsWith("#")) {
-      const code = searchTerm.slice(1);
-      setIsLoading(true);
-      try {
-        const data = await apiFetch(
-          `https://apitpv.anthonyloor.com/get_cart_rule?code=${encodeURIComponent(
-            code
-          )}`,
-          { method: "GET" }
-        );
-        if (!data.active) {
-          alert("Vale descuento no válido, motivo: no activo");
-          setSearchTerm("");
-          return;
-        }
-        const client = JSON.parse(localStorage.getItem("selectedClient"));
-        if (
-          client &&
-          data.id_customer &&
-          client.id_customer !== data.id_customer
-        ) {
-          alert(
-            "Vale descuento no válido, motivo: no pertenece al cliente seleccionado"
-          );
-          setSearchTerm("");
-          return;
-        }
-        if (data && onAddDiscount) {
-          const discObj = {
-            name: data.name || "",
-            description: data.description || "",
-            code: data.code || "",
-            reduction_amount: data.reduction_amount || 0,
-            reduction_percent: data.reduction_percent || 0,
-          };
-          onAddDiscount(discObj);
-        }
-        setSearchTerm("");
-      } catch (error) {
-        console.error("Error al buscar vale descuento:", error);
-        alert("Error al buscar el vale. Inténtalo de nuevo.");
-      } finally {
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    // Búsqueda de productos
-    if (event.key === "Enter" && searchTerm.length >= 3) {
-      setIsLoading(true);
-      try {
-        const results = await apiFetch(
-          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
-            searchTerm
-          )}`,
-          { method: "GET" }
-        );
-        const validResults = results.filter(
-          (product) =>
-            !(
-              product.id_product_attribute === null &&
-              product.ean13_combination === null &&
-              product.ean13_combination_0 === null
-            )
-        );
-        const filteredForCurrentShop = validResults.filter(
-          (product) => product.id_shop === currentShopId
-        );
-        setFilteredProducts(groupProductsByProductName(validResults));
-        if (filteredForCurrentShop.length === 1) {
-          addProductToCart(filteredForCurrentShop[0]);
-          setSearchTerm("");
-        }
-      } catch (error) {
-        console.error("Error en la búsqueda:", error);
-        alert("Error al buscar productos. Inténtalo de nuevo más tarde.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
+  // Función auxiliar para agrupar productos (se conserva la lógica original)
   const groupProductsByProductName = (products) => {
     const validProducts = products.filter(
       (product) =>
@@ -182,14 +95,160 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     }, []);
   };
 
-  const getStockForCurrentShop = (stocks) => {
-    if (!Array.isArray(stocks) || !currentShopId) return 0;
-    const currentShopStock = stocks.find(
-      (stock) => stock.id_shop === currentShopId
-    );
-    return currentShopStock ? currentShopStock.quantity : 0;
+  // Función auxiliar para detectar si existe algún modal o dialog abierto
+  const isAnyModalOpen = () => {
+    return document.querySelector('[role="dialog"]') !== null;
   };
 
+  // Solo re-enfocar el input si no hay ningún modal abierto
+  const handleContainerClick = () => {
+    if (
+      !isAnyModalOpen() &&
+      !isImageModalOpen &&
+      !confirmModalOpen &&
+      searchInputRef.current
+    ) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  const handleInputBlur = () => {
+    if (
+      !isAnyModalOpen() &&
+      !isImageModalOpen &&
+      !confirmModalOpen &&
+      searchInputRef.current
+    ) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  // Nueva lógica en el onKeyDown
+  const handleKeyDown = async (event) => {
+    if (event.key !== "Enter") return;
+    // Si el texto empieza con "#", se procesa como descuento
+    if (searchTerm.startsWith("#")) {
+      setIsLoading(true);
+      try {
+        const code = searchTerm.slice(1);
+        const data = await apiFetch(
+          `https://apitpv.anthonyloor.com/get_cart_rule?code=${encodeURIComponent(
+            code
+          )}`,
+          { method: "GET" }
+        );
+        if (!data.active) {
+          alert("Vale descuento no válido, motivo: no activo");
+          setSearchTerm("");
+          return;
+        }
+        const client = JSON.parse(localStorage.getItem("selectedClient"));
+        if (
+          client &&
+          data.id_customer &&
+          client.id_customer !== data.id_customer
+        ) {
+          alert(
+            "Vale descuento no válido, motivo: no pertenece al cliente seleccionado"
+          );
+          setSearchTerm("");
+          return;
+        }
+        if (data && onAddDiscount) {
+          const discObj = {
+            name: data.name || "",
+            description: data.description || "",
+            code: data.code || "",
+            reduction_amount: data.reduction_amount || 0,
+            reduction_percent: data.reduction_percent || 0,
+          };
+          onAddDiscount(discObj);
+        }
+        setSearchTerm("");
+      } catch (error) {
+        console.error("Error al buscar vale descuento:", error);
+        alert("Error al buscar el vale. Inténtalo de nuevo.");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Expresiones regulares para detectar EAN13
+    const ean13Regex = /^\d{13}$/;
+    const ean13HyphenRegex = /^\d{13}-\d+$/;
+
+    if (ean13Regex.test(searchTerm)) {
+      // Caso: EAN13 puro
+      setIsLoading(true);
+      try {
+        const results = await apiFetch(
+          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
+            searchTerm
+          )}`,
+          { method: "GET" }
+        );
+        const validResults = results.filter(
+          (product) =>
+            !(
+              product.id_product_attribute === null &&
+              product.ean13_combination === null &&
+              product.ean13_combination_0 === null
+            )
+        );
+        const filteredForCurrentShop = validResults.filter(
+          (product) => product.id_shop === currentShopId
+        );
+        setFilteredProducts(groupProductsByProductName(validResults));
+        if (filteredForCurrentShop.length === 1) {
+          // Agregar producto automáticamente
+          addProductToCart(filteredForCurrentShop[0]);
+          setSearchTerm("");
+        }
+      } catch (error) {
+        console.error("Error en la búsqueda por EAN13:", error);
+        alert("Error al buscar producto por EAN13. Inténtalo de nuevo.");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    if (ean13HyphenRegex.test(searchTerm)) {
+      // Caso: EAN13 con guion y número (por ejemplo, "5006503289541-50")
+      alert("Se añade producto por ean13 + id_stock");
+      setSearchTerm("");
+      return;
+    }
+
+    // Caso normal: búsqueda sin acción automática de añadir
+    setIsLoading(true);
+    try {
+      const results = await apiFetch(
+        `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
+          searchTerm
+        )}`,
+        { method: "GET" }
+      );
+      const validResults = results.filter(
+        (product) =>
+          !(
+            product.id_product_attribute === null &&
+            product.ean13_combination === null &&
+            product.ean13_combination_0 === null
+          )
+      );
+      setFilteredProducts(groupProductsByProductName(validResults));
+      // En este caso no se añade producto automáticamente
+    } catch (error) {
+      console.error("Error en la búsqueda:", error);
+      alert("Error al buscar productos. Inténtalo de nuevo más tarde.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función para agregar producto (lógica actual)
   const addProductToCart = (product) => {
     let currentShopStock = null;
     if (Array.isArray(product.stocks)) {
@@ -256,20 +315,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     setProductToConfirm(null);
   };
 
-  const handleAddToCartWithAnimation = (product) => {
-    addProductToCart(product);
-    setClickedButtons((prev) => ({
-      ...prev,
-      [product.id_product_attribute]: true,
-    }));
-    setTimeout(() => {
-      setClickedButtons((prev) => ({
-        ...prev,
-        [product.id_product_attribute]: false,
-      }));
-    }, 300);
-  };
-
   return (
     <div
       className="p-3 h-full flex flex-col"
@@ -277,6 +322,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",
       }}
+      onClick={handleContainerClick}
     >
       {/* Buscador */}
       <div className="relative mb-4">
@@ -288,10 +334,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
             />
           </div>
           <InputText
+            ref={searchInputRef}
             placeholder="Buscar por referencia o código de barras..."
             value={searchTerm}
-            onChange={handleSearch}
+            onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
             onKeyDown={handleKeyDown}
+            onBlur={handleInputBlur}
             disabled={isLoading}
             className="w-full pl-9 pr-9"
             style={{
@@ -299,6 +347,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
               backgroundColor: "var(--surface-50)",
               color: "var(--text-color)",
             }}
+            autoFocus
           />
         </span>
         {isLoading && (
@@ -354,23 +403,21 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
               <th className="py-2 px-3 text-left font-semibold">Cod. Barras</th>
               <th className="py-2 px-3 text-left font-semibold">Precio</th>
               <th className="py-2 px-3 text-left font-semibold">Cantidad</th>
-              <th className="py-2 px-3 text-left font-semibold"></th>
             </tr>
           </thead>
           <tbody>
             {filteredProducts.map((productGroup) => (
               <React.Fragment key={productGroup.product_name}>
-                {/* Fila "título" con nombre del producto */}
                 <tr
                   style={{
                     backgroundColor: "var(--surface-50)",
                     color: "var(--text-color)",
                   }}
+                  onClick={() => handleProductClick(productGroup.image_url)}
                 >
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="py-3 px-4 font-bold text-lg cursor-pointer"
-                    onClick={() => handleProductClick(productGroup.image_url)}
                   >
                     {productGroup.product_name}
                   </td>
@@ -378,9 +425,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
                 {productGroup.combinations.map((product, index) => {
                   const rowBg =
                     index % 2 === 0 ? "var(--surface-0)" : "var(--surface-50)";
-                  const isClicked =
-                    clickedButtons[product.id_product_attribute];
-
                   return (
                     <tr
                       key={`${product.id_product}_${product.id_product_attribute}`}
@@ -400,19 +444,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
                       </td>
                       <td className="py-2 px-3">{product.ean13_combination}</td>
                       <td className="py-2 px-3">{product.price} €</td>
-                      <td className="py-2 px-3 text-center relative">
-                        {getStockForCurrentShop(product.stocks)}
-                      </td>
                       <td className="py-2 px-3 text-center">
-                        <Button
-                          icon="pi pi-plus"
-                          className={`${
-                            isClicked
-                              ? "bg-green-600 hover:bg-green-700"
-                              : "bg-blue-600 hover:bg-blue-700"
-                          } text-white border-none`}
-                          onClick={() => handleAddToCartWithAnimation(product)}
-                        />
+                        {product.quantity || 0}
                       </td>
                     </tr>
                   );
