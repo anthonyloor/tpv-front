@@ -255,15 +255,24 @@ function SalesCardActions({
 
   return (
     <div
-      className="flex gap-4 p-4"
+      className="flex flex-col h-full p-4"
       style={{
         backgroundColor: "var(--surface-0)",
+        color: "var(--text-color)",
       }}
     >
       {/* Columna Izquierda: 2 filas de 2 botones */}
-      <div className="w-md space-y-2">
+      <div className="space-y-2">
         {/* 1) Devoluciones y Reimprimir */}
         <div className="flex gap-2">
+          <Button
+            label="Pedidos Online"
+            icon="pi pi-shopping-cart"
+            className="flex-1"
+            onClick={() => {
+              /* Aún sin acción */
+            }}
+          />
           <Button
             label="Devoluciones"
             icon="pi pi-undo"
@@ -296,17 +305,13 @@ function SalesCardActions({
       </div>
 
       {/* Columna Derecha: Botón Finalizar Venta */}
-      <div className="w-xs flex items-center">
+      <div className="mt-auto">
         <Button
           label={isLoading ? "Procesando..." : "Finalizar Venta"}
           icon="pi pi-check"
           className="p-button-primary w-full"
-          style={{ height: "100%", fontSize: "1.125rem" }}
-          disabled={
-            cartItems.length === 0 ||
-            isLoading ||
-            (Math.max(0, total) > 0 && totalEntered < Math.max(0, total))
-          }
+          style={{ fontSize: "1.125rem" }}
+          disabled={cartItems.length === 0 || isLoading}
           onClick={handleFinalSale}
         />
       </div>

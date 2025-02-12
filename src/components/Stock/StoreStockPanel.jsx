@@ -1,41 +1,56 @@
 // src/components/Stock/StoreStockPanel.jsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useApiFetch } from "../../components/utils/useApiFetch";
+import { AuthContext } from "../../contexts/AuthContext";
 import { Card } from "primereact/card";
 
 function StoreStockPanel({ product }) {
   const apiFetch = useApiFetch();
   const [shops, setShops] = useState([]);
   const [stocksByShop, setStocksByShop] = useState({});
+  const { idProfile } = useContext(AuthContext);
 
+  // Cargar todas las tiendas; filtrar si no admin
   useEffect(() => {
     apiFetch("https://apitpv.anthonyloor.com/shops", { method: "GET" })
-      .then((data) => setShops(data))
+      .then((data) => {
+        if (idProfile === 1) {
+          // Admin => ve todas
+          setShops(data);
+        } else {
+          // Filtra id_shop=1 y 2
+          const filtered = data.filter(
+            (s) => s.id_shop !== 1 && s.id_shop !== 2
+          );
+          setShops(filtered);
+        }
+      })
       .catch((err) => console.error("Error al cargar tiendas:", err));
-  }, [apiFetch]);
+  }, [apiFetch, idProfile]);
 
+  // Calcular stocksByShop en base al product.stocks
   useEffect(() => {
-    if (!product) {
+    if (!product || !product.stocks) {
       setStocksByShop({});
       return;
     }
-    if (product.stocks) {
-      const map = {};
-      product.stocks.forEach((s) => {
-        map[s.id_shop] = s.quantity;
-      });
-      setStocksByShop(map);
-    }
+    const map = {};
+    product.stocks.forEach((s) => {
+      map[s.id_shop] = s.quantity;
+    });
+    setStocksByShop(map);
   }, [product]);
 
-  if (!product) {
-    return (
-      <div className="italic" style={{ color: "var(--text-secondary)" }}>
-        Haz clic en un producto para ver su stock en cada tienda
-      </div>
-    );
-  }
+  // Construir el subtítulo (o parte final) con combination
+  const combinationLabel = product?.combination_name
+    ? ` - ${product.combination_name}`
+    : "";
+
+  // Título principal => si no hay product => Stock de: —
+  const mainTitle = product
+    ? `Stock de: ${product.product_name}${combinationLabel}`
+    : "Stock de: —";
 
   return (
     <div
@@ -45,15 +60,16 @@ function StoreStockPanel({ product }) {
         color: "var(--text-color)",
       }}
     >
-      <h4 className="font-bold mb-3">Stock para: {product.product_name}</h4>
-      <div className="flex flex-wrap gap-4">
+      <h4 className="font-bold text-lg mb-3">{mainTitle}</h4>
+
+      <div className="flex gap-4">
         {shops.map((shop) => {
           const qty = stocksByShop[shop.id_shop] ?? 0;
           return (
             <Card
               key={shop.id_shop}
               title={shop.name}
-              className="p-shadow-2 w-48"
+              className="p-shadow-2"
               style={{
                 backgroundColor: "var(--surface-card)",
                 color: "var(--text-color)",

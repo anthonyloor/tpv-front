@@ -69,7 +69,7 @@ function DesktopTPV() {
           </div>
         </div>
 
-        <div className="flex-none flex gap-2">
+        <div className="flex-none flex gap-2" style={{ height: "250px" }}>
           <div className="flex flex-col w-[30%] bg-white rounded shadow overflow-hidden">
             <SalesCardActions
               cartItems={cartItems}
