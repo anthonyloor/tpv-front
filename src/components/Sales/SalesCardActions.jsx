@@ -255,7 +255,7 @@ function SalesCardActions({
 
   return (
     <div
-      className="flex flex-col h-full p-4"
+      className="flex flex-col h-full p-3"
       style={{
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",
@@ -310,7 +310,7 @@ function SalesCardActions({
           label={isLoading ? "Procesando..." : "Finalizar Venta"}
           icon="pi pi-check"
           className="p-button-primary w-full"
-          style={{ fontSize: "1.125rem" }}
+          style={{ fontSize: "1.5rem", padding: "1.25rem" }}
           disabled={cartItems.length === 0 || isLoading}
           onClick={handleFinalSale}
         />

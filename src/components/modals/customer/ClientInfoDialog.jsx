@@ -20,7 +20,7 @@ export default function ClientInfoDialog({ isOpen, onClose, client }) {
       style={{ width: "50vw" }}
       modal
     >
-      <div className="p-4">
+      <div className="p-3">
         <h2 className="text-xl font-bold mb-4">{fullName}</h2>
         <p>ID Cliente: {client.id_customer}</p>
         {/* Muestra más campos que tengas guardados */}

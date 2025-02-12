@@ -13,7 +13,7 @@ export default function MobileDashboard() {
 
       {/* Contenido principal (scrollable) */}
       <div className="bg-white shadow rounded-lg overflow-auto relative flex-auto">
-        <h1 className="text-lg text-center font-bold p-4">
+        <h1 className="text-lg text-center font-bold p-3">
           Panel Administración Móvil
         </h1>
 

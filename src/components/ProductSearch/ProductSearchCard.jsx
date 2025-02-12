@@ -272,7 +272,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
 
   return (
     <div
-      className="p-4 h-full flex flex-col"
+      className="p-3 h-full flex flex-col"
       style={{
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",

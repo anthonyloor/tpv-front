@@ -162,7 +162,7 @@ function SalesCard({
 
   return (
     <div
-      className="h-full flex flex-col p-4 relative"
+      className="h-full flex flex-col p-3 relative"
       style={{
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",

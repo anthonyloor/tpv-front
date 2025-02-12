@@ -54,21 +54,22 @@ function StoreStockPanel({ product }) {
 
   return (
     <div
-      className="p-4"
+      className="pl-3"
       style={{
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",
       }}
     >
-      <h4 className="font-bold text-lg mb-3">{mainTitle}</h4>
+      <h4 className="font-bold text-lg mb-4">{mainTitle}</h4>
 
       <div className="flex gap-4">
         {shops.map((shop) => {
+          const displayName = shop.id_shop === 1 ? "Online" : shop.name;
           const qty = stocksByShop[shop.id_shop] ?? 0;
           return (
             <Card
               key={shop.id_shop}
-              title={shop.name}
+              title={displayName}
               className="p-shadow-2"
               style={{
                 backgroundColor: "var(--surface-card)",
