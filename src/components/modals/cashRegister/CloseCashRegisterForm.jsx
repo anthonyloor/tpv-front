@@ -5,6 +5,8 @@ import { AuthContext } from "../../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import SalesReportModal from "../../reports/SalesReportModal";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { InputNumber } from "primereact/inputnumber";
+import { Button } from "primereact/button";
 
 const CloseCashRegisterForm = ({ onClose }) => {
   const [numberOfSales, setNumberOfSales] = useState(0);
@@ -83,15 +85,6 @@ const CloseCashRegisterForm = ({ onClose }) => {
   const handleInputChange = (e) => {
     setTotalSalesStore(e.target.value);
   };
-  const handleInputTotalCashChange = (e) => {
-    setInputTotalCash(e.target.value);
-  };
-  const handleInputTotalCardChange = (e) => {
-    setInputTotalCard(e.target.value);
-  };
-  const handleInputTotalBizumChange = (e) => {
-    setInputTotalBizum(e.target.value);
-  };
 
   const handleCloseSalesReport = () => {
     setIsSalesReportOpen(false);
@@ -163,11 +156,11 @@ const CloseCashRegisterForm = ({ onClose }) => {
           >
             Total Efectivo (coincidir con {fetchedTotalCash.toFixed(2)} €)
           </label>
-          <input
-            type="number"
-            id="inputTotalCash"
+          <InputNumber
+            inputId="inputTotalCash"
             value={inputTotalCash}
-            onChange={handleInputTotalCashChange}
+            onValueChange={(e) => setInputTotalCash(e.value)}
+            mode="decimal"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
           />
           <label
@@ -176,11 +169,11 @@ const CloseCashRegisterForm = ({ onClose }) => {
           >
             Total Tarjeta (coincidir con {fetchedTotalCard.toFixed(2)} €)
           </label>
-          <input
-            type="number"
-            id="inputTotalCard"
+          <InputNumber
+            inputId="inputTotalCard"
             value={inputTotalCard}
-            onChange={handleInputTotalCardChange}
+            onValueChange={(e) => setInputTotalCard(e.value)}
+            mode="decimal"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
           />
           <label
@@ -189,33 +182,27 @@ const CloseCashRegisterForm = ({ onClose }) => {
           >
             Total Bizum (coincidir con {fetchedTotalBizum.toFixed(2)} €)
           </label>
-          <input
-            type="number"
-            id="inputTotalBizum"
+          <InputNumber
+            inputId="inputTotalBizum"
             value={inputTotalBizum}
-            onChange={handleInputTotalBizumChange}
+            onValueChange={(e) => setInputTotalBizum(e.value)}
+            mode="decimal"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
           />
         </div>
 
         <div className="flex justify-between items-center">
-          <button
+          <Button
+            label="Reporte de Ventas"
+            className="p-button-secondary"
             onClick={handleOpenSalesReport}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-          >
-            Reporte de Ventas
-          </button>
-          <button
-            onClick={handleCloseCashRegister}
+          />
+          <Button
+            label="Cerrar Caja"
+            className="p-button-danger"
             disabled={isCloseButtonDisabled}
-            className={`px-4 py-2 rounded ${
-              isCloseButtonDisabled
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-red-600 text-white hover:bg-red-700"
-            }`}
-          >
-            Cerrar Caja
-          </button>
+            onClick={handleCloseCashRegister}
+          />
         </div>
       </div>
 
