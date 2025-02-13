@@ -458,7 +458,7 @@ function LoginPage({ shopRoute }) {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
       <Card
         className="w-full max-w-3xl"
         style={{
@@ -474,31 +474,22 @@ function LoginPage({ shopRoute }) {
           <h2 className="text-lg font-medium mb-2">Selecciona un Empleado</h2>
           <div className="flex flex-wrap justify-center">
             {employees.map((employee) => (
-              <div key={employee.id_employee} className="w-1/4 p-2">
-                <Card
-                  className={`cursor-pointer mb-2 ${
+              <Button
+                key={employee.id_employee}
+                label={employee.employee_name}
+                className={`
+                  m-2
+                  px-4
+                  py-3
+                  text-xl
+                  ${
                     selectedEmployee?.id_employee === employee.id_employee
-                      ? "border-2 border-blue-500"
-                      : ""
-                  }`}
-                  onClick={() => setSelectedEmployee(employee)}
-                  style={{
-                    backgroundColor: "var(--surface-card)",
-                    color: "var(--text-color)",
-                    height: "100%",
-                  }}
-                >
-                  <div className="flex flex-col items-center">
-                    <span className="font-semibold">
-                      {employee.employee_name}
-                    </span>
-                    <span className="text-sm">ID: {employee.id_employee}</span>
-                    <span className="text-sm">
-                      ID Profile: {employee.id_profile}
-                    </span>
-                  </div>
-                </Card>
-              </div>
+                      ? "p-button-primary"
+                      : "p-button-secondary"
+                  }
+                `}
+                onClick={() => setSelectedEmployee(employee)}
+              />
             ))}
           </div>
         </div>
@@ -534,7 +525,6 @@ function LoginPage({ shopRoute }) {
       {showPosSessionOpenModal && (
         <PosSessionOpenModal
           isOpen={showPosSessionOpenModal}
-          onClose={() => setShowPosSessionOpenModal(false)}
           onContinue={handlePosSessionContinue}
           onCloseCash={handlePosSessionClose}
         />
