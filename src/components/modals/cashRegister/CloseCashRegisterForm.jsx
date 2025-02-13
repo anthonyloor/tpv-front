@@ -61,7 +61,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
     if (license) {
       fetchReportAmounts();
     }
-  }, [license, apiFetch]);
+  }, [license, apiFetch, totalSalesTPV]);
 
   useEffect(() => {
     const cashMatches = parseFloat(inputTotalCash) === fetchedTotalCash;
