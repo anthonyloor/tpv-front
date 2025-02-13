@@ -1,6 +1,6 @@
 // src/components/ProductSearch/ProductSearchCard.jsx
 
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, { useState, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { AuthContext } from "../../contexts/AuthContext";
@@ -8,40 +8,31 @@ import { useApiFetch } from "../utils/useApiFetch";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { toast } from "sonner";
 import { Button } from "primereact/button";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { TabView, TabPanel } from "primereact/tabview";
 
 const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [isImageModalOpen, setImageModalOpen] = useState(false);
-  const [selectedProductImage, setSelectedProductImage] = useState("");
-  const [currentShopId, setCurrentShopId] = useState(null);
-  const [currentShopName, setCurrentShopName] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [viewMode, setViewMode] = useState("table");
 
   const { configData } = useContext(ConfigContext);
   const { shopId, shopName } = useContext(AuthContext);
   const allowOutOfStockSales = configData?.allow_out_of_stock_sales || false;
   const apiFetch = useApiFetch();
 
-  // Ref para el input de búsqueda
-  const searchInputRef = useRef(null);
-
-  useEffect(() => {
-    setCurrentShopId(shopId);
-    setCurrentShopName(shopName);
-  }, [shopId, shopName]);
-
-  // Función auxiliar para agrupar productos (se conserva la lógica original)
+  // Función de agrupación para el modo "tab"
   const groupProductsByProductName = (products) => {
     const validProducts = products.filter(
       (product) =>
-        !(
-          product.id_product_attribute === null &&
-          product.ean13_combination === null &&
-          product.ean13_combination_0 === null
-        )
+        product.id_product_attribute !== null ||
+        product.ean13_combination !== null ||
+        product.ean13_combination_0 !== null
     );
     return validProducts.reduce((acc, product) => {
       const existingGroup = acc.find(
@@ -75,6 +66,9 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       } else {
         acc.push({
           product_name: product.product_name,
+          name_category: product.name_category,
+          link_rewrite: product.link_rewrite,
+          id_product: product.id_product,
           image_url: product.image_url,
           combinations: [
             {
@@ -95,35 +89,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     }, []);
   };
 
-  // Función auxiliar para detectar si existe algún modal o dialog abierto
-  const isAnyModalOpen = () => {
-    return document.querySelector('[role="dialog"]') !== null;
-  };
-
-  // Solo re-enfocar el input si no hay ningún modal abierto
-  const handleContainerClick = () => {
-    if (
-      !isAnyModalOpen() &&
-      !isImageModalOpen &&
-      !confirmModalOpen &&
-      searchInputRef.current
-    ) {
-      searchInputRef.current.focus();
-    }
-  };
-
-  const handleInputBlur = () => {
-    if (
-      !isAnyModalOpen() &&
-      !isImageModalOpen &&
-      !confirmModalOpen &&
-      searchInputRef.current
-    ) {
-      searchInputRef.current.focus();
-    }
-  };
-
-  // Nueva lógica en el onKeyDown
+  // Lógica de búsqueda (similar a la anterior)
   const handleKeyDown = async (event) => {
     if (event.key !== "Enter") return;
     // Si el texto empieza con "#", se procesa como descuento
@@ -165,6 +131,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           onAddDiscount(discObj);
         }
         setSearchTerm("");
+        setFilteredProducts([]);
+        setSelectedProduct(null);
       } catch (error) {
         console.error("Error al buscar vale descuento:", error);
         alert("Error al buscar el vale. Inténtalo de nuevo.");
@@ -190,21 +158,22 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         );
         const validResults = results.filter(
           (product) =>
-            !(
-              product.id_product_attribute === null &&
-              product.ean13_combination === null &&
-              product.ean13_combination_0 === null
-            )
+            product.id_product_attribute !== null ||
+            product.ean13_combination !== null ||
+            product.ean13_combination_0 !== null
         );
         const filteredForCurrentShop = validResults.filter(
-          (product) => product.id_shop === currentShopId
+          (product) => product.id_shop === shopId
         );
-        setFilteredProducts(groupProductsByProductName(validResults));
         if (filteredForCurrentShop.length === 1) {
-          // Agregar producto automáticamente
+          // Si solo hay un resultado, lo agregamos automáticamente
           addProductToCart(filteredForCurrentShop[0]);
           setSearchTerm("");
+          setFilteredProducts([]);
+          setSelectedProduct(null);
+          return;
         }
+        setFilteredProducts(validResults);
       } catch (error) {
         console.error("Error en la búsqueda por EAN13:", error);
         alert("Error al buscar producto por EAN13. Inténtalo de nuevo.");
@@ -213,15 +182,13 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       }
       return;
     }
-
     if (ean13HyphenRegex.test(searchTerm)) {
       // Caso: EAN13 con guion y número (por ejemplo, "5006503289541-50")
       alert("Se añade producto por ean13 + id_stock");
       setSearchTerm("");
       return;
     }
-
-    // Caso normal: búsqueda sin acción automática de añadir
+    // Búsqueda normal sin acción automática de añadir
     setIsLoading(true);
     try {
       const results = await apiFetch(
@@ -232,14 +199,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       );
       const validResults = results.filter(
         (product) =>
-          !(
-            product.id_product_attribute === null &&
-            product.ean13_combination === null &&
-            product.ean13_combination_0 === null
-          )
+          product.id_product_attribute !== null ||
+          product.ean13_combination !== null ||
+          product.ean13_combination_0 !== null
       );
-      setFilteredProducts(groupProductsByProductName(validResults));
-      // En este caso no se añade producto automáticamente
+      setFilteredProducts(validResults);
+      setSelectedProduct(null);
     } catch (error) {
       console.error("Error en la búsqueda:", error);
       alert("Error al buscar productos. Inténtalo de nuevo más tarde.");
@@ -248,12 +213,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     }
   };
 
-  // Función para agregar producto (lógica actual)
+  // Función para agregar producto al carrito
   const addProductToCart = (product) => {
     let currentShopStock = null;
     if (Array.isArray(product.stocks)) {
       currentShopStock = product.stocks.find(
-        (stock) => stock.id_shop === currentShopId
+        (stock) => stock.id_shop === shopId
       );
     } else {
       currentShopStock = {
@@ -284,8 +249,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       tax_rate: 0.21,
       image_url: product.image_url,
       quantity: 1,
-      shop_name: currentShopName,
-      id_shop: currentShopId,
+      shop_name: shopName,
+      id_shop: shopId,
     };
     console.log("Product for cart:", productForCart);
     onAddProduct(productForCart, stockQuantity, (exceedsStock) => {
@@ -296,11 +261,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         toast.success("Producto añadido al ticket");
       }
     });
-  };
-
-  const handleProductClick = (imageUrl) => {
-    setSelectedProductImage(imageUrl);
-    setImageModalOpen(true);
   };
 
   const handleConfirmAdd = () => {
@@ -315,6 +275,108 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     setProductToConfirm(null);
   };
 
+  // Modo "tabla": al seleccionar una fila se asigna el producto
+  const onRowSelect = (e) => {
+    setSelectedProduct(e.data);
+    if (onClickProduct) onClickProduct(e.data);
+  };
+
+  // Plantillas para el DataTable (modo tabla)
+  const nameBodyTemplate = (rowData) => rowData.product_name;
+  const colorBodyTemplate = (rowData) => {
+    if (rowData.combination_name) {
+      const parts = rowData.combination_name.split(" - ");
+      return parts[0] || "";
+    }
+    return "";
+  };
+  const tallaBodyTemplate = (rowData) => {
+    if (rowData.combination_name) {
+      const parts = rowData.combination_name.split(" - ");
+      return parts[1] || "";
+    }
+    return "";
+  };
+  const priceBodyTemplate = (rowData) => rowData.price.toFixed(2) + " €";
+  const quantityBodyTemplate = (rowData) => rowData.quantity;
+
+  // Función para renderizar stock (modo tabla) debajo del DataTable
+  const renderStockInfo = () => {
+    if (!selectedProduct || !selectedProduct.stocks) return null;
+    return (
+      <div
+        className="mt-4 p-3 border rounded"
+        style={{ borderColor: "var(--surface-border)" }}
+      >
+        <h5 className="font-bold mb-2">
+          Stock para {selectedProduct.product_name}
+        </h5>
+        <ul>
+          {selectedProduct.stocks.map((stock) => (
+            <li key={stock.id_stock_available}>
+              {stock.shop_name}: {stock.quantity}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+  // Modo "tab": agrupar productos por nombre
+  const groupedProducts = groupProductsByProductName(filteredProducts);
+
+  // Nueva función para renderizar contenido en modo pestañas en formato horizontal
+  const renderTabContent = (group) => {
+    return (
+      <div className="flex flex-row p-3 gap-4">
+        {/* Área para imagen (placeholder o imagen real) */}
+        <div
+          className="w-1/4 flex items-center justify-center border rounded"
+          style={{ minHeight: "150px" }}
+        >
+          {group.image_url ? (
+            <img
+              src={group.image_url}
+              alt={group.product_name}
+              className="max-h-32"
+            />
+          ) : (
+            <span className="text-gray-500">Sin imagen</span>
+          )}
+        </div>
+        {/* Información del producto */}
+        <div className="flex-grow">
+          <h5 className="font-bold text-lg">{group.product_name}</h5>
+          {/* Mostrar cada combinación (color y talla) en formato horizontal */}
+          {group.combinations.map((combo, index) => {
+            const parts = combo.combination_name
+              ? combo.combination_name.split(" - ")
+              : ["Sin asignar", ""];
+            const color = parts[0] || "";
+            const talla = parts[1] || "";
+            return (
+              <div
+                key={index}
+                className="flex justify-between border-b pb-1 mb-1"
+              >
+                <div className="w-1/2">
+                  <span className="font-medium">Color:</span> {color}
+                </div>
+                <div className="w-1/2">
+                  <span className="font-medium">Talla:</span> {talla}
+                </div>
+              </div>
+            );
+          })}
+          <div className="mt-2">
+            <span className="font-bold">Precio: </span>
+            {group.combinations[0]?.price?.toFixed(2)} €
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       className="p-3 h-full flex flex-col"
@@ -322,10 +384,9 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",
       }}
-      onClick={handleContainerClick}
     >
-      {/* Buscador */}
-      <div className="relative mb-4">
+      {/* Fila de búsqueda y toggle de vista */}
+      <div className="mb-4 flex items-center">
         <span className="p-input-icon-left w-full">
           <div className="p-input-icon-left">
             <i
@@ -334,145 +395,74 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
             />
           </div>
           <InputText
-            ref={searchInputRef}
             placeholder="Buscar por referencia o código de barras..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
             onKeyDown={handleKeyDown}
-            onBlur={handleInputBlur}
             disabled={isLoading}
-            className="w-full pl-9 pr-9"
+            className="w-full pl-9 pr-9 h-12"
             style={{
               borderColor: "var(--surface-border)",
               backgroundColor: "var(--surface-50)",
               color: "var(--text-color)",
             }}
-            autoFocus
           />
         </span>
-        {isLoading && (
-          <div
-            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            <svg
-              className="animate-spin h-5 w-5"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 0 1 8-8v8H4z"
-              />
-            </svg>
-          </div>
-        )}
-      </div>
-
-      {/* Listado de productos */}
-      <div className="flex-1 overflow-auto">
-        <table
-          className="w-full border rounded"
-          style={{
-            borderColor: "var(--surface-border)",
-            backgroundColor: "var(--surface-0)",
-            color: "var(--text-color)",
-          }}
-        >
-          <thead
-            className="sticky top-0 z-10 border-b"
-            style={{
-              backgroundColor: "var(--surface-100)",
-              color: "var(--text-color)",
-              borderColor: "var(--surface-border)",
-            }}
-          >
-            <tr>
-              <th className="py-2 px-3 text-left font-semibold">Combinación</th>
-              <th className="py-2 px-3 text-left font-semibold">Referencia</th>
-              <th className="py-2 px-3 text-left font-semibold">Cod. Barras</th>
-              <th className="py-2 px-3 text-left font-semibold">Precio</th>
-              <th className="py-2 px-3 text-left font-semibold">Cantidad</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.map((productGroup) => (
-              <React.Fragment key={productGroup.product_name}>
-                <tr
-                  style={{
-                    backgroundColor: "var(--surface-50)",
-                    color: "var(--text-color)",
-                  }}
-                  onClick={() => handleProductClick(productGroup.image_url)}
-                >
-                  <td
-                    colSpan={5}
-                    className="py-3 px-4 font-bold text-lg cursor-pointer"
-                  >
-                    {productGroup.product_name}
-                  </td>
-                </tr>
-                {productGroup.combinations.map((product, index) => {
-                  const rowBg =
-                    index % 2 === 0 ? "var(--surface-0)" : "var(--surface-50)";
-                  return (
-                    <tr
-                      key={`${product.id_product}_${product.id_product_attribute}`}
-                      style={{
-                        backgroundColor: rowBg,
-                        color: "var(--text-color)",
-                      }}
-                    >
-                      <td
-                        className="py-2 px-3 cursor-pointer"
-                        onClick={() => onClickProduct?.(product)}
-                      >
-                        {product.combination_name}
-                      </td>
-                      <td className="py-2 px-3">
-                        {product.reference_combination}
-                      </td>
-                      <td className="py-2 px-3">{product.ean13_combination}</td>
-                      <td className="py-2 px-3">{product.price} €</td>
-                      <td className="py-2 px-3 text-center">
-                        {product.quantity || 0}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal para imagen del producto */}
-      <Dialog
-        header="Imagen del Producto"
-        visible={isImageModalOpen}
-        onHide={() => setImageModalOpen(false)}
-        modal
-        style={{ width: "50vw", backgroundColor: "var(--surface-0)" }}
-      >
-        <div className="p-2" style={{ color: "var(--text-color)" }}>
-          <img
-            src={selectedProductImage}
-            alt="Imagen del producto"
-            className="w-full h-auto"
-            style={{ borderRadius: "0.25rem" }}
+        <div className="ml-2">
+          <Button
+            tooltip={
+              viewMode === "table"
+                ? "Cambiar a vista de pestañas"
+                : "Cambiar a vista de tabla"
+            }
+            tooltipOptions={{ position: "bottom" }}
+            icon={viewMode === "table" ? "pi pi-th-large" : "pi pi-table"}
+            onClick={() => setViewMode(viewMode === "table" ? "tab" : "table")}
+            className="p-button-secondary"
           />
         </div>
-      </Dialog>
+      </div>
+
+      {/* Vista según modo seleccionado */}
+      {viewMode === "table" ? (
+        <>
+          <div className="flex-1 overflow-auto">
+            <DataTable
+              value={filteredProducts}
+              selectionMode="single"
+              onRowSelect={onRowSelect}
+              dataKey="id_stock_available"
+              scrollable
+              className="p-datatable-sm"
+            >
+              <Column
+                field="product_name"
+                header="Nombre producto"
+                body={nameBodyTemplate}
+              />
+              <Column header="Color" body={colorBodyTemplate} />
+              <Column header="Talla" body={tallaBodyTemplate} />
+              <Column field="price" header="Precio" body={priceBodyTemplate} />
+              <Column
+                field="quantity"
+                header="Cantidad"
+                body={quantityBodyTemplate}
+              />
+            </DataTable>
+          </div>
+          {selectedProduct && renderStockInfo()}
+        </>
+      ) : (
+        <div className="flex-1 overflow-auto">
+          <TabView>
+            {groupedProducts.map((group, index) => (
+              <TabPanel key={index} header={group.product_name}>
+                {renderTabContent(group)}
+              </TabPanel>
+            ))}
+          </TabView>
+        </div>
+      )}
 
       {/* Modal para confirmar producto sin stock */}
       <Dialog

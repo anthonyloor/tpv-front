@@ -1,5 +1,9 @@
 // src/components/Sales/SalesCard.jsx
 
+// TO-DO: Reducir/mejorar diseño Descuentos Aplicados, totales y subtotales.
+//        Reducir margin separador. Incluir otro separador en el footer, antes de los totales.
+//        Mejorar diseño ticket, mejorar ticket/carrito añadiendo card y animacion de ir añadiendo y creando cards de forma como que aparece.
+
 import React, { useState, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { SplitButton } from "primereact/splitbutton";
@@ -14,6 +18,8 @@ import AddressModal from "../modals/customer/AddressModal";
 import ClientInfoDialog from "../modals/customer/ClientInfoDialog";
 import CustomerStepperModal from "../modals/customer/CustomerStepperModal";
 import CreateCustomerModal from "../modals/customer/CreateCustomerModal";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
 
 function SalesCard({
   cartItems,
@@ -29,7 +35,6 @@ function SalesCard({
   loadParkedCart,
   deleteParkedCart,
 }) {
-  // === CONTEXTS
   const { configData } = useContext(ConfigContext);
   const {
     selectedClient,
@@ -86,6 +91,7 @@ function SalesCard({
     setSelectedAddress(addr);
     localStorage.setItem("selectedClient", JSON.stringify(newClient));
     localStorage.setItem("selectedAddress", JSON.stringify(addr));
+    setIsStepperOpen(false);
   };
 
   // Botón de crear cliente (dentro del Stepper)
@@ -148,17 +154,39 @@ function SalesCard({
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
     0
   );
-  let totalDiscounts = 0;
-  appliedDiscounts.forEach((disc) => {
-    if (disc.reduction_percent > 0) {
-      totalDiscounts += (subtotalProducts * disc.reduction_percent) / 100;
-    } else if (disc.reduction_amount > 0) {
-      totalDiscounts += Math.min(subtotalProducts, disc.reduction_amount);
-    }
-  });
+  const totalDiscounts = appliedDiscounts.reduce((sum, disc) => {
+    const redPercent = disc.reduction_percent || 0;
+    const redAmount = disc.reduction_amount || 0;
+    const discountAmount = redPercent
+      ? subtotalProducts * (redPercent / 100)
+      : redAmount;
+    return sum + discountAmount;
+  }, 0);
   const total = subtotalProducts - totalDiscounts;
 
-  const shop = JSON.parse(localStorage.getItem("shop"));
+  const quantityBodyTemplate = (rowData) => {
+    return (
+      <div className="flex align-items-center gap-2">
+        <Button
+          icon="pi pi-minus"
+          className="p-button p-button-secondary"
+          onClick={() => onDecreaseProduct(rowData.id_stock_available)}
+        />
+        <span>{rowData.quantity}</span>
+      </div>
+    );
+  };
+
+  const actionBodyTemplate = (rowData) => {
+    return (
+      <Button
+        tooltip="Eliminar"
+        icon="pi pi-times"
+        className="p-button p-button-warning"
+        onClick={() => onRemoveProduct(rowData.id_stock_available)}
+      />
+    );
+  };
 
   return (
     <div
@@ -198,6 +226,8 @@ function SalesCard({
         <div>
           <SplitButton
             label="Tickets"
+            tooltip="Ver tickets aparcados"
+            tooltipOptions={{ position: "bottom" }}
             icon="pi pi-receipt"
             onClick={() => setIsParkedCartsModalOpen(true)}
             model={[
@@ -228,49 +258,34 @@ function SalesCard({
       <div className="flex-1 overflow-auto relative">
         <h4 className="font-bold text-lg mb-2">Productos en el Ticket</h4>
         {cartItems.length > 0 ? (
-          <ul className="flex flex-col gap-2">
-            {cartItems.map((item) => {
-              const totalItem = item.final_price_incl_tax * item.quantity;
-              const isHighlighted = item.id_stock_available === recentlyAddedId;
-
-              return (
-                <li
-                  key={item.id_stock_available}
-                  className="border p-3 flex flex-col gap-2 rounded"
-                  style={{
-                    borderColor: "var(--surface-border)",
-                    backgroundColor: isHighlighted
-                      ? "var(--primary-color)"
-                      : "var(--surface-0)",
-                    color: isHighlighted ? "#fff" : "var(--text-color)",
-                  }}
-                >
-                  <div>
-                    <strong>{item.quantity}x</strong> {item.product_name}{" "}
-                    {item.combination_name}
-                  </div>
-                  <div className="text-right">
-                    <div>P/U: {item.final_price_incl_tax.toFixed(2)} €</div>
-                    <div className="font-bold">
-                      Total: {totalItem.toFixed(2)} €
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    <Button
-                      label="-"
-                      className="p-button-danger"
-                      onClick={() => onDecreaseProduct(item.id_stock_available)}
-                    />
-                    <Button
-                      label="X"
-                      className="p-button-danger"
-                      onClick={() => onRemoveProduct(item.id_stock_available)}
-                    />
-                  </div>
-                </li>
-              );
+          <DataTable
+            value={cartItems}
+            dataKey="id_stock_available"
+            className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
+            rowClassName={(rowData) => ({
+              "highlighted-row": rowData.id_stock_available === recentlyAddedId,
             })}
-          </ul>
+          >
+            <Column field="product_name" header="Nombre" />
+            <Column
+              header="Cantidad"
+              body={quantityBodyTemplate}
+              style={{ width: "8rem" }}
+            />
+            <Column
+              field="final_price_incl_tax"
+              header="Precio Unitario"
+              style={{ width: "10rem" }}
+            />
+            <Column
+              field={(rowData) =>
+                (rowData.final_price_incl_tax * rowData.quantity).toFixed(2)
+              }
+              header="Total"
+              style={{ width: "10rem" }}
+            />
+            <Column body={actionBodyTemplate} style={{ width: "4rem" }} />
+          </DataTable>
         ) : (
           <p>No hay productos en el ticket.</p>
         )}
@@ -288,36 +303,25 @@ function SalesCard({
           <h4 className="font-bold text-lg mb-2">Descuentos Aplicados</h4>
           <ul className="flex flex-col gap-2">
             {appliedDiscounts.map((disc, index) => {
-              const label =
-                disc.reduction_percent > 0
-                  ? `${disc.reduction_percent}%`
-                  : `${disc.reduction_amount?.toFixed(2) || "0.00"} €`;
-
+              const label = disc.name || `Descuento #${index + 1}`;
               return (
                 <li
                   key={index}
-                  className="border rounded p-3 flex flex-col gap-2"
-                  style={{
-                    borderColor: "var(--surface-border)",
-                    backgroundColor: "var(--surface-0)",
-                  }}
+                  className="flex justify-between items-center p-2 rounded"
+                  style={{ backgroundColor: "var(--surface-100)" }}
                 >
                   <div>
-                    <strong>{disc.name || disc.code}</strong>
-                    {disc.code && disc.name && (
-                      <div
-                        className="text-xs"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        ({disc.code})
-                      </div>
+                    <span className="font-semibold">{label}</span>
+                    {disc.description && (
+                      <div className="text-sm">{disc.description}</div>
                     )}
                   </div>
                   <div className="text-right font-bold">{label}</div>
                   <div>
                     <Button
-                      label="Quitar"
+                      tooltip="Eliminar"
                       className="p-button-danger"
+                      icon="pi pi-times"
                       onClick={() => removeDiscountByIndex(index)}
                     />
                   </div>
@@ -409,7 +413,6 @@ function SalesCard({
         isOpen={isAddressModalOpen}
         onClose={() => setIsAddressModalOpen(false)}
         clientId={selectedClient?.id_customer}
-        shop={shop}
         handleSelectAddress={(addr) => {
           setSelectedAddress(addr);
           setIsAddressModalOpen(false);

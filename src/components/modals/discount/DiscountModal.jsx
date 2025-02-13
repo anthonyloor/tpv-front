@@ -1,5 +1,7 @@
 // src/components/modals/discount/DiscountModal.jsx
 
+// TO-DO: Si es cliente generico (id_customer no recuperado) no se puede crear el descuento.
+
 import React, { useState } from "react";
 import { Dialog } from "primereact/dialog";
 import { useCartRuleCreator } from "../../../hooks/useCartRuleCreator";

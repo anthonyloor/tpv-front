@@ -54,13 +54,13 @@ function StoreStockPanel({ product }) {
 
   return (
     <div
-      className="pl-3"
+      className="pl-3 h-full"
       style={{
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",
       }}
     >
-      <h4 className="font-bold text-lg mb-4">{mainTitle}</h4>
+      <h4 className="font-bold text-lg mb-2">{mainTitle}</h4>
 
       <div className="flex gap-4">
         {shops.map((shop) => {
@@ -69,12 +69,17 @@ function StoreStockPanel({ product }) {
           return (
             <Card
               key={shop.id_shop}
-              title={displayName}
               className="p-shadow-2"
               style={{
                 backgroundColor: "var(--surface-card)",
                 color: "var(--text-color)",
+                width: "150px",
               }}
+              header={
+                <div className="text-center text-xl font-bold">
+                  {displayName}
+                </div>
+              }
             >
               <div className="text-center text-2xl font-bold">{qty}</div>
             </Card>
