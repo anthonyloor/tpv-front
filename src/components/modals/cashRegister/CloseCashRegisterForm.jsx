@@ -7,6 +7,7 @@ import SalesReportModal from "../../reports/SalesReportModal";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import { InputNumber } from "primereact/inputnumber";
 import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
 
 const CloseCashRegisterForm = ({ onClose }) => {
   const [numberOfSales, setNumberOfSales] = useState(0);
@@ -49,7 +50,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
           const dummyTotalSalesTPV =
             totalCashNum + totalCardNum + totalBizumNum;
           setNumberOfSales(dummyNumberOfSales);
-          setTotalSalesTPV(dummyTotalSalesTPV);
+          setTotalSalesTPV(totalSalesTPV);
         } else {
           alert(data.message || "No se pudo obtener el reporte de caja");
         }
@@ -83,7 +84,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
   ]);
 
   const handleInputChange = (e) => {
-    setTotalSalesStore(e.target.value);
+    setTotalSalesStore(e.value);
   };
 
   const handleCloseSalesReport = () => {
@@ -124,15 +125,50 @@ const CloseCashRegisterForm = ({ onClose }) => {
   return (
     <>
       <div className="space-y-4">
-        <div>
-          <p>
-            <strong>Número de Ventas:</strong> {numberOfSales}
-          </p>
-          <p>
-            <strong>TOTAL VENTAS TPV:</strong>{" "}
-            {Number(totalSalesTPV).toFixed(2)} €
-          </p>
+        <div className="flex gap-2">
+          <div className="p-inputgroup flex-1">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-money-bill" />
+            </span>
+            <InputText
+              value={`${fetchedTotalCash.toFixed(2)} €`}
+              disabled
+              className="text-right"
+            />
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-euro" />
+            </span>
+          </div>
+
+          <div className="p-inputgroup flex-1">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-credit-card" />
+            </span>
+            <InputText
+              value={`${fetchedTotalCard.toFixed(2)} €`}
+              disabled
+              className="text-right"
+            />
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-euro" />
+            </span>
+          </div>
+
+          <div className="p-inputgroup flex-1">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-phone" />
+            </span>
+            <InputText
+              value={`${fetchedTotalBizum.toFixed(2)} €`}
+              disabled
+              className="text-right"
+            />
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-euro" />
+            </span>
+          </div>
         </div>
+
         <div>
           <label
             htmlFor="totalSalesStore"
@@ -140,15 +176,16 @@ const CloseCashRegisterForm = ({ onClose }) => {
           >
             Total de Ventas Tienda
           </label>
-          <input
-            type="number"
-            id="totalSalesStore"
+          <InputNumber
+            inputId="totalSalesStore"
             value={totalSalesStore}
-            onChange={handleInputChange}
+            onValueChange={handleInputChange}
+            mode="decimal"
             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
             placeholder="Ingresa el total de ventas de la tienda"
           />
         </div>
+
         <div>
           <label
             htmlFor="inputTotalCash"
