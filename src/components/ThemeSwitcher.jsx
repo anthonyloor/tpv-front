@@ -1,46 +1,54 @@
 // src/components/ThemeSwitcher.jsx
-import React, { useEffect, useState } from "react";
 
-export default function ThemeSwitcher() {
+import { useState, useEffect } from "react";
+
+export const applyTheme = (newTheme) => {
+  const link = document.getElementById("theme-link");
+  if (link) {
+    link.href = `/themes/${newTheme}/theme.css`;
+  }
+};
+
+export const switchToLight = () => {
+  applyTheme("lara-light-indigo");
+  localStorage.setItem("preferredTheme", "lara-light-indigo");
+};
+
+export const switchToDark = () => {
+  applyTheme("lara-dark-indigo");
+  localStorage.setItem("preferredTheme", "lara-dark-indigo");
+};
+
+export const useTheme = () => {
   const [theme, setTheme] = useState("lara-light-indigo");
 
-  // Al montar, leemos localStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem("preferredTheme");
     if (savedTheme) {
       setTheme(savedTheme);
       applyTheme(savedTheme);
     } else {
-      // forzamos modo claro por defecto
       applyTheme("lara-light-indigo");
     }
   }, []);
 
-  // Cambiar la etiqueta link
-  const applyTheme = (newTheme) => {
-    const link = document.getElementById("theme-link");
-    if (link) {
-      link.href = `/themes/${newTheme}/theme.css`;
-    }
+  const setThemeAndApply = (newTheme) => {
+    setTheme(newTheme);
+    applyTheme(newTheme);
+    localStorage.setItem("preferredTheme", newTheme);
   };
 
-  // Handler para cambiar
-  const switchToLight = () => {
-    setTheme("lara-light-indigo");
-    applyTheme("lara-light-indigo");
-    localStorage.setItem("preferredTheme", "lara-light-indigo");
-  };
+  return { theme, setTheme: setThemeAndApply };
+};
 
-  const switchToDark = () => {
-    setTheme("lara-dark-indigo");
-    applyTheme("lara-dark-indigo");
-    localStorage.setItem("preferredTheme", "lara-dark-indigo");
-  };
+// Componente ThemeSwitcher (opcional, para un botón)
+export default function ThemeSwitcher() {
+  const { theme, setTheme } = useTheme();
 
   return (
     <div style={{ display: "flex", gap: "0.5rem" }}>
       <button
-        onClick={switchToLight}
+        onClick={() => setTheme("lara-light-indigo")}
         style={{
           backgroundColor: theme === "lara-light-indigo" ? "#ccc" : "inherit",
         }}
@@ -48,7 +56,7 @@ export default function ThemeSwitcher() {
         Modo Claro
       </button>
       <button
-        onClick={switchToDark}
+        onClick={() => setTheme("lara-dark-indigo")}
         style={{
           backgroundColor: theme === "lara-dark-indigo" ? "#ccc" : "inherit",
         }}

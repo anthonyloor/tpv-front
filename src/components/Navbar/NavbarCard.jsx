@@ -6,13 +6,13 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import { Menubar } from "primereact/menubar";
 import PortalOrNormal from "../../components/PortalOrNormal";
-
 import TransfersModal from "../modals/transfers/TransfersModal";
 import ConfigurationModal from "../modals/configuration/ConfigurationModal";
 import SalesReportModal from "../reports/SalesReportModal";
 import CloseCashRegisterModal from "../modals/cashRegister/CloseCashRegisterModal";
-import ThemeSwitcher from "../ThemeSwitcher";
-import { Button } from "primereact/button";
+import { useTheme } from "../ThemeSwitcher";
+import { SplitButton } from "primereact/splitbutton";
+import { InputSwitch } from "primereact/inputswitch";
 
 const NavbarCard = () => {
   const navigate = useNavigate();
@@ -137,23 +137,42 @@ const NavbarCard = () => {
     },*/
   ];
 
-  // Parte derecha del Menubar
+  // Usar el hook para manejar el tema
+  const { theme, setTheme } = useTheme();
+  const isDarkTheme = theme === "lara-dark-indigo";
+
+  const toggleTheme = (e) => {
+    setTheme(e.value ? "lara-dark-indigo" : "lara-light-indigo");
+  };
+
+  // Opciones del SplitButton
+  const menuItems = [
+    {
+      // Opción personalizada con InputSwitch para el tema oscuro
+      label: (
+        <div className="flex items-center gap-2">
+          <span>Tema Oscuro</span>
+          <InputSwitch checked={isDarkTheme} onChange={toggleTheme} />
+        </div>
+      ),
+    },
+    {
+      label: "Cerrar sesión",
+      icon: "pi pi-sign-out",
+      command: handleLogoutClick,
+    },
+  ];
+
+  // Parte derecha del Menubar usando SplitButton
   const end = (
-    <div
-      className="flex items-center gap-4 mr-4"
-      style={{ color: "var(--text-color)" }}
-    >
-      <div className="flex items-center gap-2">
-        <i className="pi pi-user" />
-        <span className="font-bold">{employeeName}</span>
-      </div>
-      <Button
-        icon="pi pi-sign-out"
-        onClick={handleLogoutClick}
-        className="p-button-text text-lg"
-        style={{ color: "var(--text-color)" }}
+    <div className="flex items-center gap-4 mr-4">
+      <SplitButton
+        label={employeeName}
+        icon="pi pi-user"
+        dropdownIcon="pi pi-cog"
+        model={menuItems}
+        onClick={() => {}}
       />
-      <ThemeSwitcher />
     </div>
   );
 

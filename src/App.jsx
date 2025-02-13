@@ -14,6 +14,7 @@ import { isMobile } from "react-device-detect";
 import MobileDashboard from "./MobileDashboard";
 import DesktopTPV from "./DesktopTPV";
 import { ProgressSpinner } from "primereact/progressspinner";
+import { useTheme, applyTheme } from "./components/ThemeSwitcher";
 
 function App() {
   const {
@@ -24,8 +25,13 @@ function App() {
     setIdProfile,
     setShopName,
   } = useContext(AuthContext);
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const [isShopLoaded, setIsShopLoaded] = useState(false);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   useEffect(() => {
     const storedShop = JSON.parse(localStorage.getItem("shop"));
