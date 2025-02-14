@@ -31,6 +31,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
   const [employeeIdV, setEmployeeId] = useState(null);
 
   const apiFetch = useApiFetch();
+  const { idProfile } = useContext(AuthContext);
 
   const isNewMovement = !movementData;
   const currentStatus = movementData?.status || "En creacion";
@@ -163,9 +164,27 @@ const TransferForm = ({ type, onSave, movementData }) => {
 
     setProductsToTransfer((prev) => {
       const maxStock = product.stockOrigin;
+
+      // Si es entrada, no hay restricción de stock
+      if (type === "entrada") {
+        setRecentlyAddedId(product.id_product_attribute);
+        return [...prev, product];
+      }
+
+      // Si es traspaso o salida, controlamos el stock
       if (product.quantity > maxStock) {
-        toast.error("No dispones de más stock para añadir.");
-        return prev;
+        // Si es admin, permitimos añadir pero avisamos
+        if (idProfile === 1) {
+          toast.warn(
+            `[ADMIN] No hay suficiente stock (${maxStock}). Se ha añadido igualmente.`
+          );
+          setRecentlyAddedId(product.id_product_attribute);
+          return [...prev, product];
+        } else {
+          // Si no es admin, no permitimos añadir
+          toast.error("No dispones de más stock para añadir.");
+          return prev;
+        }
       }
 
       const existing = prev.find(
@@ -174,8 +193,22 @@ const TransferForm = ({ type, onSave, movementData }) => {
       if (existing) {
         const newQty = existing.quantity + product.quantity;
         if (newQty > maxStock) {
-          toast.error("No dispones de más stock para añadir.");
-          return prev;
+          // Si es admin, permitimos añadir pero avisamos
+          if (idProfile === 1) {
+            toast.warn(
+              `[ADMIN] No hay suficiente stock (${maxStock}). Se ha añadido igualmente.`
+            );
+            setRecentlyAddedId(product.id_product_attribute);
+            return prev.map((p) =>
+              p.id_product_attribute === product.id_product_attribute
+                ? { ...p, quantity: newQty }
+                : p
+            );
+          } else {
+            // Si no es admin, no permitimos añadir
+            toast.error("No dispones de más stock para añadir.");
+            return prev;
+          }
         }
         setRecentlyAddedId(product.id_product_attribute);
         return prev.map((p) =>
@@ -243,7 +276,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
       const payload = {
         description,
         type,
-        employeeId,
+        id_employee: employeeId,
       };
       if (type === "entrada") {
         payload.id_shop_destiny = parseInt(selectedDestinationStore, 10);

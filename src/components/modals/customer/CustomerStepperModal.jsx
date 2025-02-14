@@ -112,17 +112,17 @@ export default function CustomerStepperModal({
 
   const fetchAddressesForClient = (client) => {
     const token = localStorage.getItem("token");
-    fetch(
-      `https://apitpv.anthonyloor.com/get_addresses?customer=${client.id_customer}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({}),
-      }
-    )
+    fetch("https://apitpv.anthonyloor.com/get_addresses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        id_customer: client.id_customer,
+        origin: client.origin, // Se obtiene del cliente seleccionado
+      }),
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Error al obtener direcciones");
         return res.json();
@@ -273,10 +273,17 @@ export default function CustomerStepperModal({
         emptyMessage="No se encontraron clientes"
         className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
       >
-        <Column field="id_customer" header="ID" style={{ width: "70px" }} />
+        <Column field="id_customer" header="ID" style={{ width: "60px" }} />
+        <Column
+          field="date_add"
+          header="Fecha"
+          style={{ width: "125px", textAlign: "center" }}
+        />
         <Column field="firstname" header="Nombre" />
         <Column field="lastname" header="Apellidos" />
-        <Column field="origin" header="Origen" style={{ width: "150px" }} />
+        <Column field="phone" header="Teléfono" />
+        <Column field="email" header="Correo" />
+        <Column field="origin" header="Origen" style={{ width: "120px" }} />
       </DataTable>
     </div>
   );
@@ -345,14 +352,17 @@ export default function CustomerStepperModal({
 
   return (
     <>
-    <Toast ref={toast} />
+      <Toast ref={toast} />
       {/* ========== DIALOG PRINCIPAL (WIZARD) ========== */}
       <Dialog
         visible={isOpen}
         onHide={handleHideDialog}
         header={renderCustomHeader()}
+        draggable={false}
+        resizable={false}
+        closable={true}
         modal
-        style={{ width: "80vw", minHeight: "60vh" }}
+        style={{ width: "40vw" }}
       >
         <Steps
           model={stepsItems}
@@ -376,16 +386,16 @@ export default function CustomerStepperModal({
             }
             // Muestra las toas de PrimeReact indicando que fueron creados
             toast.current.show({
-              severity: 'success',
-              summary: 'Éxito',
-              detail: 'Cliente creado',
+              severity: "success",
+              summary: "Éxito",
+              detail: "Cliente creado",
               life: 3000,
             });
             if (newAddr) {
               toast.current.show({
-                severity: 'success',
-                summary: 'Éxito',
-                detail: 'Dirección creada',
+                severity: "success",
+                summary: "Éxito",
+                detail: "Dirección creada",
                 life: 3000,
               });
             }

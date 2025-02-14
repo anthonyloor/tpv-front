@@ -27,17 +27,17 @@ const AddressModal = ({
 
   const fetchClientAddresses = (id_customer) => {
     const token = localStorage.getItem("token");
-    fetch(
-      `https://apitpv.anthonyloor.com/get_addresses?customer=${id_customer}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({}),
-      }
-    )
+    fetch("https://apitpv.anthonyloor.com/get_addresses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        id_customer: id_customer,
+        origin,
+      }),
+    })
       .then((response) => {
         if (response.status === 404) {
           // Significa que no hay direcciones
