@@ -6,18 +6,35 @@ import { toast } from "sonner";
 import ProductSearchCardForTransfer from "./ProductSearchCardForTransfer";
 import { useApiFetch } from "../../utils/useApiFetch";
 import { Steps } from "primereact/steps";
+import { InputText } from "primereact/inputtext";
+import { Dropdown } from "primereact/dropdown";
+import { InputNumber } from "primereact/inputnumber";
+import { Button } from "primereact/button";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
 
 const TransferForm = ({ type, onSave, movementData }) => {
   const [productsToTransfer, setProductsToTransfer] = useState([]);
   const [recentlyAddedId, setRecentlyAddedId] = useState(null);
   const [shops, setShops] = useState([]);
-  const [selectedOriginStore, setSelectedOriginStore] = useState("");
-  const [selectedDestinationStore, setSelectedDestinationStore] = useState("");
+  const [selectedOriginStore, setSelectedOriginStore] = useState(null);
+  const [selectedDestinationStore, setSelectedDestinationStore] =
+    useState(null);
   const [originShopName, setOriginShopName] = useState("");
   const [destinationShopName, setDestinationShopName] = useState("");
   const [isLoadingShops, setIsLoadingShops] = useState(true);
   const [errorLoadingShops, setErrorLoadingShops] = useState(null);
   const { employeeId, shopId } = useContext(AuthContext);
+  const [description, setDescription] = useState("");
+  const [createDate, setCreateDate] = useState("");
+  const [movementStatus, setMovementStatus] = useState("En creacion");
+  const [employeeIdV, setEmployeeId] = useState(null);
+
+  const apiFetch = useApiFetch();
+
+  const isNewMovement = !movementData;
+  const currentStatus = movementData?.status || "En creacion";
+
   const stepItems =
     type && type.toLowerCase() === "traspaso"
       ? [
@@ -29,7 +46,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
         ]
       : [{ label: "En creacion" }, { label: "Ejecutado" }];
 
-  // Calcular activeIndex usando el status del movimiento, se asume que movementData.status existe
   const activeIndex =
     movementData && movementData.status
       ? stepItems.findIndex(
@@ -38,18 +54,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
         )
       : 0;
 
-  // Datos del movimiento
-  const [description, setDescription] = useState("");
-  const [createDate, setCreateDate] = useState("");
-  const [movementStatus, setMovementStatus] = useState("En creacion");
-  const [employeeIdV, setEmployeeId] = useState(null);
-
-  const apiFetch = useApiFetch();
-
-  const isNewMovement = !movementData;
-  const currentStatus = movementData?.status || "En creacion";
-
-  // 1) Carga de tiendas
   useEffect(() => {
     const loadShops = async () => {
       try {
@@ -57,7 +61,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
         const data = await apiFetch("https://apitpv.anthonyloor.com/shops", {
           method: "GET",
         });
-        // Filtramos tienda con id=1 si no la quieres
         const filteredData = data.filter((shop) => shop.id_shop !== 1);
         setShops(filteredData);
       } catch (error) {
@@ -70,7 +73,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
     loadShops();
   }, [apiFetch]);
 
-  // 2) Asignar nombre de tienda al cambiar selectedOriginStore
   useEffect(() => {
     if (shops.length > 0 && selectedOriginStore) {
       const shopObj = shops.find(
@@ -82,7 +84,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   }, [shops, selectedOriginStore]);
 
-  // 3) Asignar nombre de tienda al cambiar selectedDestinationStore
   useEffect(() => {
     if (shops.length > 0 && selectedDestinationStore) {
       const shopObj = shops.find(
@@ -94,7 +95,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   }, [shops, selectedDestinationStore]);
 
-  // 4) Si es movimiento nuevo => asignamos tienda local por defecto
   useEffect(() => {
     if (isNewMovement) {
       if (shopId) {
@@ -107,7 +107,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   }, [isNewMovement, type, shopId]);
 
-  // 5) Carga de datos del movimiento si existe
   useEffect(() => {
     if (movementData) {
       setDescription(movementData.description || "");
@@ -120,14 +119,11 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   }, [movementData]);
 
-  // 6) Fecha, status y empleado
   useEffect(() => {
     if (isNewMovement) {
-      // Fecha = hoy
       setCreateDate(new Date().toISOString().split("T")[0]);
       setEmployeeId(employeeId);
     } else {
-      // Movimiento existente
       if (movementData?.date_add) {
         const onlyDate = movementData.date_add.split(" ")[0];
         setCreateDate(onlyDate);
@@ -135,7 +131,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
       setMovementStatus(movementData?.status || "En creacion");
       setEmployeeId(movementData?.employee);
 
-      // Cargar los detalles del movimiento
       if (Array.isArray(movementData.movement_details)) {
         const loadedProducts = movementData.movement_details.map((md) => {
           const quantity = md.sent_quantity || md.recived_quantity || 0;
@@ -154,31 +149,25 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   }, [isNewMovement, movementData, employeeId]);
 
-  // Saber si la tienda origen y destino son iguales (solo para traspaso)
   const isSameStoreSelected =
     type === "traspaso" &&
     selectedOriginStore &&
     selectedDestinationStore &&
     selectedOriginStore === selectedDestinationStore;
 
-  // Podemos editar productos si: es nuevo o status = 'En creacion'
   const canEditProducts =
     isNewMovement || movementStatus.toLowerCase() === "en creacion";
 
-  // Añadir producto => si no hay suficiente stock, no se añade
   const handleAddProduct = (product) => {
     if (!canEditProducts) return;
 
     setProductsToTransfer((prev) => {
-      // 1) Comprobar stock
       const maxStock = product.stockOrigin;
       if (product.quantity > maxStock) {
         toast.error("No dispones de más stock para añadir.");
-        // No se agrega
         return prev;
       }
 
-      // 2) Buscar si ya existe
       const existing = prev.find(
         (p) => p.id_product_attribute === product.id_product_attribute
       );
@@ -188,7 +177,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
           toast.error("No dispones de más stock para añadir.");
           return prev;
         }
-        // Actualizar
         setRecentlyAddedId(product.id_product_attribute);
         return prev.map((p) =>
           p.id_product_attribute === product.id_product_attribute
@@ -196,14 +184,12 @@ const TransferForm = ({ type, onSave, movementData }) => {
             : p
         );
       } else {
-        // Producto nuevo
-        setRecentlyAddedId(product.id_product_attribute); // Animar la nueva fila
+        setRecentlyAddedId(product.id_product_attribute);
         return [...prev, product];
       }
     });
   };
 
-  // Cambiar cantidad => si excede stockOrigin => no se actualiza
   const handleQuantityChange = (id_product_attribute, newQty) => {
     if (!canEditProducts) return;
 
@@ -211,15 +197,14 @@ const TransferForm = ({ type, onSave, movementData }) => {
       const found = prev.find(
         (p) => p.id_product_attribute === id_product_attribute
       );
-      if (!found) return prev; // no lo halló
+      if (!found) return prev;
       const maxStock = found.stockOrigin;
 
       let val = parseInt(newQty, 10) || 1;
       if (val > maxStock) {
         toast.error("No dispones de más stock para añadir.");
-        return prev; // no se actualiza
+        return prev;
       }
-      // Actualizar
       return prev.map((p) =>
         p.id_product_attribute === id_product_attribute
           ? { ...p, quantity: val }
@@ -228,14 +213,13 @@ const TransferForm = ({ type, onSave, movementData }) => {
     });
   };
 
-  // Eliminar producto
   const handleRemoveProduct = (id_product_attribute) => {
     if (!canEditProducts) return;
     setProductsToTransfer((prev) =>
       prev.filter((p) => p.id_product_attribute !== id_product_attribute)
     );
   };
-  // Construir movements_details
+
   const buildMovementsDetails = () => {
     return productsToTransfer.map((prod) => {
       const detail = {
@@ -248,14 +232,12 @@ const TransferForm = ({ type, onSave, movementData }) => {
       if (type === "entrada") {
         detail.recived_quantity = prod.quantity;
       } else {
-        // 'salida' o 'traspaso'
         detail.sent_quantity = prod.quantity;
       }
       return detail;
     });
   };
 
-  // Crear => POST create_warehouse_movement
   const handleSaveCreate = async () => {
     try {
       const payload = {
@@ -288,8 +270,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   };
 
-  // Actualizar => POST update_warehouse_movement
-  // Mantiene status "En creacion"
   const handleUpdateMovement = async () => {
     if (!movementData?.id_warehouse_movement) return;
 
@@ -323,7 +303,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   };
 
-  // Ejecutar => POST execute_warehouse_movement, solo si 'entrada' o 'salida'
   const handleExecuteMovement = async () => {
     if (!movementData?.id_warehouse_movement) return;
 
@@ -346,7 +325,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   };
 
-  // Para traspaso => Enviar / Recibido / En revision / Finalizar
   const handleUpdateMovementStatus = async (newStatus) => {
     if (!movementData?.id_warehouse_movement) return;
     const currentDate = new Date().toLocaleString();
@@ -379,120 +357,100 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   };
 
-  // Render principal de botones en la parte inferior
   const noProducts = productsToTransfer.length === 0;
   const isSameStore = isSameStoreSelected;
   const st = currentStatus.toLowerCase();
 
   const renderMainButton = () => {
-    // 1) Si es nuevo => solo "Guardar"
     if (isNewMovement) {
       return (
-        <button
-          className="bg-blue-500 text-white px-4 py-2 rounded w-full"
+        <Button
+          label="Guardar"
+          className="w-full"
           disabled={isSameStore || noProducts}
           onClick={handleSaveCreate}
-        >
-          Guardar
-        </button>
+        />
       );
     }
 
-    // 2) Movimiento existente
     if (st === "en creacion") {
       if (type === "traspaso") {
-        // "Actualizar" => mantiene En creacion
-        // "Enviar" => pasa a Enviado
         return (
           <div className="flex gap-2 w-full">
-            <button
-              className="bg-gray-500 text-white px-4 py-2 rounded flex-1"
+            <Button
+              label="Actualizar"
+              className="p-button-secondary w-1/2"
               disabled={isSameStore || noProducts}
               onClick={handleUpdateMovement}
-            >
-              Actualizar
-            </button>
-            <button
-              className="bg-green-500 text-white px-4 py-2 rounded flex-1"
+            />
+            <Button
+              label="Enviar"
+              className="p-button-success w-1/2"
               disabled={isSameStore || noProducts}
               onClick={() => handleUpdateMovementStatus("Enviado")}
-            >
-              Enviar
-            </button>
+            />
           </div>
         );
       } else if (type === "entrada" || type === "salida") {
-        // "Actualizar" + "Ejecutar"
         return (
           <div className="flex gap-2 w-full">
-            <button
-              className="bg-gray-500 text-white px-4 py-2 rounded flex-1"
+            <Button
+              label="Actualizar"
+              className="p-button-secondary w-1/2"
               disabled={noProducts}
               onClick={handleUpdateMovement}
-            >
-              Actualizar
-            </button>
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded flex-1"
+            />
+            <Button
+              label="Ejecutar"
+              className="p-button-primary w-1/2"
               disabled={noProducts}
               onClick={handleExecuteMovement}
-            >
-              Ejecutar
-            </button>
+            />
           </div>
         );
       }
     }
 
-    // 3) Si es "Enviado" => solo para traspaso => "Marcar Recibido"
     if (st === "enviado" && type === "traspaso") {
       return (
-        <button
-          className="bg-yellow-500 text-white px-4 py-2 rounded w-full"
+        <Button
+          label="Marcar como Recibido"
+          className="w-full p-button-warning"
           onClick={() => handleUpdateMovementStatus("Recibido")}
-        >
-          Marcar como Recibido
-        </button>
+        />
       );
     }
 
-    // 4) "Recibido" => "Revisar" (traspaso)
     if (st === "recibido" && type === "traspaso") {
       return (
-        <button
-          className="bg-orange-500 text-white px-4 py-2 rounded w-full"
+        <Button
+          label="Revisar"
+          className="w-full p-button-help"
           onClick={() => handleUpdateMovementStatus("En revision")}
-        >
-          Revisar
-        </button>
+        />
       );
     }
 
-    // 5) "En revision" => "Finalizar" (traspaso)
     if (st === "en revision" && type === "traspaso") {
       return (
-        <button
-          className="bg-blue-500 text-white px-4 py-2 rounded flex-1"
+        <Button
+          label="Ejecutar"
+          className="w-full p-button-primary"
           disabled={noProducts}
           onClick={handleExecuteMovement}
-        >
-          Ejecutar
-        </button>
+        />
       );
     }
 
-    // 6) Si estado final o no encaja: sin acciones
     return (
-      <button
-        className="bg-gray-400 text-white px-4 py-2 rounded w-full"
+      <Button
+        label="Sin acciones"
+        className="w-full p-button-secondary"
         disabled
-      >
-        Sin acciones
-      </button>
+      />
     );
   };
 
-  // Título interno
   let formTitle = "";
   if (isNewMovement) {
     formTitle = `Crear movimiento: ${
@@ -512,147 +470,80 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   }
 
-  // ¿Podemos editar selects de tienda?
   const canEditStores = isNewMovement;
 
+  const shopDropdownOptions = shops.map((shop) => ({
+    label: shop.name,
+    value: String(shop.id_shop),
+  }));
+
+  const destinationShopDropdownOptions = shops
+    .filter((s) => String(s.id_shop) !== String(selectedOriginStore))
+    .map((shop) => ({
+      label: shop.name,
+      value: String(shop.id_shop),
+    }));
+
+  const productTableColumns = [
+    { field: "product_name", header: "Producto" },
+    { field: "quantity", header: "Cantidad", body: quantityBodyTemplate },
+    { field: "action", header: "", body: actionBodyTemplate },
+  ];
+
+  function quantityBodyTemplate(rowData) {
+    return (
+      <InputNumber
+        value={rowData.quantity}
+        onValueChange={(e) =>
+          handleQuantityChange(rowData.id_product_attribute, e.value)
+        }
+        min={1}
+        disabled={!canEditProducts}
+      />
+    );
+  }
+
+  function actionBodyTemplate(rowData) {
+    return (
+      <Button
+        icon="pi pi-trash"
+        className="p-button-rounded p-button-danger"
+        onClick={() => handleRemoveProduct(rowData.id_product_attribute)}
+        disabled={!canEditProducts}
+      />
+    );
+  }
+
   return (
-    <div className="bg-white rounded-lg p-6">
-      <div className="text-xl font-bold mb-4">{formTitle}</div>
+    <div className="p-2">
+      <div className="mb-6">
+        <Steps
+          model={stepItems}
+          activeIndex={activeIndex}
+          readOnly
+          className="m-0"
+        />{" "}
+        {/* Quitamos margen */}
+      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Columna 1: Fecha + Estado + Empleado */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold mb-1">
-              Fecha Creación
-            </label>
-            <input
-              className="border rounded w-full p-2"
-              type="date"
-              value={createDate}
-              readOnly
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold mb-1">ID Empleado</label>
-            <input
-              className="border rounded w-full p-2"
-              type="text"
-              value={employeeIdV || ""}
-              readOnly
-            />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 3 columnas */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Descripción</label>
+          <InputText
+            placeholder="Ej: Traspaso ropa navidad"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={
+              !isNewMovement && currentStatus.toLowerCase() !== "en creacion"
+            }
+            className="w-full"
+          />
         </div>
-
-        {/* Columna 2: Descripción + Fecha */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold mb-1">Descripción</label>
-            <input
-              className="border rounded w-full p-2"
-              type="text"
-              placeholder="Ej: Traspaso ropa navidad"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={
-                !isNewMovement && currentStatus.toLowerCase() !== "en creacion"
-              }
-            />
-          </div>
-          {type === "traspaso" && (
-            <div className="space-y-2">
-              <div>
-                <label className="block text-sm font-bold mb-1">
-                  Tienda Origen
-                </label>
-                {isLoadingShops ? (
-                  <p>Cargando tiendas...</p>
-                ) : errorLoadingShops ? (
-                  <p className="text-red-500">{errorLoadingShops}</p>
-                ) : (
-                  <select
-                    className="border rounded w-full p-2"
-                    value={selectedOriginStore}
-                    onChange={(e) => setSelectedOriginStore(e.target.value)}
-                    disabled={!canEditStores}
-                  >
-                    <option value="">Selecciona una tienda</option>
-                    {shops.map((shop) => (
-                      <option key={shop.id_shop} value={shop.id_shop}>
-                        {shop.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-1">
-                  Tienda Destino
-                </label>
-                {isLoadingShops ? (
-                  <p>Cargando tiendas...</p>
-                ) : errorLoadingShops ? (
-                  <p className="text-red-500">{errorLoadingShops}</p>
-                ) : (
-                  <select
-                    className="border rounded w-full p-2"
-                    value={selectedDestinationStore}
-                    onChange={(e) =>
-                      setSelectedDestinationStore(e.target.value)
-                    }
-                    disabled={!canEditStores}
-                  >
-                    <option value="">Selecciona una tienda</option>
-                    {shops
-                      .filter(
-                        (s) => String(s.id_shop) !== String(selectedOriginStore)
-                      )
-                      .map((shop) => (
-                        <option key={shop.id_shop} value={shop.id_shop}>
-                          {shop.name}
-                        </option>
-                      ))}
-                  </select>
-                )}
-                {isSameStoreSelected && (
-                  <p className="text-red-500">
-                    La tienda origen y destino no pueden ser la misma.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {type === "entrada" && (
+        {type === "traspaso" && (
+          <>
             <div>
-              <label className="block text-sm font-bold mb-1">
-                Tienda Destino
-              </label>
-              {isLoadingShops ? (
-                <p>Cargando tiendas...</p>
-              ) : errorLoadingShops ? (
-                <p className="text-red-500">{errorLoadingShops}</p>
-              ) : (
-                <select
-                  className="border rounded w-full p-2"
-                  value={selectedDestinationStore}
-                  onChange={(e) => setSelectedDestinationStore(e.target.value)}
-                  disabled={!canEditStores}
-                >
-                  <option value="">Selecciona una tienda</option>
-                  {shops.map((shop) => (
-                    <option key={shop.id_shop} value={shop.id_shop}>
-                      {shop.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          )}
-
-          {type === "salida" && (
-            <div>
-              <label className="block text-sm font-bold mb-1">
+              <label className="block text-sm font-medium mb-2">
                 Tienda Origen
               </label>
               {isLoadingShops ? (
@@ -660,30 +551,107 @@ const TransferForm = ({ type, onSave, movementData }) => {
               ) : errorLoadingShops ? (
                 <p className="text-red-500">{errorLoadingShops}</p>
               ) : (
-                <select
-                  className="border rounded w-full p-2"
+                <Dropdown
                   value={selectedOriginStore}
-                  onChange={(e) => setSelectedOriginStore(e.target.value)}
+                  options={shopDropdownOptions}
+                  onChange={(e) => setSelectedOriginStore(e.value)}
+                  placeholder="Selecciona una tienda"
+                  className="w-full"
                   disabled={!canEditStores}
-                >
-                  <option value="">Selecciona una tienda</option>
-                  {shops.map((shop) => (
-                    <option key={shop.id_shop} value={shop.id_shop}>
-                      {shop.name}
-                    </option>
-                  ))}
-                </select>
+                />
               )}
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Tienda Destino
+              </label>
+              {isLoadingShops ? (
+                <p>Cargando tiendas...</p>
+              ) : errorLoadingShops ? (
+                <p className="text-red-500">{errorLoadingShops}</p>
+              ) : (
+                <Dropdown
+                  value={selectedDestinationStore}
+                  options={destinationShopDropdownOptions}
+                  onChange={(e) => setSelectedDestinationStore(e.value)}
+                  placeholder="Selecciona una tienda"
+                  className="w-full"
+                  disabled={!canEditStores}
+                />
+              )}
+              {isSameStoreSelected && (
+                <p className="text-red-500">
+                  La tienda origen y destino no pueden ser la misma.
+                </p>
+              )}
+            </div>
+          </>
+        )}
+        {type === "entrada" && (
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Tienda Destino
+            </label>
+            {isLoadingShops ? (
+              <p>Cargando tiendas...</p>
+            ) : errorLoadingShops ? (
+              <p className="text-red-500">{errorLoadingShops}</p>
+            ) : (
+              <Dropdown
+                value={selectedDestinationStore}
+                options={shopDropdownOptions}
+                onChange={(e) => setSelectedDestinationStore(e.value)}
+                placeholder="Selecciona una tienda"
+                className="w-full"
+                disabled={!canEditStores}
+              />
+            )}
+          </div>
+        )}
+        {type === "salida" && (
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Tienda Origen
+            </label>
+            {isLoadingShops ? (
+              <p>Cargando tiendas...</p>
+            ) : errorLoadingShops ? (
+              <p className="text-red-500">{errorLoadingShops}</p>
+            ) : (
+              <Dropdown
+                value={selectedOriginStore}
+                options={shopDropdownOptions}
+                onChange={(e) => setSelectedOriginStore(e.value)}
+                placeholder="Selecciona una tienda"
+                className="w-full"
+                disabled={!canEditStores}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        {" "}
+        {/* Nueva fila */}
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Fecha Creación
+          </label>
+          <InputText value={createDate} readOnly className="w-full" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">ID Empleado</label>
+          <InputText value={employeeIdV || ""} readOnly className="w-full" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Tipo Movimiento
+          </label>
+          <InputText value={type} readOnly className="w-full" />
         </div>
       </div>
 
-      <div className="my-4">
-        <Steps readOnly model={stepItems} activeIndex={activeIndex} />
-      </div>
-
-      {/* Si es nuevo o (estado=en creacion) => renderizar el ProductSearchCard */}
       {(isNewMovement || currentStatus.toLowerCase() === "en creacion") && (
         <ProductSearchCardForTransfer
           onAddProduct={handleAddProduct}
@@ -695,89 +663,26 @@ const TransferForm = ({ type, onSave, movementData }) => {
         />
       )}
 
-      {/* Tabla de productos */}
       <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-2">
+        <h3 className="text-xl font-semibold mb-2">
           {type === "traspaso"
             ? "Productos a Traspasar"
             : type === "entrada"
             ? "Productos a Ingresar"
             : "Productos a Retirar"}
         </h3>
-        <table className="min-w-full bg-white border">
-          <thead>
-            <tr>
-              <th className="py-2 px-4 border-b text-left">Producto</th>
-              <th className="py-2 px-4 border-b text-left">Cantidad</th>
-              <th className="py-2 px-4 border-b text-left"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {productsToTransfer.length === 0 && (
-              <tr>
-                <td colSpan={3} className="p-4 text-center text-gray-500">
-                  No hay productos seleccionados.
-                </td>
-              </tr>
-            )}
-
-            {productsToTransfer.map((product, index) => {
-              const rowClass =
-                product.id_product_attribute === recentlyAddedId
-                  ? "animate-product"
-                  : "";
-              const eanString = product.ean13 || "";
-
-              return (
-                <tr
-                  key={`${product.id_product_attribute}_${index}`}
-                  className={rowClass}
-                >
-                  <td className="py-2 px-4 border-b">
-                    <div>
-                      {product.product_name}
-                      {product.combination_name
-                        ? ` - ${product.combination_name}`
-                        : ""}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      EAN: {eanString || "--"}
-                    </div>
-                  </td>
-                  <td className="py-2 px-4 border-b">
-                    <input
-                      type="number"
-                      min="1"
-                      className="border rounded w-16 p-1"
-                      value={product.quantity}
-                      onChange={(e) =>
-                        handleQuantityChange(
-                          product.id_product_attribute,
-                          e.target.value
-                        )
-                      }
-                      disabled={!canEditProducts}
-                    />
-                  </td>
-                  <td className="py-2 px-4 border-b">
-                    <button
-                      className="bg-red-500 text-white px-2 py-1 rounded"
-                      onClick={() =>
-                        handleRemoveProduct(product.id_product_attribute)
-                      }
-                      disabled={!canEditProducts}
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <DataTable value={productsToTransfer} responsiveLayout="scroll">
+          {productTableColumns.map((col) => (
+            <Column
+              key={col.field}
+              field={col.field}
+              header={col.header}
+              body={col.body}
+            />
+          ))}
+        </DataTable>
       </div>
 
-      {/* Botones finales */}
       <div className="mt-6 flex gap-4">{renderMainButton()}</div>
     </div>
   );

@@ -1,20 +1,32 @@
-// src/components/modals/reports/SalesReportModal.jsx
 import React from "react";
-import Modal from "../modals/Modal";
+import { Dialog } from "primereact/dialog";
 import SalesReportSearch from "./SalesReportSearch";
 
 const SalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
+  const getAppendTarget = () => {
+    if (inlineMode) {
+      const target = document.getElementById("mobile-modals-container");
+      return target ? target : document.body;
+    }
+    return document.body;
+  };
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Reporte de Ventas"
-      size="6xl"
-      height="default"
-      inlineMode={inlineMode}
+    <Dialog
+      header="Reporte de Ventas"
+      visible={isOpen}
+      onHide={onClose}
+      modal
+      appendTo={getAppendTarget()}
+      style={{
+        width: inlineMode ? "100vw" : "80vw",
+        maxWidth: inlineMode ? "none" : "1200px",
+      }}
+      draggable={false}
+      resizable={false}
     >
       <SalesReportSearch />
-    </Modal>
+    </Dialog>
   );
 };
 

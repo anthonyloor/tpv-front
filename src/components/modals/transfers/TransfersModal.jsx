@@ -11,7 +11,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Toolbar } from "primereact/toolbar";
 
-const TransfersModal = ({ isOpen, onClose }) => {
+const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
   const apiFetch = useApiFetch();
 
   // Vistas => 'list', 'selectType', 'form'
@@ -498,7 +498,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
           value={movements}
           loading={loading}
           scrollable
-          scrollHeight="540px"
+          scrollHeight="650px"
           dataKey="id_warehouse_movement"
           selectionMode="multiple"
           metaKeySelection={false}
@@ -506,7 +506,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
           onSelectionChange={(e) => setSelectedMovements(e.value)}
           paginator
           rows={10}
-          rowsPerPageOptions={[10, 15, 30]}
+          rowsPerPageOptions={[10, 20, 30]}
           emptyMessage={loading ? "Cargando..." : "No hay movimientos."}
           className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
           onRowClick={(e) => handleRowClick(e.data)}
@@ -631,6 +631,30 @@ const TransfersModal = ({ isOpen, onClose }) => {
     setMovementType(null);
   };
 
+  // Cabecera personalizada del diálogo
+  const dialogHeader = () => {
+    return (
+      <div className="flex items-center justify-between w-full">
+        <div className="w-[100px]">
+          {" "}
+          {/* Espacio fijo para el botón atrás */}
+          {showBackButton && (
+            <Button
+              icon="pi pi-arrow-left"
+              className="p-button-text"
+              onClick={handleBack}
+            />
+          )}
+        </div>
+        <span className="font-bold text-xl flex-1 text-center">
+          {modalTitle}
+        </span>
+        <div className="w-[100px]"></div>{" "}
+        {/* Espacio fijo para mantener el título centrado */}
+      </div>
+    );
+  };
+
   let content = null;
   if (currentView === "list") {
     content = renderMovementList();
@@ -644,21 +668,13 @@ const TransfersModal = ({ isOpen, onClose }) => {
     <Dialog
       visible={isOpen}
       onHide={onClose}
-      header={modalTitle}
+      header={dialogHeader}
+      draggable={false}
+      resizable={false}
+      closable={true}
       modal
-      style={{ width: "85vw", maxWidth: "1200px" }}
+      style={{ width: "40vw" }}
     >
-      {/* Botón "Atrás" si no estamos en la vista "list" */}
-      {showBackButton && (
-        <div className="mb-3">
-          <Button
-            label="Atrás"
-            icon="pi pi-arrow-left"
-            className="p-button-text"
-            onClick={handleBack}
-          />
-        </div>
-      )}
       {content}
     </Dialog>
   );

@@ -35,7 +35,7 @@ const SessionExpiredDialog = () => {
       onHide={() => {}}
       modal
       closable={false}
-      style={{ width: "20rem", backgroundColor: "var(--surface-0)" }}
+      style={{ width: "25rem", backgroundColor: "var(--surface-0)" }}
     >
       <div className="text-center">
         <p className="mb-6">
