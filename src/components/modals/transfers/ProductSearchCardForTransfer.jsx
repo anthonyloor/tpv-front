@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
-import { useApiFetch } from '../../utils/useApiFetch';
-import ProductSelectionModal from './ProductSelectionModal';
+import React, { useState } from "react";
+import { useApiFetch } from "../../utils/useApiFetch";
+import ProductSelectionModal from "./ProductSelectionModal";
+import { Card } from "primereact/card";
+import { InputText } from "primereact/inputtext";
+import { Button } from "primereact/button";
+import { Checkbox } from "primereact/checkbox";
+import { ProgressSpinner } from "primereact/progressspinner";
 
 const ProductSearchCardForTransfer = ({
   onAddProduct,
@@ -11,9 +16,8 @@ const ProductSearchCardForTransfer = ({
   destinationShopName,
 }) => {
   const apiFetch = useApiFetch();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
   const [modalProducts, setModalProducts] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -21,11 +25,11 @@ const ProductSearchCardForTransfer = ({
   const [autoAdd, setAutoAdd] = useState(false);
 
   let isSearchDisabled = false;
-  if (type === 'traspaso') {
+  if (type === "traspaso") {
     isSearchDisabled = !selectedOriginStore || !selectedDestinationStore;
-  } else if (type === 'entrada') {
+  } else if (type === "entrada") {
     isSearchDisabled = !selectedDestinationStore;
-  } else if (type === 'salida') {
+  } else if (type === "salida") {
     isSearchDisabled = !selectedOriginStore;
   }
 
@@ -34,7 +38,11 @@ const ProductSearchCardForTransfer = ({
   };
 
   const handleKeyDown = async (e) => {
-    if (e.key === 'Enter' && searchTerm.trim().length >= 3 && !isSearchDisabled) {
+    if (
+      e.key === "Enter" &&
+      searchTerm.trim().length >= 3 &&
+      !isSearchDisabled
+    ) {
       await performSearch();
     }
   };
@@ -47,7 +55,7 @@ const ProductSearchCardForTransfer = ({
         const ean13Val =
           prod.ean13_combination !== null
             ? prod.ean13_combination
-            : prod.ean13_combination_0 || '';
+            : prod.ean13_combination_0 || "";
 
         grouped[key] = {
           id_product: prod.id_product,
@@ -80,7 +88,7 @@ const ProductSearchCardForTransfer = ({
         `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
           searchTerm.trim()
         )}`,
-        { method: 'GET' }
+        { method: "GET" }
       );
       const validResults = response.filter(
         (p) =>
@@ -92,11 +100,11 @@ const ProductSearchCardForTransfer = ({
       );
       const transformed = transformProductsForDisplay(validResults);
       if (transformed.length === 0) {
-        alert('No se encontraron productos.');
+        alert("No se encontraron productos.");
         return;
       }
 
-      // Revisar si autoAdd está activo y hay exactamente 1 resultado
+      // Si autoAdd está activo y solo hay un resultado, lo añade automáticamente
       if (autoAdd && transformed.length === 1) {
         handleAddSelectedProducts(transformed);
       } else {
@@ -104,8 +112,8 @@ const ProductSearchCardForTransfer = ({
         setIsModalOpen(true);
       }
     } catch (error) {
-      console.error('[ProductSearchCardForTransfer] Error:', error);
-      alert('Error al buscar productos');
+      console.error("[ProductSearchCardForTransfer] Error:", error);
+      alert("Error al buscar productos");
     } finally {
       setIsLoading(false);
     }
@@ -126,84 +134,62 @@ const ProductSearchCardForTransfer = ({
       onAddProduct(item);
     });
     setIsModalOpen(false);
-    setSearchTerm('');
+    setSearchTerm("");
   };
 
   return (
-    <div className="mt-6 bg-white rounded-lg">
-      <h2 className="text-lg font-semibold mb-2">Buscar Producto</h2>
-
-      {/* Contenedor flex para alinear input y botón en la misma fila */}
-      <div className="flex items-center gap-2 mb-2">
-        <div className="relative flex-grow">
-          <input
-            type="text"
-            placeholder="Buscar por nombre, referencia o código..."
-            className="border rounded p-2 w-full"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            onKeyDown={handleKeyDown}
-            disabled={isSearchDisabled || isLoading}
-          />
-          {isLoading && (
-            <div className="absolute right-2 top-2">
-              <svg
-                className="animate-spin h-5 w-5 text-gray-500"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8H4z"
-                />
-              </svg>
-            </div>
-          )}
+    <Card className="mt-6" title="Buscar Producto">
+      <div className="p-fluid">
+        <div className="p-field p-grid">
+          <div className="p-col-12 p-md-9">
+            <InputText
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Buscar por referencia o código de barras"
+              disabled={isSearchDisabled || isLoading}
+            />
+          </div>
+          <div className="p-col-12 p-md-3">
+            <Button
+              label="Buscar"
+              icon="pi pi-search"
+              onClick={performSearch}
+              disabled={
+                isSearchDisabled || isLoading || searchTerm.trim().length < 3
+              }
+              className="w-full"
+            />
+          </div>
         </div>
-
-        <button
-          onClick={performSearch}
-          className="bg-blue-600 text-white px-3 py-2 rounded"
-          disabled={
-            isSearchDisabled || isLoading || searchTerm.trim().length < 3
-          }
-        >
-          Buscar
-        </button>
+        {isLoading && (
+          <div className="p-d-flex p-jc-center">
+            <ProgressSpinner
+              style={{ width: "30px", height: "30px" }}
+              strokeWidth="8"
+            />
+          </div>
+        )}
+        <div className="p-field">
+          <Checkbox
+            inputId="autoAdd"
+            checked={autoAdd}
+            onChange={(e) => setAutoAdd(e.checked)}
+          />
+          <label htmlFor="autoAdd" className="p-checkbox-label">
+            Agregar Automático
+          </label>
+        </div>
+        {isSearchDisabled && (
+          <p className="p-text-danger">
+            {type === "traspaso"
+              ? "Selecciona ambas tiendas (origen y destino)."
+              : type === "entrada"
+              ? "Selecciona la tienda destino."
+              : "Selecciona la tienda origen."}
+          </p>
+        )}
       </div>
-
-      {/* Checkbox para "Agregar Automático" */}
-      <label className="inline-flex items-center space-x-2 mb-4">
-        <input
-          type="checkbox"
-          className="form-checkbox h-5 w-5"
-          checked={autoAdd}
-          onChange={(e) => setAutoAdd(e.target.checked)}
-        />
-        <span className="text-sm text-gray-700">Agregar Automático</span>
-      </label>
-
-      {isSearchDisabled && (
-        <p className="mt-3 text-red-500">
-          {type === 'traspaso'
-            ? 'Selecciona ambas tiendas (origen y destino).'
-            : type === 'entrada'
-            ? 'Selecciona la tienda destino.'
-            : 'Selecciona la tienda origen.'
-          }
-        </p>
-      )}
-
       <ProductSelectionModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -213,7 +199,7 @@ const ProductSearchCardForTransfer = ({
         destinationShopName={destinationShopName}
         type={type}
       />
-    </div>
+    </Card>
   );
 };
 
