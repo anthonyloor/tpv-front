@@ -5,6 +5,7 @@ import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import TicketViewModal from "../ticket/TicketViewModal";
 
@@ -102,11 +103,11 @@ const ReprintModal = ({ isOpen, onClose }) => {
     setTicketGift(gift);
   };
 
-  // Fila “custom” expandible
+  // Fila expandible
   const CustomRow = ({ sale, isLoading }) => {
     const [expanded, setExpanded] = useState(false);
-    const [maxHeight, setMaxHeight] = useState("0px");
     const contentRef = useRef(null);
+    const [maxHeight, setMaxHeight] = useState("0px");
 
     const toggleExpand = () => {
       if (!isLoading && sale.order_details?.length > 0) {
@@ -123,6 +124,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
       }
     }, [expanded, sale.order_details]);
 
+    // Chequear si es la venta seleccionada
     const isSelected = sale.id_order === selectedOrderId;
     const handleSelect = () => {
       if (!isLoading) {
@@ -130,57 +132,84 @@ const ReprintModal = ({ isOpen, onClose }) => {
       }
     };
 
+    // Estilos inline con CSS variables
+    const containerStyle = {
+      backgroundColor: "var(--surface-0)",
+      border: "1px solid var(--surface-border)",
+      borderRadius: "4px",
+      marginBottom: "0.5rem",
+      padding: "1rem",
+      transition: "background-color 0.2s",
+    };
+
+    const headerStyle = {
+      display: "flex",
+      flexWrap: "wrap",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "0.5rem",
+      color: "var(--text-color)",
+    };
+
     return (
-      <div className="border rounded mb-2 p-2 bg-white shadow-sm transition-colors">
-        <div className="flex flex-wrap items-center justify-between space-y-1 md:space-y-0">
-          <div className="mr-2">
+      <div style={containerStyle}>
+        <div style={headerStyle}>
+          <div>
             {isLoading ? (
-              <div className="animate-pulse">
+              <div className="p-mb-2">
                 <div className="bg-gray-200 h-4 w-32 rounded mb-1" />
                 <div className="bg-gray-200 h-3 w-24 rounded" />
               </div>
             ) : (
               <>
-                <div className="font-semibold">ID Venta: {sale.id_order}</div>
-                <div className="text-gray-600">
-                  ID Cliente: {sale.id_customer}
-                </div>
+                <div className="font-bold mb-1">ID Venta: {sale.id_order}</div>
+                <div className="text-sm">ID Cliente: {sale.id_customer}</div>
               </>
             )}
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-3">
             {isLoading ? (
-              <div className="animate-pulse flex space-x-2">
+              <div className="flex gap-2">
                 <div className="bg-gray-200 h-4 w-16 rounded" />
                 <div className="bg-gray-200 h-4 w-16 rounded" />
               </div>
             ) : (
               <>
                 <div className="text-right">
-                  <div className="text-gray-500 text-xs">Método Pago</div>
-                  <div className="font-semibold">{sale.payment}</div>
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    Método Pago
+                  </div>
+                  <div className="font-bold">{sale.payment}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-gray-500 text-xs">Total (€)</div>
-                  <div className="font-semibold">
-                    {sale.total_paid?.toFixed(2)}
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    Total (€)
                   </div>
+                  <div className="font-bold">{sale.total_paid?.toFixed(2)}</div>
                 </div>
               </>
             )}
 
-            {/* Radio para seleccionar la venta */}
-            <div>
-              <input
-                type="radio"
-                checked={isSelected}
-                onChange={handleSelect}
-                disabled={isLoading}
-              />
-            </div>
+            {/* Radio => seleccionar la venta */}
+            <input
+              type="radio"
+              checked={isSelected}
+              onChange={handleSelect}
+              disabled={isLoading}
+            />
 
-            {/* Botón expandir si hay detalles */}
+            {/* Botón expandir */}
             {!isLoading && sale.order_details?.length > 0 && (
               <Button
                 label={expanded ? "Ocultar" : "Ver Detalles"}
@@ -201,37 +230,59 @@ const ReprintModal = ({ isOpen, onClose }) => {
             marginTop: expanded ? "0.5rem" : "0",
           }}
         >
-          <div className="border rounded p-2 bg-gray-50">
+          <div
+            className="p-2"
+            style={{
+              backgroundColor: "var(--surface-50)",
+              border: "1px solid var(--surface-border)",
+              borderRadius: "4px",
+            }}
+          >
             {isLoading ? (
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded mb-1 w-3/4" />
-                <div className="h-4 bg-gray-200 rounded mb-1 w-2/3" />
-                <div className="h-4 bg-gray-200 rounded mb-1 w-1/2" />
+              <div style={{ color: "var(--text-secondary)" }}>
+                Cargando detalles...
               </div>
+            ) : !sale.order_details?.length ? (
+              <div className="text-sm">Sin detalles.</div>
             ) : (
-              <table className="min-w-full text-xs md:text-sm">
-                <thead className="bg-white text-gray-700">
-                  <tr>
-                    <th className="py-1 px-2 text-left">Producto</th>
-                    <th className="py-1 px-2 text-right">Unid.</th>
-                    <th className="py-1 px-2 text-right">P/U (€)</th>
-                    <th className="py-1 px-2 text-right">Total (€)</th>
+              <table style={{ width: "100%", fontSize: "0.875rem" }}>
+                <thead>
+                  <tr
+                    style={{
+                      backgroundColor: "var(--surface-100)",
+                      color: "var(--text-color)",
+                    }}
+                  >
+                    <th style={{ textAlign: "left", padding: "0.5rem" }}>
+                      Producto
+                    </th>
+                    <th style={{ textAlign: "right", padding: "0.5rem" }}>
+                      Unid.
+                    </th>
+                    <th style={{ textAlign: "right", padding: "0.5rem" }}>
+                      P/U (€)
+                    </th>
+                    <th style={{ textAlign: "right", padding: "0.5rem" }}>
+                      Total (€)
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sale.order_details?.map((item, idx) => {
+                  {sale.order_details.map((item, idx) => {
                     const total =
                       item.unit_price_tax_incl * item.product_quantity;
                     return (
-                      <tr key={idx} className="border-b last:border-b-0">
-                        <td className="py-1 px-2">{item.product_name}</td>
-                        <td className="py-1 px-2 text-right">
+                      <tr key={idx} style={{ borderBottom: "1px solid #ddd" }}>
+                        <td style={{ padding: "0.5rem" }}>
+                          {item.product_name}
+                        </td>
+                        <td style={{ padding: "0.5rem", textAlign: "right" }}>
                           {item.product_quantity}
                         </td>
-                        <td className="py-1 px-2 text-right">
+                        <td style={{ padding: "0.5rem", textAlign: "right" }}>
                           {item.unit_price_tax_incl.toFixed(2)}
                         </td>
-                        <td className="py-1 px-2 text-right">
+                        <td style={{ padding: "0.5rem", textAlign: "right" }}>
                           {total.toFixed(2)}
                         </td>
                       </tr>
@@ -246,7 +297,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
     );
   };
 
-  // Datos “esqueleto”
+  // Datos “skeleton”
   const skeletonData = new Array(rows).fill(null).map((_, idx) => ({
     id_order: `skeleton-${idx}`,
     id_customer: "",
@@ -255,7 +306,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
     order_details: [],
   }));
 
-  // Body para la DataTable, una sola columna con el CustomRow
+  // singleColumnBodyTemplate
   const singleColumnBodyTemplate = (sale) => {
     return <CustomRow sale={sale} isLoading={isLoading} />;
   };
@@ -278,31 +329,49 @@ const ReprintModal = ({ isOpen, onClose }) => {
         onHide={onClose}
         header="Reimprimir Ticket"
         modal
-        style={{ width: "70vw", maxWidth: "900px" }}
+        style={{
+          width: "70vw",
+          maxWidth: "900px",
+          backgroundColor: "var(--surface-0)",
+          color: "var(--text-color)",
+        }}
       >
-        <div className="w-full mx-auto space-y-4">
+        <div className="p-2">
           {/* Input para buscar ticket */}
-          <div className="flex space-x-2 items-end">
+          <div className="flex items-center gap-2 mb-3">
             <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Número de ticket"
-                value={orderId}
-                onChange={(e) => setOrderId(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSearchOrder();
-                }}
-                className="border rounded p-2 w-full"
-              />
+              <span className="p-input-icon-left w-full">
+                <i
+                  className="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: "var(--text-secondary)" }}
+                />
+                <InputText
+                  placeholder="Número de ticket"
+                  value={orderId}
+                  onChange={(e) => setOrderId(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSearchOrder();
+                  }}
+                  className="w-full pl-8"
+                />
+              </span>
             </div>
+            <Button
+              label="Buscar"
+              icon="pi pi-search"
+              onClick={handleSearchOrder}
+              disabled={!orderId.trim()}
+            />
           </div>
 
-          {error && <div className="text-red-500 font-semibold">{error}</div>}
+          {error && (
+            <div className="text-red-500 font-semibold mb-2">{error}</div>
+          )}
 
-          {/* Tabla con las órdenes (recientes o la buscada) */}
+          {/* DataTable con las órdenes */}
           <DataTable
             value={displayData}
-            className="p-datatable-sm"
+            className="p-datatable-sm p-datatable-gridlines"
             paginator
             rows={rows}
             dataKey="id_order"
@@ -318,24 +387,23 @@ const ReprintModal = ({ isOpen, onClose }) => {
           </DataTable>
 
           {/* Botones para reimprimir */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end gap-2 mt-2">
             <Button
               label="Ticket Normal"
               icon="pi pi-print"
               onClick={() => handleReprintClick(false)}
-              className="p-button-success p-button-sm"
+              className="p-button-success"
             />
             <Button
               label="Ticket Regalo"
               icon="pi pi-gift"
               onClick={() => handleReprintClick(true)}
-              className="p-button-help p-button-sm"
+              className="p-button-help"
             />
           </div>
         </div>
       </Dialog>
 
-      {/* TicketViewModal para la reimpresión */}
       {ticketModalOpen && viewTicketOrderId && (
         <TicketViewModal
           isOpen={ticketModalOpen}

@@ -1,6 +1,6 @@
 // src/components/ProductSearch/ProductSearchCard.jsx
 
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useRef, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { AuthContext } from "../../contexts/AuthContext";
@@ -10,23 +10,30 @@ import { toast } from "sonner";
 import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { TabView, TabPanel } from "primereact/tabview";
 
 const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  // groupedProducts contendrá el resultado de agrupar los productos por nombre
+  const [groupedProducts, setGroupedProducts] = useState([]);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [viewMode, setViewMode] = useState("table");
 
   const { configData } = useContext(ConfigContext);
   const { shopId, shopName } = useContext(AuthContext);
   const allowOutOfStockSales = configData?.allow_out_of_stock_sales || false;
   const apiFetch = useApiFetch();
 
-  // Función de agrupación para el modo "tab"
+  const searchInputRef = useRef(null);
+
+  // Efecto que asegura que, cuando searchTerm queda vacío, se haga focus en el input
+  useEffect(() => {
+    if (searchTerm === "" && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchTerm]);
+
+  // Función de agrupación (se conserva la lógica original)
   const groupProductsByProductName = (products) => {
     const validProducts = products.filter(
       (product) =>
@@ -38,49 +45,33 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       const existingGroup = acc.find(
         (group) => group.product_name === product.product_name
       );
+      const productStock = {
+        shop_name: product.shop_name,
+        id_shop: product.id_shop,
+        quantity: product.quantity,
+        id_stock_available: product.id_stock_available,
+      };
       if (existingGroup) {
         const existingCombination = existingGroup.combinations.find(
           (combination) =>
             combination.id_product_attribute === product.id_product_attribute
         );
         if (existingCombination) {
-          existingCombination.stocks.push({
-            shop_name: product.shop_name,
-            id_shop: product.id_shop,
-            quantity: product.quantity,
-            id_stock_available: product.id_stock_available,
-          });
+          existingCombination.stocks.push(productStock);
         } else {
           existingGroup.combinations.push({
             ...product,
-            stocks: [
-              {
-                shop_name: product.shop_name,
-                id_shop: product.id_shop,
-                quantity: product.quantity,
-                id_stock_available: product.id_stock_available,
-              },
-            ],
+            stocks: [productStock],
           });
         }
       } else {
         acc.push({
           product_name: product.product_name,
-          name_category: product.name_category,
-          link_rewrite: product.link_rewrite,
-          id_product: product.id_product,
           image_url: product.image_url,
           combinations: [
             {
               ...product,
-              stocks: [
-                {
-                  shop_name: product.shop_name,
-                  id_shop: product.id_shop,
-                  quantity: product.quantity,
-                  id_stock_available: product.id_stock_available,
-                },
-              ],
+              stocks: [productStock],
             },
           ],
         });
@@ -89,10 +80,41 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     }, []);
   };
 
-  // Lógica de búsqueda (similar a la anterior)
+  // Para detectar si hay algún modal abierto y así forzar el foco en el input
+  const isAnyModalOpen = () => {
+    return document.querySelector('[role="dialog"]') !== null;
+  };
+
+  const handleContainerClick = () => {
+    if (!isAnyModalOpen() && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  const handleInputBlur = () => {
+    if (!isAnyModalOpen() && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  // Funciones para el modal de confirmación (definidas para corregir ESLint)
+  const handleCancelAdd = () => {
+    setConfirmModalOpen(false);
+    setProductToConfirm(null);
+  };
+
+  const handleConfirmAdd = () => {
+    // Se fuerza la adición aunque exceda stock
+    onAddProduct(productToConfirm, null, null, true, 1);
+    toast.success("Producto sin stock añadido al ticket");
+    setConfirmModalOpen(false);
+    setProductToConfirm(null);
+  };
+
+  // Lógica de búsqueda
   const handleKeyDown = async (event) => {
     if (event.key !== "Enter") return;
-    // Si el texto empieza con "#", se procesa como descuento
+    // Caso descuento: si inicia con "#"
     if (searchTerm.startsWith("#")) {
       setIsLoading(true);
       try {
@@ -106,6 +128,11 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         if (!data.active) {
           alert("Vale descuento no válido, motivo: no activo");
           setSearchTerm("");
+          setTimeout(() => {
+            if (searchInputRef.current) {
+              searchInputRef.current.focus();
+            }
+          }, 100);
           return;
         }
         const client = JSON.parse(localStorage.getItem("selectedClient"));
@@ -118,6 +145,11 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
             "Vale descuento no válido, motivo: no pertenece al cliente seleccionado"
           );
           setSearchTerm("");
+          setTimeout(() => {
+            if (searchInputRef.current) {
+              searchInputRef.current.focus();
+            }
+          }, 100);
           return;
         }
         if (data && onAddDiscount) {
@@ -131,8 +163,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           onAddDiscount(discObj);
         }
         setSearchTerm("");
-        setFilteredProducts([]);
-        setSelectedProduct(null);
+        setGroupedProducts([]);
+        setTimeout(() => {
+          if (searchInputRef.current) {
+            searchInputRef.current.focus();
+          }
+        }, 100);
       } catch (error) {
         console.error("Error al buscar vale descuento:", error);
         alert("Error al buscar el vale. Inténtalo de nuevo.");
@@ -142,12 +178,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       return;
     }
 
-    // Expresiones regulares para detectar EAN13
+    // Expresiones regulares para EAN13
     const ean13Regex = /^\d{13}$/;
     const ean13HyphenRegex = /^\d{13}-\d+$/;
 
-    if (ean13Regex.test(searchTerm)) {
-      // Caso: EAN13 puro
+    if (ean13Regex.test(searchTerm) || ean13HyphenRegex.test(searchTerm)) {
+      // Caso EAN13
       setIsLoading(true);
       try {
         const results = await apiFetch(
@@ -162,18 +198,24 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
             product.ean13_combination !== null ||
             product.ean13_combination_0 !== null
         );
+        // Filtrar solo los productos de la tienda actual
         const filteredForCurrentShop = validResults.filter(
           (product) => product.id_shop === shopId
         );
+        const groups = groupProductsByProductName(validResults);
+        setGroupedProducts(groups);
         if (filteredForCurrentShop.length === 1) {
-          // Si solo hay un resultado, lo agregamos automáticamente
+          // Si solo hay un resultado para la tienda actual, agregar automáticamente
           addProductToCart(filteredForCurrentShop[0]);
           setSearchTerm("");
-          setFilteredProducts([]);
-          setSelectedProduct(null);
+          setGroupedProducts([]);
+          setTimeout(() => {
+            if (searchInputRef.current) {
+              searchInputRef.current.focus();
+            }
+          }, 100);
           return;
         }
-        setFilteredProducts(validResults);
       } catch (error) {
         console.error("Error en la búsqueda por EAN13:", error);
         alert("Error al buscar producto por EAN13. Inténtalo de nuevo.");
@@ -182,13 +224,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       }
       return;
     }
-    if (ean13HyphenRegex.test(searchTerm)) {
-      // Caso: EAN13 con guion y número (por ejemplo, "5006503289541-50")
-      alert("Se añade producto por ean13 + id_stock");
-      setSearchTerm("");
-      return;
-    }
-    // Búsqueda normal sin acción automática de añadir
+
+    // Búsqueda normal sin acción automática
     setIsLoading(true);
     try {
       const results = await apiFetch(
@@ -203,8 +240,13 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           product.ean13_combination !== null ||
           product.ean13_combination_0 !== null
       );
-      setFilteredProducts(validResults);
-      setSelectedProduct(null);
+      const groups = groupProductsByProductName(validResults);
+      setGroupedProducts(groups);
+      setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 100);
     } catch (error) {
       console.error("Error en la búsqueda:", error);
       alert("Error al buscar productos. Inténtalo de nuevo más tarde.");
@@ -263,119 +305,41 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     });
   };
 
-  const handleConfirmAdd = () => {
-    onAddProduct(productToConfirm, null, null, true, 1);
-    toast.success("Producto sin stock añadido al ticket");
-    setConfirmModalOpen(false);
-    setProductToConfirm(null);
-  };
-
-  const handleCancelAdd = () => {
-    setConfirmModalOpen(false);
-    setProductToConfirm(null);
-  };
-
-  // Modo "tabla": al seleccionar una fila se asigna el producto
+  // Al seleccionar una fila en el DataTable, asigna el producto (combinación) seleccionada
   const onRowSelect = (e) => {
-    setSelectedProduct(e.data);
     if (onClickProduct) onClickProduct(e.data);
   };
 
-  // Plantillas para el DataTable (modo tabla)
-  const nameBodyTemplate = (rowData) => rowData.product_name;
-  const colorBodyTemplate = (rowData) => {
-    if (rowData.combination_name) {
-      const parts = rowData.combination_name.split(" - ");
-      return parts[0] || "";
-    }
-    return "";
-  };
-  const tallaBodyTemplate = (rowData) => {
-    if (rowData.combination_name) {
-      const parts = rowData.combination_name.split(" - ");
-      return parts[1] || "";
-    }
-    return "";
-  };
+  // --- Plantillas para las columnas del DataTable ---
+  const combinationBodyTemplate = (rowData) => rowData.combination_name;
+  const referenceBodyTemplate = (rowData) => rowData.reference_combination;
+  const eanBodyTemplate = (rowData) => rowData.ean13_combination;
   const priceBodyTemplate = (rowData) => rowData.price.toFixed(2) + " €";
   const quantityBodyTemplate = (rowData) => rowData.quantity;
 
-  // Función para renderizar stock (modo tabla) debajo del DataTable
-  const renderStockInfo = () => {
-    if (!selectedProduct || !selectedProduct.stocks) return null;
+  // Template para el encabezado de grupo
+  const groupHeaderTemplate = (groupValue) => {
     return (
       <div
-        className="mt-4 p-3 border rounded"
-        style={{ borderColor: "var(--surface-border)" }}
+        className="p-2 font-bold"
+        style={{
+          backgroundColor: "var(--surface-100)",
+          borderBottom: "1px solid var(--surface-border)",
+        }}
       >
-        <h5 className="font-bold mb-2">
-          Stock para {selectedProduct.product_name}
-        </h5>
-        <ul>
-          {selectedProduct.stocks.map((stock) => (
-            <li key={stock.id_stock_available}>
-              {stock.shop_name}: {stock.quantity}
-            </li>
-          ))}
-        </ul>
+        {groupValue}
       </div>
     );
   };
 
-  // Modo "tab": agrupar productos por nombre
-  const groupedProducts = groupProductsByProductName(filteredProducts);
-
-  // Nueva función para renderizar contenido en modo pestañas en formato horizontal
-  const renderTabContent = (group) => {
-    return (
-      <div className="flex flex-row p-3 gap-4">
-        {/* Área para imagen (placeholder o imagen real) */}
-        <div
-          className="w-1/4 flex items-center justify-center border rounded"
-          style={{ minHeight: "150px" }}
-        >
-          {group.image_url ? (
-            <img
-              src={group.image_url}
-              alt={group.product_name}
-              className="max-h-32"
-            />
-          ) : (
-            <span className="text-gray-500">Sin imagen</span>
-          )}
-        </div>
-        {/* Información del producto */}
-        <div className="flex-grow">
-          <h5 className="font-bold text-lg">{group.product_name}</h5>
-          {/* Mostrar cada combinación (color y talla) en formato horizontal */}
-          {group.combinations.map((combo, index) => {
-            const parts = combo.combination_name
-              ? combo.combination_name.split(" - ")
-              : ["Sin asignar", ""];
-            const color = parts[0] || "";
-            const talla = parts[1] || "";
-            return (
-              <div
-                key={index}
-                className="flex justify-between border-b pb-1 mb-1"
-              >
-                <div className="w-1/2">
-                  <span className="font-medium">Color:</span> {color}
-                </div>
-                <div className="w-1/2">
-                  <span className="font-medium">Talla:</span> {talla}
-                </div>
-              </div>
-            );
-          })}
-          <div className="mt-2">
-            <span className="font-bold">Precio: </span>
-            {group.combinations[0]?.price?.toFixed(2)} €
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // Aplanamos los grupos para usarlos en el DataTable (la propiedad groupField usará product_name)
+  const flatProducts = groupedProducts.reduce((acc, group) => {
+    const combos = group.combinations.map((combo) => ({
+      ...combo,
+      product_name: group.product_name,
+    }));
+    return acc.concat(combos);
+  }, []);
 
   return (
     <div
@@ -384,8 +348,9 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",
       }}
+      onClick={handleContainerClick}
     >
-      {/* Fila de búsqueda y toggle de vista */}
+      {/* Fila de búsqueda */}
       <div className="mb-4 flex items-center">
         <span className="p-input-icon-left w-full">
           <div className="p-input-icon-left">
@@ -395,74 +360,61 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
             />
           </div>
           <InputText
+            ref={searchInputRef}
             placeholder="Buscar por referencia o código de barras..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
             onKeyDown={handleKeyDown}
+            onBlur={handleInputBlur}
             disabled={isLoading}
-            className="w-full pl-9 pr-9 h-12"
+            className="w-full pl-9 pr-9"
             style={{
               borderColor: "var(--surface-border)",
               backgroundColor: "var(--surface-50)",
               color: "var(--text-color)",
             }}
+            autoFocus
           />
         </span>
-        <div className="ml-2">
-          <Button
-            tooltip={
-              viewMode === "table"
-                ? "Cambiar a vista de pestañas"
-                : "Cambiar a vista de tabla"
-            }
-            tooltipOptions={{ position: "bottom" }}
-            icon={viewMode === "table" ? "pi pi-th-large" : "pi pi-table"}
-            onClick={() => setViewMode(viewMode === "table" ? "tab" : "table")}
-            className="p-button-secondary"
-          />
-        </div>
       </div>
 
-      {/* Vista según modo seleccionado */}
-      {viewMode === "table" ? (
-        <>
-          <div className="flex-1 overflow-auto">
-            <DataTable
-              value={filteredProducts}
-              selectionMode="single"
-              onRowSelect={onRowSelect}
-              dataKey="id_stock_available"
-              scrollable
-              className="p-datatable-sm"
-            >
-              <Column
-                field="product_name"
-                header="Nombre producto"
-                body={nameBodyTemplate}
-              />
-              <Column header="Color" body={colorBodyTemplate} />
-              <Column header="Talla" body={tallaBodyTemplate} />
-              <Column field="price" header="Precio" body={priceBodyTemplate} />
-              <Column
-                field="quantity"
-                header="Cantidad"
-                body={quantityBodyTemplate}
-              />
-            </DataTable>
-          </div>
-          {selectedProduct && renderStockInfo()}
-        </>
-      ) : (
-        <div className="flex-1 overflow-auto">
-          <TabView>
-            {groupedProducts.map((group, index) => (
-              <TabPanel key={index} header={group.product_name}>
-                {renderTabContent(group)}
-              </TabPanel>
-            ))}
-          </TabView>
-        </div>
-      )}
+      {/* DataTable con agrupación por product_name */}
+      <div className="flex-1 overflow-auto">
+        <DataTable
+          value={flatProducts}
+          groupField="product_name"
+          rowGroupMode="subheader"
+          groupRowTemplate={groupHeaderTemplate}
+          selectionMode="single"
+          onRowSelect={onRowSelect}
+          dataKey="id_product_attribute"
+          scrollable
+          className="p-datatable-sm"
+        >
+          {/* eslint-enable react/no-unknown-property */}
+          <Column
+            field="combination_name"
+            header="Combinación"
+            body={combinationBodyTemplate}
+          />
+          <Column
+            field="reference_combination"
+            header="Referencia"
+            body={referenceBodyTemplate}
+          />
+          <Column
+            field="ean13_combination"
+            header="Cod. Barras"
+            body={eanBodyTemplate}
+          />
+          <Column field="price" header="Precio" body={priceBodyTemplate} />
+          <Column
+            field="quantity"
+            header="Cantidad"
+            body={quantityBodyTemplate}
+          />
+        </DataTable>
+      </div>
 
       {/* Modal para confirmar producto sin stock */}
       <Dialog

@@ -33,6 +33,7 @@ const SessionExpiredDialog = () => {
       header="Sesión Expirada"
       visible={isSessionExpired}
       onHide={() => {}}
+      draggable={false}
       modal
       closable={false}
       style={{ width: "25rem", backgroundColor: "var(--surface-0)" }}

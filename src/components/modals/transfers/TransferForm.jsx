@@ -175,7 +175,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
       if (product.quantity > maxStock) {
         // Si es admin, permitimos añadir pero avisamos
         if (idProfile === 1) {
-          toast.warn(
+          toast.warning(
             `[ADMIN] No hay suficiente stock (${maxStock}). Se ha añadido igualmente.`
           );
           setRecentlyAddedId(product.id_product_attribute);
@@ -195,7 +195,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
         if (newQty > maxStock) {
           // Si es admin, permitimos añadir pero avisamos
           if (idProfile === 1) {
-            toast.warn(
+            toast.warning(
               `[ADMIN] No hay suficiente stock (${maxStock}). Se ha añadido igualmente.`
             );
             setRecentlyAddedId(product.id_product_attribute);
