@@ -177,7 +177,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               <i
                 key={rid}
                 className="pi pi-receipt ml-1 cursor-pointer"
-                onClick={() => alert(rid)}
+                onClick={() => setViewTicketId(rid)}
                 title={`Devolución ${rid}`}
               ></i>
             ))}
@@ -193,7 +193,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               <i
                 key={rid}
                 className="pi pi-receipt ml-1 cursor-pointer"
-                onClick={() => alert(rid)}
+                onClick={() => setViewTicketId(rid)}
                 title={`Devolución ${rid}`}
               ></i>
             ))}
@@ -216,7 +216,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
             <i
               key={rid}
               className="pi pi-receipt ml-1 cursor-pointer"
-              onClick={() => alert(rid)}
+              onClick={() => setViewTicketId(rid)}
               title={`Devolución ${rid}`}
             ></i>
           ))}

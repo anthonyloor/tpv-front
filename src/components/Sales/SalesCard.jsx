@@ -301,34 +301,36 @@ function SalesCard({
           }}
         >
           <h4 className="font-bold text-lg mb-2">Descuentos Aplicados</h4>
-          <ul className="flex flex-col gap-2">
-            {appliedDiscounts.map((disc, index) => {
-              const label = disc.name || `Descuento #${index + 1}`;
-              return (
-                <li
-                  key={index}
-                  className="flex justify-between items-center p-2 rounded"
-                  style={{ backgroundColor: "var(--surface-100)" }}
-                >
-                  <div>
-                    <span className="font-semibold">{label}</span>
-                    {disc.description && (
-                      <div className="text-sm">{disc.description}</div>
-                    )}
-                  </div>
-                  <div className="text-right font-bold">{label}</div>
-                  <div>
-                    <Button
-                      tooltip="Eliminar"
-                      className="p-button-danger"
-                      icon="pi pi-times"
-                      onClick={() => removeDiscountByIndex(index)}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="text-left">Etiqueta</th>
+                <th className="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {appliedDiscounts.map((disc, index) => {
+                const label = disc.name || `Descuento #${index + 1}`;
+                return (
+                  <tr
+                    key={index}
+                    className="border-b"
+                    style={{ borderColor: "var(--surface-border)" }}
+                  >
+                    <td className="py-2">{label}</td>
+                    <td className="py-2 text-right">
+                      <Button
+                        tooltip="Eliminar"
+                        className="p-button-danger p-button-sm"
+                        icon="pi pi-times"
+                        onClick={() => removeDiscountByIndex(index)}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

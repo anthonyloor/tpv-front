@@ -322,6 +322,8 @@ function SalesCardActions({
         visible={isFinalSaleModalOpen}
         onHide={handleCloseFinalSaleModal}
         modal
+        draggable={false}
+        resizable={false}
         style={{ width: "70vw", minHeight: "70vh" }}
       >
         <div

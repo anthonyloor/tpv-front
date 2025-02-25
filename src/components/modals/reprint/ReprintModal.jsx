@@ -12,6 +12,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
+import { Toast } from "primereact/toast";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import TicketViewModal from "../ticket/TicketViewModal";
 import { AuthContext } from "../../../contexts/AuthContext";
@@ -26,6 +27,8 @@ const ReprintModal = ({ isOpen, onClose }) => {
   const [allOrders, setAllOrders] = useState([]);
   const [searchedOrder, setSearchedOrder] = useState(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [expandedRows, setExpandedRows] = useState(null);
+  const toast = useRef(null);
 
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketGift, setTicketGift] = useState(false);
@@ -48,8 +51,14 @@ const ReprintModal = ({ isOpen, onClose }) => {
           }),
         }
       );
-
-      setAllOrders(Array.isArray(data) ? data : []);
+      setAllOrders(
+        Array.isArray(data)
+          ? data.map((order) => ({
+              ...order,
+              order_cart_rules: order.order_cart_rules || [],
+            }))
+          : []
+      );
     } catch (err) {
       console.error("Error cargando ventas recientes:", err);
       setError("No se pudo obtener la lista de ventas recientes.");
@@ -93,6 +102,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
       setSelectedOrderId(null);
       setIsLoading(false);
       setMode("recent");
+      setExpandedRows(null);
     }
   }, [isOpen, loadRecentOrders]);
 
@@ -102,14 +112,16 @@ const ReprintModal = ({ isOpen, onClose }) => {
       alert("Selecciona una venta para reimprimir.");
       return;
     }
-    let saleToReprint = null;
-    if (mode === "recent") {
-      saleToReprint = allOrders.find((o) => o.id_order === selectedOrderId);
-    } else {
-      if (searchedOrder && searchedOrder.id_order === selectedOrderId) {
-        saleToReprint = searchedOrder;
-      }
-    }
+    // Usar directamente el objeto seleccionado si es un objeto.
+    const saleToReprint =
+      typeof selectedOrderId === "object"
+        ? selectedOrderId
+        : mode === "recent"
+        ? allOrders.find((o) => o.id_order === selectedOrderId)
+        : searchedOrder && searchedOrder.id_order === selectedOrderId
+        ? searchedOrder
+        : null;
+
     if (!saleToReprint) {
       alert("No se encontró la venta seleccionada.");
       return;
@@ -119,224 +131,92 @@ const ReprintModal = ({ isOpen, onClose }) => {
     setTicketGift(gift);
   };
 
-  // Fila expandible
-  const CustomRow = ({ sale, isLoading }) => {
-    const [expanded, setExpanded] = useState(false);
-    const contentRef = useRef(null);
-    const [maxHeight, setMaxHeight] = useState("0px");
+  // Unificar las órdenes a mostrar según el modo
+  const displayOrders =
+    mode === "recent" ? allOrders : searchedOrder ? [searchedOrder] : [];
 
-    const toggleExpand = () => {
-      if (!isLoading && sale.order_details?.length > 0) {
-        setExpanded((prev) => !prev);
-      }
-    };
+  // Nuevo componente para la expansión de filas
+  const OrderExpansion = ({ order, apiFetch }) => {
+    const [loading, setLoading] = useState(false);
+    const [details, setDetails] = useState([]);
 
     useEffect(() => {
-      if (expanded && contentRef.current) {
-        const scrollHeight = contentRef.current.scrollHeight;
-        setMaxHeight(`${scrollHeight}px`);
-      } else {
-        setMaxHeight("0px");
-      }
-    }, [expanded, sale.order_details]);
-
-    // Chequear si es la venta seleccionada
-    const isSelected = sale.id_order === selectedOrderId;
-    const handleSelect = () => {
-      if (!isLoading) {
-        setSelectedOrderId(sale.id_order);
-      }
-    };
-
-    // Estilos inline con CSS variables
-    const containerStyle = {
-      backgroundColor: "var(--surface-0)",
-      border: "1px solid var(--surface-border)",
-      borderRadius: "4px",
-      marginBottom: "0.5rem",
-      padding: "1rem",
-      transition: "background-color 0.2s",
-    };
-
-    const headerStyle = {
-      display: "flex",
-      flexWrap: "wrap",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "0.5rem",
-      color: "var(--text-color)",
-    };
+      setLoading(true);
+      (async () => {
+        try {
+          const data = await apiFetch(
+            `https://apitpv.anthonyloor.com/get_order?id_order=${encodeURIComponent(
+              order.id_order
+            )}`,
+            { method: "GET" }
+          );
+          setDetails(data.order_details || []);
+          order.order_cart_rules = data.order_cart_rules || [];
+        } catch (err) {
+          console.error("Error cargando detalles:", err);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }, [order, apiFetch]);
 
     return (
-      <div style={containerStyle}>
-        <div style={headerStyle}>
-          <div>
-            {isLoading ? (
-              <div className="p-mb-2">
-                <div className="bg-gray-200 h-4 w-32 rounded mb-1" />
-                <div className="bg-gray-200 h-3 w-24 rounded" />
-              </div>
-            ) : (
-              <>
-                <div className="font-bold mb-1">ID Venta: {sale.id_order}</div>
-                <div className="text-sm">ID Cliente: {sale.id_customer}</div>
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            {isLoading ? (
-              <div className="flex gap-2">
-                <div className="bg-gray-200 h-4 w-16 rounded" />
-                <div className="bg-gray-200 h-4 w-16 rounded" />
-              </div>
-            ) : (
-              <>
-                <div className="text-right">
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    Método Pago
-                  </div>
-                  <div className="font-bold">{sale.payment}</div>
-                </div>
-                <div className="text-right">
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    Total (€)
-                  </div>
-                  <div className="font-bold">{sale.total_paid?.toFixed(2)}</div>
-                </div>
-              </>
-            )}
-
-            {/* Radio => seleccionar la venta */}
-            <input
-              type="radio"
-              checked={isSelected}
-              onChange={handleSelect}
-              disabled={isLoading}
-            />
-
-            {/* Botón expandir */}
-            {!isLoading && sale.order_details?.length > 0 && (
-              <Button
-                label={expanded ? "Ocultar" : "Ver Detalles"}
-                icon={`pi ${expanded ? "pi-chevron-up" : "pi-chevron-down"}`}
-                className="p-button-text p-button-sm"
-                onClick={toggleExpand}
+      <div className="p-3">
+        {loading ? (
+          <div>Cargando detalles...</div>
+        ) : details.length > 0 ? (
+          <>
+            <h5>Detalles de la venta #{order.id_order}</h5>
+            <DataTable value={details}>
+              <Column field="product_name" header="Producto" />
+              <Column
+                field="product_quantity"
+                header="Cant."
+                style={{ textAlign: "right" }}
               />
+              <Column
+                field="unit_price_tax_incl"
+                header="P/U (€)"
+                body={(data) => data.unit_price_tax_incl.toFixed(2)}
+                style={{ textAlign: "right" }}
+              />
+              <Column
+                header="Total (€)"
+                body={(rowData) =>
+                  (
+                    rowData.unit_price_tax_incl * rowData.product_quantity
+                  ).toFixed(2)
+                }
+                style={{ textAlign: "right" }}
+              />
+            </DataTable>
+            {order.order_cart_rules && order.order_cart_rules.length > 0 && (
+              <>
+                <h5 style={{ marginTop: "1rem" }}>Descuentos</h5>
+                <DataTable value={order.order_cart_rules}>
+                  <Column field="code" header="Código" />
+                  <Column field="name" header="Nombre" />
+                  <Column
+                    field="value"
+                    header="Valor"
+                    body={(data) => data.value.toFixed(2) + " €"}
+                    style={{ textAlign: "right" }}
+                  />
+                </DataTable>
+              </>
             )}
-          </div>
-        </div>
-
-        {/* Contenido expandible */}
-        <div
-          ref={contentRef}
-          className="overflow-hidden transition-all duration-300"
-          style={{
-            maxHeight,
-            marginTop: expanded ? "0.5rem" : "0",
-          }}
-        >
-          <div
-            className="p-2"
-            style={{
-              backgroundColor: "var(--surface-50)",
-              border: "1px solid var(--surface-border)",
-              borderRadius: "4px",
-            }}
-          >
-            {isLoading ? (
-              <div style={{ color: "var(--text-secondary)" }}>
-                Cargando detalles...
-              </div>
-            ) : !sale.order_details?.length ? (
-              <div className="text-sm">Sin detalles.</div>
-            ) : (
-              <table style={{ width: "100%", fontSize: "0.875rem" }}>
-                <thead>
-                  <tr
-                    style={{
-                      backgroundColor: "var(--surface-100)",
-                      color: "var(--text-color)",
-                    }}
-                  >
-                    <th style={{ textAlign: "left", padding: "0.5rem" }}>
-                      Producto
-                    </th>
-                    <th style={{ textAlign: "right", padding: "0.5rem" }}>
-                      Unid.
-                    </th>
-                    <th style={{ textAlign: "right", padding: "0.5rem" }}>
-                      P/U (€)
-                    </th>
-                    <th style={{ textAlign: "right", padding: "0.5rem" }}>
-                      Total (€)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sale.order_details.map((item, idx) => {
-                    const total =
-                      item.unit_price_tax_incl * item.product_quantity;
-                    return (
-                      <tr key={idx} style={{ borderBottom: "1px solid #ddd" }}>
-                        <td style={{ padding: "0.5rem" }}>
-                          {item.product_name}
-                        </td>
-                        <td style={{ padding: "0.5rem", textAlign: "right" }}>
-                          {item.product_quantity}
-                        </td>
-                        <td style={{ padding: "0.5rem", textAlign: "right" }}>
-                          {item.unit_price_tax_incl.toFixed(2)}
-                        </td>
-                        <td style={{ padding: "0.5rem", textAlign: "right" }}>
-                          {total.toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
+          </>
+        ) : (
+          <div>No hay detalles.</div>
+        )}
       </div>
     );
   };
 
-  // Datos “skeleton”
-  const skeletonData = new Array(rows).fill(null).map((_, idx) => ({
-    id_order: `skeleton-${idx}`,
-    id_customer: "",
-    payment: "",
-    total_paid: 0,
-    order_details: [],
-  }));
-
-  // singleColumnBodyTemplate
-  const singleColumnBodyTemplate = (sale) => {
-    return <CustomRow sale={sale} isLoading={isLoading} />;
+  // Reemplazar rowExpansionTemplate con una función que retorne OrderExpansion
+  const rowExpansionTemplate = (order) => {
+    return <OrderExpansion order={order} apiFetch={apiFetch} />;
   };
-
-  let displayData = [];
-  if (isLoading) {
-    displayData = skeletonData;
-  } else {
-    if (mode === "recent") {
-      displayData = allOrders;
-    } else {
-      displayData = searchedOrder ? [searchedOrder] : [];
-    }
-  }
 
   return (
     <>
@@ -381,18 +261,20 @@ const ReprintModal = ({ isOpen, onClose }) => {
               disabled={!orderId.trim()}
             />
           </div>
-
           {error && (
             <div className="text-red-500 font-semibold mb-2">{error}</div>
           )}
-
-          {/* DataTable con las órdenes */}
+          <Toast ref={toast} />
           <DataTable
-            value={displayData}
-            className="p-datatable-sm p-datatable-gridlines"
+            value={displayOrders}
+            dataKey="id_order"
+            selection={selectedOrderId}
+            onSelectionChange={(e) => setSelectedOrderId(e.value)}
+            expandedRows={expandedRows}
+            onRowToggle={(e) => setExpandedRows(e.data)}
+            rowExpansionTemplate={rowExpansionTemplate}
             paginator
             rows={rows}
-            dataKey="id_order"
             emptyMessage={
               isLoading
                 ? ""
@@ -401,10 +283,33 @@ const ReprintModal = ({ isOpen, onClose }) => {
                 : "No se encontró esa venta."
             }
           >
-            <Column body={singleColumnBodyTemplate} />
+            <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
+            <Column expander style={{ width: "3rem" }} />
+            <Column field="id_order" header="# Ticket" />
+            <Column
+              field="date_add"
+              header="Fecha"
+              body={(rowData) => {
+                const date = new Date(rowData.date_add);
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, "0");
+                const d = String(date.getDate()).padStart(2, "0");
+                const hh = String(date.getHours()).padStart(2, "0");
+                const mm = String(date.getMinutes()).padStart(2, "0");
+                return `${y}-${m}-${d} ${hh}:${mm}`;
+              }}
+            />
+            <Column field="id_customer" header="Cliente" />
+            <Column field="payment" header="Pago" />
+            <Column
+              field="total_paid"
+              header="Total (€)"
+              body={(data) => data.total_paid?.toFixed(2)}
+              sortable
+              style={{ textAlign: "right" }}
+            />
           </DataTable>
-
-          {/* Botones para reimprimir */}
+          {/* Botones para reimprimir basados en la venta seleccionada */}
           <div className="flex justify-end gap-2 mt-2">
             <Button
               label="Ticket Normal"
