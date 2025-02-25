@@ -8,7 +8,6 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import TicketViewModal from "../ticket/TicketViewModal";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
-import { AuthContext } from "../../../contexts/AuthContext";
 
 /**
  * Modal para gestionar devoluciones/cambios.
@@ -18,7 +17,6 @@ import { AuthContext } from "../../../contexts/AuthContext";
  * @param {function} onAddProduct    - Para añadir productos negativos (rectificación) al ticket.
  */
 const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
-  const { shopId } = React.useContext(AuthContext); // o de donde obtengas tu shopId
   const [orderId, setOrderId] = useState("");
   const [orderData, setOrderData] = useState(null);
   const [error, setError] = useState(null);
@@ -38,9 +36,6 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
 
   const apiFetch = useApiFetch();
 
-  // Guardar en un estado local los pedidos de la tienda
-  const [shopOrders, setShopOrders] = useState([]);
-
   // Skeleton
   const skeletonData = new Array(6).fill(null).map((_, idx) => ({
     uniqueLineId: `skeleton-${idx}`,
@@ -59,51 +54,8 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       setReturnQuantities({});
       setReturnedProductMap({});
       setIsLoading(false);
-
-      // Cargar pedidos de la tienda
-      loadShopOrders();
-    } else {
-      // Al cerrar => limpiar
-      setShopOrders([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
-
-  /**
-   * Cargar todos los pedidos de la tienda actual usando /get_shop_orders.
-   * origin = "mayret" (según tu requisito).
-   */
-  const loadShopOrders = async () => {
-    if (!shopId) return;
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const payload = {
-        id_shop: shopId,
-        origin: "mayret",
-      };
-      const data = await apiFetch(
-        "https://apitpv.anthonyloor.com/get_shop_orders",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        }
-      );
-      if (!Array.isArray(data) || !data.length) {
-        // Podría venir un response con status=error, message=...
-        setError("No se encontraron pedidos para la tienda.");
-        setShopOrders([]);
-      } else {
-        setShopOrders(data);
-      }
-    } catch (error) {
-      console.error("Error al cargar pedidos de la tienda:", error);
-      setError("Error al cargar los pedidos de la tienda.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   /**
    * Buscar un pedido en shopOrders que coincida con el orderId introducido.
@@ -115,67 +67,57 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       setError(null);
       setIsLoading(true);
       setReturnedProductMap({});
-
-      // Buscar en shopOrders el pedido con ID = orderId
-      const foundOrder = shopOrders.find(
-        (od) => String(od.id_order) === String(orderId.trim())
+      const data = await apiFetch(
+        `https://apitpv.anthonyloor.com/get_order?id_order=${encodeURIComponent(
+          orderId.trim()
+        )}`,
+        {
+          method: "GET",
+        }
       );
-
-      if (!foundOrder || !foundOrder.order_details) {
+      if (!data || !data.order_details) {
         setError("No se encontró la venta o no tiene detalles.");
         setOrderData(null);
         return;
       }
-
-      // Clonar la info y añadir uniqueLineId
-      const details = foundOrder.order_details.map((item) => ({
+      const details = data.order_details.map((item) => ({
         ...item,
         uniqueLineId: `${item.product_id}-${item.product_attribute_id}`,
-        id_order: foundOrder.id_order,
+        id_order: data.id_order,
       }));
       const orderWithDetails = {
-        ...foundOrder,
+        ...data,
         order_details: details,
       };
       setOrderData(orderWithDetails);
-      setSelectedRows([]);
-      setReturnQuantities({});
 
-      // Comprobar rectificaciones en TODOS los pedidos de la tienda.
-      // (Ya tenemos shopOrders, no hace falta otra llamada.)
-      const rectificationOrders = [];
-      shopOrders.forEach((ord) => {
-        if (!ord.order_details) return;
-        const hasRect = ord.order_details.some((line) => {
-          const name = line.product_name?.trim().toLowerCase();
-          return (
-            name && name.startsWith(`rectificaci\u00f3n del ticket #${orderId}`)
-          );
-        });
-        if (hasRect) {
-          rectificationOrders.push(ord);
-        }
-      });
-
-      // Construir mapa de productos devueltos
-      const returnedMap = {};
-      if (rectificationOrders.length > 0) {
-        // Recorremos rectOrders y si coinciden con details
-        for (let prod of details) {
-          for (let rOrder of rectificationOrders) {
-            if (!rOrder.order_details) continue;
-            for (let line of rOrder.order_details) {
-              if (
-                line.product_id === prod.product_id &&
-                line.product_attribute_id === prod.product_attribute_id
-              ) {
-                returnedMap[prod.uniqueLineId] = rOrder.id_order;
+      // Procesar devoluciones para cada producto
+      if (data.returns && Array.isArray(data.returns)) {
+        let rpMap = {};
+        data.returns.forEach((ret) => {
+          ret.order_details.forEach((item) => {
+            // Ignorar línea de rectificación
+            if (item.product_reference === "rectificacion") return;
+            const uniqueId = `${item.product_id}-${item.product_attribute_id}`;
+            if (!rpMap[uniqueId]) {
+              rpMap[uniqueId] = {
+                totalReturned: Math.abs(item.product_quantity),
+                returns: [ret.id_order],
+              };
+            } else {
+              rpMap[uniqueId].totalReturned += Math.abs(item.product_quantity);
+              if (!rpMap[uniqueId].returns.includes(ret.id_order)) {
+                rpMap[uniqueId].returns.push(ret.id_order);
               }
             }
-          }
-        }
+          });
+        });
+        setReturnedProductMap(rpMap);
+      } else {
+        setReturnedProductMap({});
       }
-      setReturnedProductMap(returnedMap);
+      setSelectedRows([]);
+      setReturnQuantities({});
     } catch (e) {
       console.error("Error al buscar la venta:", e);
       setError("No se encontró la venta o ocurrió un error.");
@@ -208,19 +150,80 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   // Cambiar la cantidad a devolver
   const handleQuantityChange = (rowData, newValue) => {
     const key = rowData.uniqueLineId;
+    const rp = returnedProductMap[key];
+    const alreadyReturned = rp ? rp.totalReturned : 0;
+    const maxQty = rowData.product_quantity - alreadyReturned;
     let qty = parseInt(newValue, 10) || 1;
     if (qty < 1) qty = 1;
-    if (qty > rowData.product_quantity) qty = rowData.product_quantity;
+    if (qty > maxQty) qty = maxQty;
     setReturnQuantities((prev) => ({ ...prev, [key]: qty }));
   };
 
   // Columna "Devolver"
   const devolverBodyTemplate = (rowData) => {
     const key = rowData.uniqueLineId;
-    const currentQty = returnQuantities[key] ?? rowData.product_quantity;
+    const rp = returnedProductMap[key];
+    const alreadyReturned = rp ? rp.totalReturned : 0;
+    const availableQty = rowData.product_quantity - alreadyReturned;
     const isSelected = selectedRows.some((p) => p.uniqueLineId === key);
 
-    // Si ya se devolvió
+    // Si existen devoluciones definidas para el producto
+    if (rp && rp.returns.length > 0) {
+      // Mostrar solo iconos si ya se alcanzó la devolución completa
+      if (availableQty <= 0) {
+        return (
+          <span>
+            {rp.returns.map((rid) => (
+              <i
+                key={rid}
+                className="pi pi-receipt ml-1 cursor-pointer"
+                onClick={() => alert(rid)}
+                title={`Devolución ${rid}`}
+              ></i>
+            ))}
+          </span>
+        );
+      }
+      // Si quedan unidades, mostrar iconos junto al input (o guión si no está seleccionado)
+      if (!isSelected) {
+        return (
+          <span className="text-gray-400">
+            -{" "}
+            {rp.returns.map((rid) => (
+              <i
+                key={rid}
+                className="pi pi-receipt ml-1 cursor-pointer"
+                onClick={() => alert(rid)}
+                title={`Devolución ${rid}`}
+              ></i>
+            ))}
+          </span>
+        );
+      }
+      const currentQty = returnQuantities[key] ?? rowData.product_quantity;
+      return (
+        <>
+          <input
+            type="number"
+            min="1"
+            max={availableQty}
+            value={currentQty}
+            onChange={(e) => handleQuantityChange(rowData, e.target.value)}
+            className="p-inputtext p-component p-filled w-16 text-right"
+            style={{ borderColor: "var(--surface-border)" }}
+          />
+          {rp.returns.map((rid) => (
+            <i
+              key={rid}
+              className="pi pi-receipt ml-1 cursor-pointer"
+              onClick={() => alert(rid)}
+              title={`Devolución ${rid}`}
+            ></i>
+          ))}
+        </>
+      );
+    }
+    // Si no hay devoluciones y el producto ya se devolvió (caso anterior)
     if (returnedProductMap[key]) {
       return (
         <span
@@ -236,13 +239,10 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         </span>
       );
     }
-
-    // Si no está seleccionado => “-”
     if (!isSelected) {
       return <span className="text-gray-400">-</span>;
     }
-
-    // Campo para modificar la cantidad a devolver
+    const currentQty = returnQuantities[key] ?? rowData.product_quantity;
     return (
       <input
         type="number"
@@ -251,9 +251,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         value={currentQty}
         onChange={(e) => handleQuantityChange(rowData, e.target.value)}
         className="p-inputtext p-component p-filled w-16 text-right"
-        style={{
-          borderColor: "var(--surface-border)",
-        }}
+        style={{ borderColor: "var(--surface-border)" }}
       />
     );
   };
@@ -269,7 +267,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       id_stock_available: 0,
       product_name: `Rectificación del ticket #${orderId}`,
       combination_name: "",
-      reference_combination: "",
+      reference_combination: "rectificacion",
       ean13_combination: "",
       price_incl_tax: 0,
       final_price_incl_tax: 0,
@@ -353,7 +351,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                   }}
                   className="w-full pl-8"
                   placeholder="Número de ticket"
-                  disabled={isLoading || !shopOrders.length}
+                  disabled={isLoading}
                 />
               </span>
             </div>
@@ -361,7 +359,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               label="Buscar"
               icon="pi pi-search"
               onClick={handleSearchOrder}
-              disabled={isLoading || !orderId.trim() || !shopOrders.length}
+              disabled={isLoading || !orderId.trim()}
             />
           </div>
 

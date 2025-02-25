@@ -5,6 +5,7 @@ import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { Steps } from "primereact/steps";
 
 export default function CreateAddressModal({
   isOpen,
@@ -70,9 +71,10 @@ export default function CreateAddressModal({
     }
   };
 
+  const items = [{ label: "Crear Dirección" }];
+
   const footer = (
     <div className="flex justify-end gap-2 mt-4">
-      <Button label="Cancelar" className="p-button-text" onClick={onClose} />
       <Button
         label="Crear Dirección"
         className="p-button-success"
@@ -90,6 +92,8 @@ export default function CreateAddressModal({
       style={{ width: "40vw" }}
       modal
     >
+      <Steps model={items} activeIndex={0} readOnly className="mb-3" />
+
       <div className="p-fluid">
         {errorMessage && <p className="text-red-500">{errorMessage}</p>}
 

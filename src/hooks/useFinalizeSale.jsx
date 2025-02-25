@@ -32,7 +32,10 @@ export default function useFinalizeSale() {
       const id_customer = client ? client.id_customer : 0;
       const id_address_delivery = address ? address.id_address : 0;
 
-      const normalItems = cartItems.filter((it) => it.id_product !== 0);
+      const normalItems = cartItems.filter(
+        (it) =>
+          it.id_product !== 0 || it.reference_combination === "rectificacion"
+      );
       const total_paid_tax_excl = normalItems.reduce(
         (sum, item) => sum + item.final_price_excl_tax * item.quantity,
         0
@@ -47,6 +50,7 @@ export default function useFinalizeSale() {
         product_id: item.id_product,
         product_attribute_id: item.id_product_attribute,
         stock_available_id: item.id_stock_available,
+        id_control_stock: item.id_control_stock,
         product_name: `${item.product_name} ${
           item.combination_name || ""
         }`.trim(),

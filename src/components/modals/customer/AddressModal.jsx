@@ -64,7 +64,7 @@ const AddressModal = ({
 
     // Dirección "tienda"
     setStoreAddress({
-      id_address: "store",
+      id_address: 0,
       alias: "Vender en tienda",
       address1: `Calle ${shop?.name}`,
       address2: "",

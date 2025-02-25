@@ -139,6 +139,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
             id_warehouse_movement_detail: md.id_warehouse_movement_detail,
             id_product: md.id_product,
             id_product_attribute: md.id_product_attribute,
+            id_control_stock: md.id_control_stock,
             product_name: md.product_name,
             ean13: md.ean13 || "",
             quantity,
@@ -259,6 +260,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
         id_warehouse_movement_detail: prod.id_warehouse_movement_detail || null,
         id_product: prod.id_product,
         id_product_attribute: prod.id_product_attribute,
+        id_control_stock: prod.id_control_stock,
         product_name: prod.product_name,
         ean13: prod.ean13 || "",
       };
@@ -519,6 +521,8 @@ const TransferForm = ({ type, onSave, movementData }) => {
 
   const productTableColumns = [
     { field: "product_name", header: "Producto" },
+    { field: "ean13", header: "EAN13" },
+    { field: "id_control_stock", header: "id_stock" },
     { field: "quantity", header: "Cantidad", body: quantityBodyTemplate },
     { field: "action", header: "", body: actionBodyTemplate },
   ];

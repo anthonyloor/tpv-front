@@ -180,9 +180,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
 
     // Expresiones regulares para EAN13
     const ean13Regex = /^\d{13}$/;
-    const ean13HyphenRegex = /^\d{13}-\d+$/;
-
-    if (ean13Regex.test(searchTerm) || ean13HyphenRegex.test(searchTerm)) {
+    const ean13ApostropheRegex = /^(\d{13})'(\d+)$/;
+    if (ean13Regex.test(searchTerm)) {
       // Caso EAN13
       setIsLoading(true);
       try {
@@ -219,6 +218,40 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       } catch (error) {
         console.error("Error en la búsqueda por EAN13:", error);
         alert("Error al buscar producto por EAN13. Inténtalo de nuevo.");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    if (ean13ApostropheRegex.test(searchTerm)) {
+      setIsLoading(true);
+      try {
+        const [, eanCode, controlId] = searchTerm.match(ean13ApostropheRegex);
+        const results = await apiFetch(
+          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
+            eanCode
+          )}`,
+          { method: "GET" }
+        );
+        const validResults = results.filter(
+          (p) =>
+            (p.ean13_combination === eanCode ||
+              p.ean13_combination_0 === eanCode) &&
+            `${p.id_control_stock}` === controlId
+        );
+        if (validResults.length === 1) {
+          addProductToCart(validResults[0]);
+          setSearchTerm("");
+          setGroupedProducts([]);
+        } else {
+          setGroupedProducts(groupProductsByProductName(validResults));
+        }
+      } catch (error) {
+        console.error("Error en la búsqueda por EAN13 con apóstrofe:", error);
+        alert(
+          "Error al buscar producto por EAN13 con apóstrofe. Inténtalo de nuevo."
+        );
       } finally {
         setIsLoading(false);
       }
@@ -293,6 +326,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       quantity: 1,
       shop_name: shopName,
       id_shop: shopId,
+      id_control_stock: product.id_control_stock,
     };
     console.log("Product for cart:", productForCart);
     onAddProduct(productForCart, stockQuantity, (exceedsStock) => {

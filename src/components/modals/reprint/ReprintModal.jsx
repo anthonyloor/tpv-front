@@ -1,6 +1,12 @@
 // src/components/modals/reprint/ReprintModal.jsx
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useContext,
+} from "react";
 import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -8,9 +14,11 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import TicketViewModal from "../ticket/TicketViewModal";
+import { AuthContext } from "../../../contexts/AuthContext";
 
 const ReprintModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
+  const { shopId } = useContext(AuthContext);
   const [mode, setMode] = useState("recent");
   const [orderId, setOrderId] = useState("");
   const [error, setError] = useState(null);
@@ -30,9 +38,17 @@ const ReprintModal = ({ isOpen, onClose }) => {
       setError(null);
       setIsLoading(true);
       setMode("recent");
-      const data = await apiFetch("https://apitpv.anthonyloor.com/get_orders", {
-        method: "GET",
-      });
+      const data = await apiFetch(
+        "https://apitpv.anthonyloor.com/get_shop_orders",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            id_shop: shopId,
+            origin: "mayret",
+          }),
+        }
+      );
+
       setAllOrders(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error cargando ventas recientes:", err);
@@ -41,7 +57,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [apiFetch]);
+  }, [apiFetch, shopId]);
 
   const handleSearchOrder = async () => {
     if (!orderId.trim()) return;
@@ -335,6 +351,8 @@ const ReprintModal = ({ isOpen, onClose }) => {
           backgroundColor: "var(--surface-0)",
           color: "var(--text-color)",
         }}
+        draggable={false}
+        resizable={false}
       >
         <div className="p-2">
           {/* Input para buscar ticket */}

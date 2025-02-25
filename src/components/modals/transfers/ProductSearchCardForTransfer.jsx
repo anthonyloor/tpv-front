@@ -43,13 +43,9 @@ const ProductSearchCardForTransfer = ({
     setSearchTerm(e.target.value);
   };
 
-  // Manejar Enter en el input
+  // Modificar la condición de búsqueda en handleKeyDown para no depender de longitud mínima
   const handleKeyDown = async (e) => {
-    if (
-      e.key === "Enter" &&
-      searchTerm.trim().length >= 3 &&
-      !isSearchDisabled
-    ) {
+    if (e.key === "Enter" && !isSearchDisabled) {
       await performSearch();
     }
   };
@@ -63,33 +59,61 @@ const ProductSearchCardForTransfer = ({
     );
   };
 
-  // Realizar la búsqueda en la API
+  // Realizar la búsqueda usando el código EAN13 ingresado
   const performSearch = async () => {
     if (isSearchDisabled || !searchTerm.trim()) return;
-
+    const term = searchTerm.trim();
     setIsLoading(true);
     try {
-      const resp = await apiFetch(
-        `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
-          searchTerm.trim()
-        )}`,
-        { method: "GET" }
-      );
-      const valid = resp.filter(isProductValid);
-
-      if (valid.length === 0) {
-        alert("No se encontraron productos.");
+      const plainEanRegex = /^\d{13}$/;
+      const eanApostropheRegex = /^(\d{13})'(\d+)$/;
+      let code = "";
+      let results = [];
+      
+      if (eanApostropheRegex.test(term)) {
+        // Caso: EAN13 con id control stock
+        const [, eanCode, control] = term.match(eanApostropheRegex);
+        code = eanCode;
+        const resp = await apiFetch(
+          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(code)}`,
+          { method: "GET" }
+        );
+        const valid = resp.filter(isProductValid);
+        results = valid.filter(
+          (prod) =>
+            (prod.ean13_combination === code ||
+             prod.ean13_combination_0 === code) &&
+            String(prod.id_control_stock) === control
+        );
+      } else if (plainEanRegex.test(term)) {
+        // Caso: EAN13 sin id control stock
+        code = term;
+        const resp = await apiFetch(
+          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(code)}`,
+          { method: "GET" }
+        );
+        const valid = resp.filter(isProductValid);
+        results = valid.filter(
+          (prod) =>
+            prod.ean13_combination === code ||
+            prod.ean13_combination_0 === code
+        );
+      } else {
+        alert("Formato de búsqueda incorrecto. Ingresa un EAN13 o EAN13'id.");
         return;
       }
 
-      // Transformar para incluir stock de origen/destino
-      const transformed = transformProductsForTransfer(valid);
+      if (results.length === 0) {
+        alert("No se encontró producto con el código especificado.");
+        return;
+      }
 
-      // AutoAdd + un resultado => añadir directo
-      if (autoAdd && transformed.length === 1) {
+      // Transformar solo los productos que cumplen con la condición
+      const transformed = transformProductsForTransfer(results);
+
+      if (transformed.length === 1) {
         handleAddSelectedProducts(transformed);
       } else {
-        // Mostrar el diálogo de selección
         setSearchResults(transformed);
         setIsDialogOpen(true);
       }
@@ -99,7 +123,6 @@ const ProductSearchCardForTransfer = ({
     } finally {
       setIsLoading(false);
       setSearchTerm("");
-      // Hacer focus de nuevo
       inputRef.current?.focus();
     }
   };
@@ -119,6 +142,7 @@ const ProductSearchCardForTransfer = ({
           ean13: prod.ean13_combination || prod.ean13_combination_0 || "",
           stockOrigin: 0,
           stockDestination: 0,
+          id_control_stock: prod.id_control_stock,
         };
       }
       // Stock de Origen
@@ -139,10 +163,10 @@ const ProductSearchCardForTransfer = ({
       const item = {
         id_product: prod.id_product,
         id_product_attribute: prod.id_product_attribute,
-        product_name: prod.product_name,
-        combination_name: prod.combination_name,
+        product_name: `${prod.product_name} ${prod.combination_name}`, // Concatenar
         reference_combination: prod.reference_combination,
         ean13: prod.ean13,
+        id_control_stock: prod.id_control_stock,
         stockOrigin: prod.stockOrigin,
         quantity: 1,
       };

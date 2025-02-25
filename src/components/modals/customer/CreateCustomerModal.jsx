@@ -6,6 +6,7 @@ import { AuthContext } from "../../../contexts/AuthContext";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
+import { Steps } from "primereact/steps";
 
 const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   const [step, setStep] = useState(1);
@@ -134,37 +135,61 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
     }
   };
 
+  const items = [{ label: "Crear Cliente" }, { label: "Crear Dirección" }];
+
   const renderStepContent = () => {
     if (step === 1) {
       return (
         <form onSubmit={handleCreateCustomer}>
-          <h3
-            className="p-mb-3"
-            style={{ fontWeight: "bold", fontSize: "1.25rem" }}
-          >
-            Paso 1: Crear Cliente
-          </h3>
-          <div className="p-field p-mb-3">
-            <span className="p-float-label" style={{ width: "100%" }}>
-              <InputText
-                name="firstname"
-                value={customerData.firstname}
-                onChange={handleCustomerChange}
-                style={{ width: "100%" }}
-              />
-              <label>Nombre</label>
-            </span>
-          </div>
-          <div className="p-field p-mb-3">
-            <span className="p-float-label" style={{ width: "100%" }}>
-              <InputText
-                name="lastname"
-                value={customerData.lastname}
-                onChange={handleCustomerChange}
-                style={{ width: "100%" }}
-              />
-              <label>Apellidos</label>
-            </span>
+          <div className="p-fluid p-formgrid p-grid">
+            <div className="p-field p-col-12 p-md-6">
+              <span className="p-float-label" style={{ width: "100%" }}>
+                <InputText
+                  name="firstname"
+                  value={customerData.firstname}
+                  onChange={handleCustomerChange}
+                  style={{ width: "100%" }}
+                />
+                <label>Nombre</label>
+              </span>
+            </div>
+            <div className="p-field p-col-12 p-md-6">
+              <span className="p-float-label" style={{ width: "100%" }}>
+                <InputText
+                  name="lastname"
+                  value={customerData.lastname}
+                  onChange={handleCustomerChange}
+                  style={{ width: "100%" }}
+                />
+                <label>Apellidos</label>
+              </span>
+            </div>
+            <div className="p-field p-col-12 p-md-6">
+              <span className="p-float-label" style={{ width: "100%" }}>
+                <InputText
+                  type="email"
+                  name="email"
+                  value={customerData.email}
+                  onChange={handleCustomerChange}
+                  disabled={isNoWeb}
+                  style={{ width: "100%" }}
+                />
+                <label>Email</label>
+              </span>
+            </div>
+            <div className="p-field p-col-12 p-md-6">
+              <span className="p-float-label" style={{ width: "100%" }}>
+                <InputText
+                  type="password"
+                  name="password"
+                  value={customerData.password}
+                  onChange={handleCustomerChange}
+                  disabled={isNoWeb}
+                  style={{ width: "100%" }}
+                />
+                <label>Contraseña</label>
+              </span>
+            </div>
           </div>
           <div className="p-mb-3">
             <label
@@ -180,52 +205,11 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               <span>Cliente no web</span>
             </label>
           </div>
-          <div className="p-field p-mb-3">
-            <span className="p-float-label" style={{ width: "100%" }}>
-              <InputText
-                type="email"
-                name="email"
-                value={customerData.email}
-                onChange={handleCustomerChange}
-                disabled={isNoWeb}
-                style={{ width: "100%" }}
-              />
-              <label>Email</label>
-            </span>
-          </div>
-          <div className="p-field p-mb-3">
-            <span className="p-float-label" style={{ width: "100%" }}>
-              <InputText
-                type="password"
-                name="password"
-                value={customerData.password}
-                onChange={handleCustomerChange}
-                disabled={isNoWeb}
-                style={{ width: "100%" }}
-              />
-              <label>Contraseña</label>
-            </span>
-          </div>
           {errorMessage && (
             <div className="p-mb-3" style={{ color: "var(--red-500)" }}>
               {errorMessage}
             </div>
           )}
-          <div
-            className="p-d-flex p-jc-end p-ai-center"
-            style={{ gap: "0.5rem" }}
-          >
-            <Button
-              label="Cancelar"
-              onClick={onClose}
-              className="p-button-text"
-            />
-            <Button
-              label="Crear Cliente"
-              type="submit"
-              className="p-button-success"
-            />
-          </div>
         </form>
       );
     } else if (step === 2) {
@@ -432,21 +416,6 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
               {errorMessage}
             </div>
           )}
-          <div
-            className="p-d-flex p-jc-end p-ai-center"
-            style={{ gap: "0.5rem" }}
-          >
-            <Button
-              label="Cancelar"
-              onClick={onClose}
-              className="p-button-text"
-            />
-            <Button
-              label="Crear Dirección"
-              type="submit"
-              className="p-button-success"
-            />
-          </div>
         </form>
       );
     }
@@ -465,7 +434,11 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
           className="p-button-text"
         />
       )}
-      <Button label="Cerrar" onClick={onClose} className="p-button-text" />
+      <Button
+        label={step === 1 ? "Crear Cliente" : "Crear Dirección"}
+        onClick={step === 1 ? handleCreateCustomer : handleCreateAddress}
+        className="p-button-success"
+      />
     </div>
   );
 
@@ -477,7 +450,21 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
       footer={footer}
       style={{ width: "60vw", minHeight: "60vh" }}
       modal
+      draggable={false}
+      resizable={false}
     >
+      <Steps model={items} activeIndex={step - 1} readOnly className="mb-3" />
+
+      {/* Botón Atrás arriba */}
+      {step === 2 && (
+        <Button
+          label="Atrás"
+          icon="pi pi-arrow-left"
+          onClick={() => setStep(1)}
+          className="p-button-text mb-3"
+        />
+      )}
+
       <div
         className="p-mb-3"
         style={{ fontSize: "0.875rem", color: "var(--text-secondary)" }}

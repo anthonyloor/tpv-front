@@ -136,7 +136,7 @@ export default function CustomerStepperModal({
         // Address “tienda”
         const shop = JSON.parse(localStorage.getItem("shop"));
         setStoreAddress({
-          id_address: "store",
+          id_address: 0,
           alias: "Vender en tienda",
           address1: `Calle ${shop?.name}`,
           address2: "",
@@ -150,7 +150,6 @@ export default function CustomerStepperModal({
       });
   };
 
-  // ================== STEPS ==================
   const stepsItems = [
     { label: "Seleccionar Cliente" },
     { label: "Seleccionar Dirección" },
@@ -172,7 +171,6 @@ export default function CustomerStepperModal({
     </div>
   );
 
-  // ================== STEP 0: CLIENTE ==================
   const onClientDoubleClick = (cli) => {
     setSelectedRow(cli);
     setSelectedClient(cli);
@@ -288,7 +286,6 @@ export default function CustomerStepperModal({
     </div>
   );
 
-  // ================== STEP 1: DIRECCIONES ==================
   const handleSelectAddress = (addr) => {
     if (!selectedClient) return;
     onSelectClientAndAddress?.(selectedClient, addr);
@@ -340,7 +337,6 @@ export default function CustomerStepperModal({
     </div>
   );
 
-  // ================== CONTENIDO PRINCIPAL ==================
   const renderCurrentStep = () => {
     if (activeIndex === 0) return renderStepClient();
     return renderStepAddress();
@@ -353,7 +349,6 @@ export default function CustomerStepperModal({
   return (
     <>
       <Toast ref={toast} />
-      {/* ========== DIALOG PRINCIPAL (WIZARD) ========== */}
       <Dialog
         visible={isOpen}
         onHide={handleHideDialog}
@@ -372,7 +367,6 @@ export default function CustomerStepperModal({
         <div className="mt-4">{renderCurrentStep()}</div>
       </Dialog>
 
-      {/* ========== MODAL CREAR CLIENTE ========== */}
       {showCreateCustomerModal && (
         <CreateCustomerModal
           isOpen
@@ -409,7 +403,6 @@ export default function CustomerStepperModal({
         />
       )}
 
-      {/* ========== MODAL CREAR DIRECCIÓN ========== */}
       {showCreateAddressModal && (
         <CreateAddressModal
           isOpen

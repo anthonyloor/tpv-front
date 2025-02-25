@@ -149,7 +149,16 @@ const ProductSelectionDialog = ({
                   textAlign: "left",
                 }}
               >
-                Combinación
+                EAN13
+              </th>
+              <th
+                className="py-2 px-4 border-b"
+                style={{
+                  borderColor: "var(--surface-border)",
+                  textAlign: "left",
+                }}
+              >
+                idCS
               </th>
               {showOriginStock && (
                 <th
@@ -194,6 +203,7 @@ const ProductSelectionDialog = ({
                   >
                     <input
                       type="checkbox"
+                      disabled={!!prod.id_control_stock} // Desactivar si tiene id_control_stock
                       checked={selected}
                       onChange={() => handleCheckboxChange(prod)}
                     />
@@ -202,13 +212,19 @@ const ProductSelectionDialog = ({
                     className="py-2 px-4 border-b"
                     style={{ borderColor: "var(--surface-border)" }}
                   >
-                    {prod.product_name}
+                    {`${prod.product_name} ${prod.combination_name}`}
                   </td>
                   <td
                     className="py-2 px-4 border-b"
                     style={{ borderColor: "var(--surface-border)" }}
                   >
-                    {prod.combination_name}
+                    {prod.ean13}
+                  </td>
+                  <td
+                    className="py-2 px-4 border-b"
+                    style={{ borderColor: "var(--surface-border)" }}
+                  >
+                    {prod.id_control_stock || ''}
                   </td>
                   {showOriginStock && (
                     <td

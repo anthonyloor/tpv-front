@@ -11,7 +11,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Toolbar } from "primereact/toolbar";
 
-const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
+const TransfersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
 
   // Vistas => 'list', 'selectType', 'form'
@@ -506,7 +506,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
           onSelectionChange={(e) => setSelectedMovements(e.value)}
           paginator
           rows={10}
-          rowsPerPageOptions={[10, 20, 30]}
+          rowsPerPageOptions={[10, 15, 30]}
           emptyMessage={loading ? "Cargando..." : "No hay movimientos."}
           className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
           onRowClick={(e) => handleRowClick(e.data)}
@@ -673,7 +673,7 @@ const TransfersModal = ({ isOpen, onClose, inlineMode = false }) => {
       resizable={false}
       closable={true}
       modal
-      style={{ width: "40vw" }}
+      style={{ width: "85vw", maxWidth: "1200px" }}
     >
       {content}
     </Dialog>
