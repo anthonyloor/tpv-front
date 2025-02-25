@@ -106,7 +106,7 @@ export default function useFinalizeSale() {
           amount: parseFloat(discountValue.toFixed(2)),
         });
         remaining -= discountValue;
-        if (remaining < 0) remaining = 0;
+        if (remaining < 0) remaining = remaining; // mantener signo negativo
         if (leftoverValue > 0) {
           leftoverArray.push({
             code: disc.code,
@@ -115,6 +115,8 @@ export default function useFinalizeSale() {
         }
       });
 
+      // Si remaining es negativo, definir voucherAmount; de lo contrario es 0.
+      const voucherAmount = remaining < 0 ? Math.abs(remaining) : 0;
       const finalTotalInclTax = Math.max(0, remaining);
       const total_discounts_tax_excl = total_discounts / factorTax;
 
@@ -142,6 +144,37 @@ export default function useFinalizeSale() {
         saleData.discounts = discountsArray;
       }
 
+      // Solo se crea vale descuento si voucherAmount > 0 y no se seleccionó ningún método de pago
+      let newCartRuleCode = null;
+      if (voucherAmount > 0 && selectedMethods.length === 0) {
+        const cartRulePayload = {
+          reduction_amount: parseFloat(voucherAmount.toFixed(2)),
+          reduction_percent: 0,
+          id_customer,
+          description: `Vale descuento generado automáticamente por superar el descuento.`,
+          name: `Vale descuento por ${voucherAmount.toFixed(2)}€`,
+          date_from: new Date().toISOString().split("T")[0] + " 00:00:00",
+          date_to:
+            new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+              .toISOString()
+              .split("T")[0] + " 23:59:59",
+        };
+        const cartRuleResponse = await apiFetch(
+          "https://apitpv.anthonyloor.com/create_cart_rule",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(cartRulePayload),
+          }
+        );
+        if (cartRuleResponse && cartRuleResponse.code) {
+          newCartRuleCode = cartRuleResponse.code;
+          // Se asigna voucher_amount a la orden solo si se crea el vale
+          saleData.voucher_amount = parseFloat(voucherAmount.toFixed(2));
+        }
+      }
+      // Si se selecciona al menos un método de pago, no se crea vale descuento.
+
       const response = await apiFetch(
         "https://apitpv.anthonyloor.com/create_order",
         {
@@ -164,20 +197,21 @@ export default function useFinalizeSale() {
           giftTicket,
           changeAmount,
           leftoverArray,
-          newCartRuleCode: response.new_cart_rule_code || null,
+          newCartRuleCode:
+            newCartRuleCode || response.new_cart_rule_code || null,
         });
       }
 
+      // Imprimir vale descuento si se generó (new_cart_rule_code)
       if (response.new_cart_rule_code) {
-        const leftoverCode = response.new_cart_rule_code;
         try {
           const leftoverResp = await apiFetch(
-            `https://apitpv.anthonyloor.com/get_cart_rule?code=${leftoverCode}`,
+            `https://apitpv.anthonyloor.com/get_cart_rule?code=${response.new_cart_rule_code}`,
             { method: "GET" }
           );
           console.log("Respuesta get_cart_rule:", leftoverResp);
           alert(
-            `Se va a imprimir un nuevo vale con la cantidad sobrante: ${leftoverCode}`
+            `Se va a imprimir un nuevo vale con la cantidad sobrante: ${response.new_cart_rule_code}`
           );
         } catch (error) {
           console.error("Error al obtener el nuevo cart rule sobrante:", error);

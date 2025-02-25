@@ -91,15 +91,19 @@ function SalesCardActions({
     0
   );
 
-  let totalDiscounts = 0;
-  appliedDiscounts.forEach((disc) => {
-    const { reduction_amount = 0, reduction_percent = 0 } = disc;
-    if (reduction_percent > 0) {
-      totalDiscounts += (subtotalProducts * reduction_percent) / 100;
-    } else if (reduction_amount > 0) {
-      totalDiscounts += Math.min(subtotalProducts, reduction_amount);
-    }
-  });
+  const isRectification = cartItems.some(
+    (item) => item.reference_combination === "rectificacion"
+  );
+
+  const totalDiscounts = appliedDiscounts.reduce((sum, disc) => {
+    const redPercent = disc.reduction_percent || 0;
+    const redAmount = disc.reduction_amount || 0;
+    const discountAmount = redPercent
+      ? subtotalProducts * (redPercent / 100)
+      : redAmount;
+    return sum + discountAmount;
+  }, 0);
+  // total puede ser negativo
   const total = subtotalProducts - totalDiscounts;
 
   // Abrir/Cerrar modales
@@ -221,9 +225,17 @@ function SalesCardActions({
     } else {
       // Agregar
       setSelectedMethods((prev) => [...prev, method]);
-      if (method === "tarjeta" || method === "bizum") {
-        const remain = Math.max(0, total) - totalEntered;
-        const newVal = remain > 0 ? remain.toFixed(2) : "";
+      // Si es rectificación, el importe se establece negativo
+      if (method === "tarjeta" || method === "bizum" || method === "efectivo") {
+        const remain = isRectification
+          ? Math.abs(total)
+          : Math.max(0, total) - totalEntered;
+        const newVal =
+          remain > 0
+            ? isRectification
+              ? (-remain).toFixed(2)
+              : remain.toFixed(2)
+            : "";
         const updated = { ...amounts, [method]: newVal };
         setAmounts(updated);
         updateChangeAmount(updated);
@@ -232,7 +244,9 @@ function SalesCardActions({
   };
 
   const handleAmountChange = (method, amount) => {
-    const updated = { ...amounts, [method]: amount };
+    const parsed = parseFloat(amount) || 0;
+    const value = isRectification ? -Math.abs(parsed) : parsed;
+    const updated = { ...amounts, [method]: value.toString() };
     setAmounts(updated);
     updateChangeAmount(updated);
   };
@@ -252,6 +266,13 @@ function SalesCardActions({
     );
     setChangeAmount(newChange);
   };
+
+  // Mostrar mensaje de vale descuento si total es negativo y sin métodos de pago seleccionados
+  // Voucher se genera solo si total < 0 y no se selecciona ningún método
+  const voucherMessage =
+    total < 0 && selectedMethods.length === 0
+      ? `Se va a generar un vale descuento de ${Math.abs(total).toFixed(2)} €`
+      : "";
 
   return (
     <div
@@ -377,15 +398,16 @@ function SalesCardActions({
                       : "secondary"
                   }
                   className="flex-1"
-                  onClick={() => total > 0 && togglePaymentMethod(method)}
-                  disabled={total <= 0}
+                  onClick={() => togglePaymentMethod(method)}
+                  // Permitir selección si total > 0 o si es rectificación
+                  disabled={total === 0 ? true : false}
                 />
                 <input
                   type="number"
                   placeholder={`Importe en ${method}`}
                   value={amounts[method]}
                   onChange={(e) => handleAmountChange(method, e.target.value)}
-                  disabled={!selectedMethods.includes(method) || total <= 0}
+                  disabled={!selectedMethods.includes(method)}
                   className="flex-1 p-2 border rounded"
                   style={{
                     borderColor: "var(--surface-border)",
@@ -396,7 +418,10 @@ function SalesCardActions({
               </div>
             ))}
           </div>
-
+          {/* Mostrar mensaje de vale descuento si corresponde */}
+          {voucherMessage && (
+            <div className="mt-2 text-red-500 font-bold">{voucherMessage}</div>
+          )}
           <Button
             label={isLoading ? "Procesando..." : "Confirmar Venta"}
             className="p-button-success mt-3"

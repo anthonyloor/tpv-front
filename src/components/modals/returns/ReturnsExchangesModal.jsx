@@ -464,6 +464,44 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
             </DataTable>
           </div>
 
+          {/* Nueva sección: Descuentos aplicados (si existen) */}
+          {orderData?.order_cart_rules &&
+            orderData.order_cart_rules.length > 0 && (
+              <div
+                className="p-3 rounded mt-4"
+                style={{
+                  backgroundColor: "var(--surface-50)",
+                  color: "var(--text-color)",
+                }}
+              >
+                <h4 className="font-bold text-lg mb-2">Descuentos Aplicados</h4>
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <th className="text-left">Código</th>
+                      <th className="text-left">Nombre</th>
+                      <th className="text-right">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderData.order_cart_rules.map((disc, index) => (
+                      <tr
+                        key={index}
+                        className="border-b"
+                        style={{ borderColor: "var(--surface-border)" }}
+                      >
+                        <td className="py-2">{disc.code}</td>
+                        <td className="py-2">{disc.name}</td>
+                        <td className="py-2 text-right">
+                          {disc.value.toFixed(2)} €
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
           {/* Botón Aceptar */}
           <div className="flex justify-end mt-3">
             <Button
