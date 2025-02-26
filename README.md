@@ -1,43 +1,54 @@
-# Proyecto TPV con PrimeReact y Tailwind CSS
+# TPV App – Resumen y Guía de Diseño
 
-Este proyecto es una aplicación de Punto de Venta (TPV) que utiliza PrimeReact para los componentes de la interfaz de usuario y Tailwind CSS para la gestión de estilos. El objetivo es proporcionar una solución eficiente y visualmente atractiva para la gestión de ventas y stock.
+Este proyecto es una aplicación de TPV (Terminal Punto de Venta) desarrollada en React que integra PrimeReact para componentes de interfaz y Tailwind CSS para estilos. Se ha diseñado de forma modular, utilizando Context API y hooks personalizados para gestionar la lógica de negocio, lo que facilita la escalabilidad y el mantenimiento. La aplicación abarca funcionalidades de ventas, devoluciones, descuentos, gestión de stock y configuración, adaptándose tanto a dispositivos de escritorio como móviles.
+
+---
 
 ## Tecnologías Utilizadas
 
-- **React:** Biblioteca de JavaScript para construir interfaces de usuario.
-- **PrimeReact:** Conjunto de componentes de interfaz de usuario ricos y personalizables para React.
-- **Tailwind CSS:** Framework de CSS utilitario para un diseño rápido y flexible.
-- **PrimeFlex:** Sistema de diseño basado en Flexbox, complementario a PrimeReact.
-- **react-router-dom:** Para la gestión de la navegación dentro de la aplicación.
-- **useApiFetch:** Hook personalizado para simplificar las llamadas a la API.
-- **sonner:** Biblioteca para mostrar notificaciones de forma elegante.
-- **Contextos (AuthContext, ClientContext, ConfigContext):** Para la gestión del estado global de la aplicación, como la autenticación, la información del cliente y la configuración.
+- **React**: Biblioteca para construir interfaces de usuario.
+- **PrimeReact**: Conjunto de componentes UI ricos, personalizables y adaptados al diseño.
+- **Tailwind CSS**: Framework utilitario para un estilo consistente y flexible.
+- **React Router**: Gestión de la navegación entre páginas.
+- **Context API & Hooks Personalizados**: Para gestionar estados globales (Autenticación, Configuración, Clientes, PIN) y lógica de negocio (carrito, descuentos, finalización de ventas, etc.).
+- **Otras bibliotecas**: Sonner (notificaciones), entre otras.
+
+---
 
 ## Estructura del Proyecto
 
-La estructura del proyecto está organizada en componentes reutilizables, cada uno con una responsabilidad específica. Algunos de los componentes clave incluyen:
+El proyecto se organiza de la siguiente manera:
 
-- **Componentes de la Interfaz de Usuario:** Implementados con PrimeReact, ofrecen una amplia gama de funcionalidades, desde la visualización de datos hasta la interacción del usuario.
-- **Componentes de Estilo:** Definen la apariencia visual de la aplicación, utilizando Tailwind CSS para una fácil personalización y mantenimiento.
-- **Componentes de Lógica de Negocio:** Contienen la lógica específica de la aplicación, como la gestión de ventas, el control de stock y la interacción con la API.
+- **`src/`**  
+  - **`components/`**: Contiene componentes reutilizables, modales, páginas (Login, NotFound, Pin, etc.) y reportes.
+  - **`contexts/`**: Define los contextos para la autenticación, configuración, clientes y PIN.
+  - **`hooks/`**: Hooks personalizados como `useCart`, `useDiscounts`, `useFinalizeSale`, `useApiFetch`, etc.
+  - **`data/`**: Archivos estáticos con datos de empleados, tiendas y configuraciones (ej. ticket).
+- **`public/`**  
+  - Archivos estáticos, assets y hojas de estilos de temas (por ejemplo, para modo claro y oscuro).
 
-## Configuración y Personalización
+---
 
-- **Temas de PrimeReact:** La aplicación permite cambiar entre diferentes temas de PrimeReact para adaptarse a las preferencias del usuario o a los requisitos de la marca.
-- **Estilos de Tailwind CSS:** Tailwind CSS se utiliza para personalizar aún más la apariencia de la aplicación, permitiendo un control preciso sobre cada elemento visual.
-- **Desactivación de Preflight:** En algunos casos, se ha desactivado la característica "preflight" de Tailwind CSS para evitar conflictos con los estilos predeterminados de PrimeReact.
+## Diseño y Estilo
 
-## Componentes Destacados
+El diseño de la aplicación se centra en la integración de PrimeReact y Tailwind CSS para lograr una interfaz coherente y adaptable. Algunos puntos clave son:
 
-- **CustomerStepperModal:** Proporciona un flujo paso a paso para la selección o creación de clientes y direcciones.
-- **CreateCustomerModal y CreateAddressModal:** Permiten la creación de nuevos clientes y direcciones de forma modular.
-- **SalesCardActions:** Ofrece acciones rápidas para la gestión de ventas, como la aplicación de descuentos y la finalización de la venta.
-- **StoreStockPanel:** Muestra información detallada sobre el stock de un producto en diferentes tiendas.
+- **Variables y Temas CSS**  
+  Se usan variables CSS (por ejemplo, `var(--surface-0)`, `var(--text-color)`, `var(--surface-border)`) para definir colores, fondos, bordes y tipografías. Esto permite mantener una identidad visual uniforme en toda la aplicación.
 
-## Integración de PrimeReact y Tailwind CSS
+- **Modo Claro/Oscuro**  
+  A través del componente `ThemeSwitcher` se pueden alternar entre temas (por ejemplo, `lara-light-indigo` y `lara-dark-indigo`). Las hojas de estilo de cada tema se encuentran en la carpeta `public/themes/`.
 
-La combinación de PrimeReact y Tailwind CSS permite crear una interfaz de usuario rica y flexible. PrimeReact proporciona los componentes de interfaz de usuario, mientras que Tailwind CSS se encarga de los estilos y el diseño. La desactivación de "preflight" en Tailwind CSS asegura que los estilos de PrimeReact se mantengan intactos.
-
-## Conclusión
-
-Este proyecto TPV es un ejemplo de cómo combinar las fortalezas de PrimeReact y Tailwind CSS para crear una aplicación de gestión de ventas eficiente y visualmente atractiva. La estructura modular y la fácil personalización permiten adaptar la aplicación a diferentes necesidades y requisitos.
+- **Consistencia en Componentes**  
+  Todos los componentes (modales, formularios, tablas, botones, etc.) utilizan clases utilitarias de Tailwind CSS junto con los estilos propios de PrimeReact. Esto asegura:
+  - **Colores y Tipografía:** Uso de las variables globales para mantener coherencia.
+  - **Espaciados y Tamaños:** Uso de clases como `p-4`, `m-2`, etc., para definir márgenes, padding y tamaños de forma uniforme.
+  - **Componentes Modales y Diálogos:** Se ha creado un componente base (`Modal.jsx`) que se extiende en todos los diálogos, garantizando transiciones, botones y cabeceras con el mismo estilo.
+  
+- **Guía para Crear Nuevos Componentes**  
+  Para extender la aplicación o agregar nuevos elementos manteniendo la coherencia visual, se recomienda:
+  1. **Utilizar las Variables CSS:** Emplear siempre las variables definidas para fondos, textos y bordes.
+  2. **Seguir la Estructura Modular:** Ubicar nuevos componentes en la carpeta `components/` y, en caso de ser modales o diálogos, basarse en el componente `Modal.jsx`.
+  3. **Aplicar Clases de Tailwind y PrimeReact:** Usar las clases ya establecidas en el proyecto (por ejemplo, `p-button`, `p-datatable`, etc.) para lograr el mismo tamaño, espaciado y estilo.
+  4. **Pruebas de Responsividad:** Verificar que los nuevos componentes se comporten de manera consistente en dispositivos móviles y de escritorio.
+  
