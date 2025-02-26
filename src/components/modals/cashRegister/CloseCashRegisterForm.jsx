@@ -8,11 +8,13 @@ import { useApiFetch } from "../../../components/utils/useApiFetch";
 import { InputNumber } from "primereact/inputnumber";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
+import ActionResultDialog from "../../common/ActionResultDialog";
+
+function formatNumber(value) {
+  return isNaN(Number(value)) || value === "" ? "-" : value;
+}
 
 const CloseCashRegisterForm = ({ onClose }) => {
-  const [numberOfSales, setNumberOfSales] = useState(0);
-  const [totalSalesTPV, setTotalSalesTPV] = useState(0);
-  const [totalSalesStore, setTotalSalesStore] = useState("");
   const [fetchedTotalCash, setFetchedTotalCash] = useState(0.0);
   const [fetchedTotalCard, setFetchedTotalCard] = useState(0.0);
   const [fetchedTotalBizum, setFetchedTotalBizum] = useState(0.0);
@@ -21,6 +23,11 @@ const CloseCashRegisterForm = ({ onClose }) => {
   const [inputTotalBizum, setInputTotalBizum] = useState("");
   const [isCloseButtonDisabled, setIsCloseButtonDisabled] = useState(true);
   const [isSalesReportOpen, setIsSalesReportOpen] = useState(false);
+  const [salesCount, setSalesCount] = useState(0);
+  const [returnsCount, setReturnsCount] = useState(0);
+  const [closingModalVisible, setClosingModalVisible] = useState(false);
+  const [closingModalMessage, setClosingModalMessage] = useState("");
+  const [closingModalSuccess, setClosingModalSuccess] = useState(false);
 
   const apiFetch = useApiFetch();
   const navigate = useNavigate();
@@ -28,6 +35,12 @@ const CloseCashRegisterForm = ({ onClose }) => {
   const shop = JSON.parse(localStorage.getItem("shop"));
   const licenseData = JSON.parse(localStorage.getItem("licenseData")) || {};
   const license = licenseData.licenseKey;
+
+  const showAlert = (message, success = false) => {
+    setClosingModalSuccess(success);
+    setClosingModalMessage(message);
+    setClosingModalVisible(true);
+  };
 
   useEffect(() => {
     const fetchReportAmounts = async () => {
@@ -46,46 +59,89 @@ const CloseCashRegisterForm = ({ onClose }) => {
           setFetchedTotalCash(totalCashNum);
           setFetchedTotalCard(totalCardNum);
           setFetchedTotalBizum(totalBizumNum);
-          const dummyNumberOfSales = 10;
-          const dummyTotalSalesTPV =
-            totalCashNum + totalCardNum + totalBizumNum;
-          setNumberOfSales(dummyNumberOfSales);
-          setTotalSalesTPV(totalSalesTPV);
         } else {
-          alert(data.message || "No se pudo obtener el reporte de caja");
+          showAlert(data.message || "No se pudo obtener el reporte de caja");
         }
       } catch (error) {
         console.error("Error fetch report amounts:", error);
+        showAlert("Error obteniendo reporte de caja: " + error.message);
       }
     };
     if (license) {
       fetchReportAmounts();
     }
-  }, [license, apiFetch, totalSalesTPV]);
+  }, [license, apiFetch]);
 
   useEffect(() => {
     const cashMatches = parseFloat(inputTotalCash) === fetchedTotalCash;
     const cardMatches = parseFloat(inputTotalCard) === fetchedTotalCard;
     const bizumMatches = parseFloat(inputTotalBizum) === fetchedTotalBizum;
-    const salesMatches =
-      parseFloat(totalSalesStore) === parseFloat(totalSalesTPV);
+    const allFilled =
+      inputTotalCash !== "" && inputTotalCard !== "" && inputTotalBizum !== "";
     setIsCloseButtonDisabled(
-      !(cashMatches && cardMatches && bizumMatches && salesMatches)
+      !(allFilled && cashMatches && cardMatches && bizumMatches)
     );
   }, [
     inputTotalCash,
     inputTotalCard,
     inputTotalBizum,
-    totalSalesStore,
     fetchedTotalCash,
     fetchedTotalCard,
     fetchedTotalBizum,
-    totalSalesTPV,
   ]);
 
-  const handleInputChange = (e) => {
-    setTotalSalesStore(e.value);
-  };
+  useEffect(() => {
+    const fetchSalesSummary = async () => {
+      try {
+        const today = new Date();
+        const dateToStr = today.toISOString().split("T")[0] + " 23:59:59";
+        const data = await apiFetch(
+          "https://apitpv.anthonyloor.com/get_sale_report_orders",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              license,
+              date1: null,
+              date2: dateToStr,
+            }),
+          }
+        );
+        if (Array.isArray(data)) {
+          const salesSet = new Set();
+          const returnsSet = new Set();
+          data.forEach((order) => {
+            const hasRectification = order.order_details.some(
+              (detail) =>
+                detail.product_name &&
+                detail.product_name
+                  .trim()
+                  .toLowerCase()
+                  .startsWith("rectificaci\u00f3n del ticket #")
+            );
+            if (hasRectification) {
+              returnsSet.add(order.id_order);
+            } else {
+              salesSet.add(order.id_order);
+            }
+          });
+          setSalesCount(salesSet.size);
+          setReturnsCount(returnsSet.size);
+        } else {
+          showAlert(
+            "No se recibieron datos o el formato no es el esperado para resumen de ventas."
+          );
+        }
+      } catch (error) {
+        console.error("Error obteniendo resumen de ventas:", error);
+        showAlert("Error obteniendo resumen de ventas: " + error.message);
+      }
+    };
+
+    if (license) {
+      fetchSalesSummary();
+    }
+  }, [license, apiFetch]);
 
   const handleCloseSalesReport = () => {
     setIsSalesReportOpen(false);
@@ -104,34 +160,42 @@ const CloseCashRegisterForm = ({ onClose }) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             license,
-            employeeId,
+            id_employee: employeeId,
           }),
         }
       );
       if (data.status === "OK") {
-        alert("Cierre de caja realizado exitosamente.");
-        onClose();
-        handleLogout();
-        navigate(`/${shop.route}`);
+        showAlert("Cierre de caja realizado correctamente.", true);
       } else {
-        alert(data.message || "No se pudo cerrar la caja.");
+        showAlert(data.message || "No se pudo cerrar la caja");
       }
     } catch (error) {
       console.error("Error al cerrar la caja:", error);
-      alert("Error al cerrar la caja.");
+      showAlert("Error al cerrar la caja: " + error.message);
+    }
+  };
+
+  // Función para cerrar el modal de mensaje y continuar si fue éxito.
+  const handleCloseResultModal = () => {
+    setClosingModalVisible(false);
+    if (closingModalSuccess) {
+      onClose();
+      handleLogout();
+      navigate(`/${shop.route}`);
     }
   };
 
   return (
     <>
-      <div className="space-y-4">
+      {/* Contenedor principal con fondo blanco en light y gris oscuro en dark */}
+      <div className="space-y-4 rounded">
         <div className="flex gap-2">
           <div className="p-inputgroup flex-1">
             <span className="p-inputgroup-addon">
               <i className="pi pi-money-bill" />
             </span>
             <InputText
-              value={`${fetchedTotalCash.toFixed(2)} €`}
+              value={`${formatNumber(fetchedTotalCash.toFixed(2))} €`}
               disabled
               className="text-right"
             />
@@ -145,7 +209,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
               <i className="pi pi-credit-card" />
             </span>
             <InputText
-              value={`${fetchedTotalCard.toFixed(2)} €`}
+              value={`${formatNumber(fetchedTotalCard.toFixed(2))} €`}
               disabled
               className="text-right"
             />
@@ -159,7 +223,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
               <i className="pi pi-phone" />
             </span>
             <InputText
-              value={`${fetchedTotalBizum.toFixed(2)} €`}
+              value={`${formatNumber(fetchedTotalBizum.toFixed(2))} €`}
               disabled
               className="text-right"
             />
@@ -169,62 +233,79 @@ const CloseCashRegisterForm = ({ onClose }) => {
           </div>
         </div>
 
-        <div>
-          <label
-            htmlFor="totalSalesStore"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Total de Ventas Tienda
-          </label>
-          <InputNumber
-            inputId="totalSalesStore"
-            value={totalSalesStore}
-            onValueChange={handleInputChange}
-            mode="decimal"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-            placeholder="Ingresa el total de ventas de la tienda"
-          />
+        {/* Reemplazar los bloques de resumen de ventas actuales por una fila con ambos inputs */}
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <label className="block text-sm font-medium dark:text-gray-300 mb-1">
+              Ventas (sin rectificaciones)
+            </label>
+            <div className="p-inputgroup">
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-arrow-up" />
+              </span>
+              <InputText
+                value={formatNumber(salesCount)}
+                disabled
+                className="w-full text-right dark:text-gray-300"
+              />
+            </div>
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium dark:text-gray-300 mb-1">
+              Devoluciones (con rectificaciones)
+            </label>
+            <div className="p-inputgroup">
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-arrow-down" />
+              </span>
+              <InputText
+                value={formatNumber(returnsCount)}
+                disabled
+                className="w-full text-right dark:text-gray-300"
+              />
+            </div>
+          </div>
         </div>
 
         <div>
           <label
             htmlFor="inputTotalCash"
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="block text-sm font-medium dark:text-gray-300 mb-1"
           >
-            Total Efectivo (coincidir con {fetchedTotalCash.toFixed(2)} €)
+            Total Efectivo
           </label>
           <InputNumber
             inputId="inputTotalCash"
             value={inputTotalCash}
             onValueChange={(e) => setInputTotalCash(e.value)}
             mode="decimal"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
+            className="mt-1 block w-full border border-gray-300 rounded-md p-2"
           />
           <label
             htmlFor="inputTotalCard"
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="block text-sm font-medium dark:text-gray-300 mb-1"
           >
-            Total Tarjeta (coincidir con {fetchedTotalCard.toFixed(2)} €)
+            Total Tarjeta
           </label>
           <InputNumber
             inputId="inputTotalCard"
             value={inputTotalCard}
             onValueChange={(e) => setInputTotalCard(e.value)}
             mode="decimal"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
+            className="mt-1 block w-full border border-gray-300 rounded-md p-2"
           />
           <label
             htmlFor="inputTotalBizum"
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="block text-sm font-medium dark:text-gray-300 mb-1"
           >
-            Total Bizum (coincidir con {fetchedTotalBizum.toFixed(2)} €)
+            Total Bizum
           </label>
           <InputNumber
             inputId="inputTotalBizum"
             value={inputTotalBizum}
             onValueChange={(e) => setInputTotalBizum(e.value)}
             mode="decimal"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 mb-4"
+            className="mt-1 block w-full border border-gray-300 rounded-md p-2 mb-4"
           />
         </div>
 
@@ -244,8 +325,18 @@ const CloseCashRegisterForm = ({ onClose }) => {
       </div>
 
       {isSalesReportOpen && (
-        <SalesReportModal onClose={handleCloseSalesReport} />
+        <SalesReportModal
+          isOpen={isSalesReportOpen}
+          onClose={handleCloseSalesReport}
+        />
       )}
+
+      <ActionResultDialog
+        visible={closingModalVisible}
+        onClose={handleCloseResultModal}
+        success={closingModalSuccess}
+        message={closingModalMessage}
+      />
     </>
   );
 };

@@ -3,12 +3,12 @@
 import { useState, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useApiFetch } from "../components/utils/useApiFetch";
-import { toast } from "sonner";
 
 export default function useFinalizeSale() {
+  const { employeeId, shopId, defaultClient, defaultAddress } =
+    useContext(AuthContext);
   const [isLoading, setIsLoading] = useState(false);
   const apiFetch = useApiFetch();
-  const { employeeId, shopId } = useContext(AuthContext);
 
   const finalizeSale = async (
     {
@@ -25,8 +25,10 @@ export default function useFinalizeSale() {
   ) => {
     setIsLoading(true);
     try {
-      const client = JSON.parse(localStorage.getItem("selectedClient"));
-      const address = JSON.parse(localStorage.getItem("selectedAddress"));
+      const localClient = localStorage.getItem("selectedClient");
+      const localAddress = localStorage.getItem("selectedAddress");
+      const client = localClient ? JSON.parse(localClient) : defaultClient;
+      const address = localAddress ? JSON.parse(localAddress) : defaultAddress;
       const licenseData = JSON.parse(localStorage.getItem("licenseData"));
 
       const id_customer = client ? client.id_customer : 0;
@@ -106,7 +108,6 @@ export default function useFinalizeSale() {
           amount: parseFloat(discountValue.toFixed(2)),
         });
         remaining -= discountValue;
-        if (remaining < 0) remaining = remaining; // mantener signo negativo
         if (leftoverValue > 0) {
           leftoverArray.push({
             code: disc.code,
@@ -190,15 +191,13 @@ export default function useFinalizeSale() {
       setIsLoading(false);
 
       if (onSuccess && newOrderId) {
-        toast.success("Venta finalizada correctamente");
         onSuccess({
           orderId: newOrderId,
           print,
           giftTicket,
           changeAmount,
           leftoverArray,
-          newCartRuleCode:
-            newCartRuleCode || response.new_cart_rule_code || null,
+          newCartRuleCode,
         });
       }
 
@@ -210,9 +209,6 @@ export default function useFinalizeSale() {
             { method: "GET" }
           );
           console.log("Respuesta get_cart_rule:", leftoverResp);
-          alert(
-            `Se va a imprimir un nuevo vale con la cantidad sobrante: ${response.new_cart_rule_code}`
-          );
         } catch (error) {
           console.error("Error al obtener el nuevo cart rule sobrante:", error);
         }

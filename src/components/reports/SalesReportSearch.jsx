@@ -2,12 +2,12 @@
 import React, { useState, useEffect, useContext } from "react";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { useApiFetch } from "../../components/utils/useApiFetch";
-
-// PrimeReact
+import { Button } from "primereact/button";
+import { Calendar } from "primereact/calendar";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 
-const SalesReportSearch = () => {
+const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
   const apiFetch = useApiFetch();
   const { configData } = useContext(ConfigContext);
 
@@ -17,17 +17,20 @@ const SalesReportSearch = () => {
   const license = licenseData?.licenseKey;
 
   // Fechas
-  const today = new Date().toISOString().split("T")[0]; // Formato yyyy-mm-dd
-  const [dateFrom, setDateFrom] = useState(today);
-  const [dateTo, setDateTo] = useState(today);
+  const today = new Date();
+  const [dateFrom, setDateFrom] = useState(
+    initialDateFrom !== undefined ? initialDateFrom : today
+  );
+  const [dateTo, setDateTo] = useState(
+    initialDateTo !== undefined ? initialDateTo : today
+  );
 
   // 2. Botones rápidos para fechas
   const setDaysAgo = (days) => {
     const now = new Date();
     const pastDate = new Date(now);
     pastDate.setDate(now.getDate() - days);
-    const pastDateStr = pastDate.toISOString().split("T")[0];
-    setDateFrom(pastDateStr);
+    setDateFrom(pastDate);
     setDateTo(today);
   };
 
@@ -115,11 +118,16 @@ const SalesReportSearch = () => {
     setLoading(true);
     setOrders([]);
 
+    // Si dateFrom es null, se envía null al back; de lo contrario se formatea
+    const dateFromStr = dateFrom ? dateFrom.toISOString().split("T")[0] : null;
+    const dateToStr = dateTo.toISOString().split("T")[0];
+    const currentDateStr = today.toISOString().split("T")[0];
+
     let dateFromWithTime = null;
-    if (dateFrom !== today) {
-      dateFromWithTime = `${dateFrom} 00:00:00`;
+    if (dateFromStr !== currentDateStr) {
+      dateFromWithTime = `${dateFromStr} 00:00:00`;
     }
-    const dateToWithTime = `${dateTo} 23:59:59`;
+    const dateToWithTime = `${dateToStr} 23:59:59`;
 
     try {
       const data = await apiFetch(
@@ -275,53 +283,51 @@ const SalesReportSearch = () => {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Fecha Desde
           </label>
-          <input
-            type="date"
+          <Calendar
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="border border-gray-300 rounded-md p-2 focus:outline-none 
-                       focus:ring-indigo-500 focus:border-indigo-500"
+            onChange={(e) => setDateFrom(e.value)}
+            dateFormat="yy-mm-dd"
+            showIcon
+            className="w-full"
+            // Permitir valor null
+            placeholder="Sin fecha"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Fecha Hasta
           </label>
-          <input
-            type="date"
+          <Calendar
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="border border-gray-300 rounded-md p-2 focus:outline-none 
-                       focus:ring-indigo-500 focus:border-indigo-500"
+            onChange={(e) => setDateTo(e.value)}
+            dateFormat="yy-mm-dd"
+            showIcon
+            className="w-full"
           />
         </div>
 
         {/* Botones rápidos en fila horizontal */}
         <div className="flex space-x-2">
-          <button
+          <Button
+            label="1 día"
             onClick={() => setDaysAgo(1)}
-            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            1 día
-          </button>
-          <button
+            className="p-button-rounded p-button-secondary"
+          />
+          <Button
+            label="7 días"
             onClick={() => setDaysAgo(7)}
-            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            7 días
-          </button>
-          <button
+            className="p-button-rounded p-button-secondary"
+          />
+          <Button
+            label="15 días"
             onClick={() => setDaysAgo(15)}
-            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            15 días
-          </button>
-          <button
+            className="p-button-rounded p-button-secondary"
+          />
+          <Button
+            label="30 días"
             onClick={() => setDaysAgo(30)}
-            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            30 días
-          </button>
+            className="p-button-rounded p-button-secondary"
+          />
         </div>
       </div>
 

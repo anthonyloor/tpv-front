@@ -2,7 +2,15 @@ import React from "react";
 import { Dialog } from "primereact/dialog";
 import SalesReportSearch from "./SalesReportSearch";
 
-const SalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
+const SalesReportModal = ({
+  isOpen,
+  onClose,
+  inlineMode = false,
+  initialDateFrom,
+  initialDateTo,
+  widthPercent = "50%",
+  heightPercent = "70%",
+}) => {
   const getAppendTarget = () => {
     if (inlineMode) {
       const target = document.getElementById("mobile-modals-container");
@@ -19,13 +27,18 @@ const SalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
       modal
       appendTo={getAppendTarget()}
       style={{
-        width: inlineMode ? "100vw" : "80vw",
-        maxWidth: inlineMode ? "none" : "1200px",
+        width: widthPercent,
+        height: heightPercent,
+        minWidth: "700px",
+        minHeight: "600px",
       }}
       draggable={false}
       resizable={false}
     >
-      <SalesReportSearch />
+      <SalesReportSearch
+        initialDateFrom={initialDateFrom}
+        initialDateTo={initialDateTo}
+      />
     </Dialog>
   );
 };

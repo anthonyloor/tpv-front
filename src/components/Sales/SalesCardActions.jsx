@@ -8,8 +8,10 @@ import ReprintModal from "../modals/reprint/ReprintModal";
 import PinValidationModal from "../modals/pin/PinValidationModal";
 import DiscountModal from "../modals/discount/DiscountModal";
 import TicketViewModal from "../modals/ticket/TicketViewModal";
+import ActionResultDialog from "../common/ActionResultDialog";
 import useFinalizeSale from "../../hooks/useFinalizeSale";
 import { AuthContext } from "../../contexts/AuthContext";
+import { toast } from "sonner";
 
 // Función auxiliar: simula consumo de importe de un vale
 function simulateDiscountConsumption(cartItems, appliedDiscounts) {
@@ -82,8 +84,8 @@ function SalesCardActions({
   const [changeAmount, setChangeAmount] = useState(0);
 
   // Vale leftover
-  const [leftoverPreview, setLeftoverPreview] = useState([]);
-  const [leftoverInfo, setLeftoverInfo] = useState([]);
+  // const [leftoverPreview, setLeftoverPreview] = useState([]); // Eliminado: no usado
+  // const [leftoverInfo, setLeftoverInfo] = useState([]); // Eliminado: no usado
 
   // Cálculo de totales
   const subtotalProducts = cartItems.reduce(
@@ -106,13 +108,29 @@ function SalesCardActions({
   // total puede ser negativo
   const total = subtotalProducts - totalDiscounts;
 
+  // Estados para alertas
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertSuccess, setAlertSuccess] = useState(false);
+
+  const showAlert = (message, success = false) => {
+    setAlertSuccess(success);
+    setAlertMessage(message);
+    setAlertVisible(true);
+  };
+
+  const handleAlertClose = () => {
+    setAlertVisible(false);
+  };
+
   // Abrir/Cerrar modales
   const openReturnsModal = () => setIsReturnsModalOpen(true);
   const closeReturnsModal = () => setIsReturnsModalOpen(false);
   const openReprintModal = () => setIsReprintModalOpen(true);
   const closeReprintModal = () => setIsReprintModalOpen(false);
-  const handleAddManual = () =>
-    console.log("[AddManual] Clic en añadir manual");
+  const handleAddManual = () => {
+    toast.success("Producto añadido manualmente");
+  };
 
   const handleDescuentoClick = () => {
     if (idProfile === 1) {
@@ -133,7 +151,7 @@ function SalesCardActions({
       cartItems,
       appliedDiscounts
     );
-    setLeftoverPreview(leftoverArray);
+    // setLeftoverPreview(leftoverArray);
     console.log("[handleFinalSale] Subtotal:", subtotalProducts);
     console.log("[handleFinalSale] totalDiscounts:", totalDiscounts);
     console.log("[handleFinalSale] total final:", Math.max(0, total));
@@ -169,6 +187,7 @@ function SalesCardActions({
           leftoverArray,
           newCartRuleCode,
         }) => {
+          showAlert("Venta finalizada correctamente", true);
           // Guardar estado
           setTicketOrderId(orderId);
           setGiftTicketTM(giftTicket);
@@ -178,7 +197,7 @@ function SalesCardActions({
 
           // Nuevo cart rule
           if (newCartRuleCode) setNewCartRuleCode(newCartRuleCode);
-          setLeftoverInfo(leftoverArray);
+          // setLeftoverInfo(leftoverArray);
 
           // Limpiar carrito y descuentos
           setCartItems([]);
@@ -192,7 +211,8 @@ function SalesCardActions({
           setGiftTicket(false);
           setFinalSaleModalOpen(false);
         },
-        onError: () => {
+        onError: (error) => {
+          showAlert("Error al finalizar la venta: " + error.message, false);
           alert("Error al finalizar la venta.");
         },
       },
@@ -435,6 +455,13 @@ function SalesCardActions({
         </div>
       </Dialog>
 
+      <ActionResultDialog
+        visible={alertVisible}
+        onClose={handleAlertClose}
+        success={alertSuccess}
+        message={alertMessage}
+      />ﬁ
+
       {/* TicketViewModal para ticket normal */}
       {ticketOrderId && (
         <TicketViewModal
@@ -483,6 +510,7 @@ function SalesCardActions({
           setIsDiscountModalOpen(false);
         }}
       />
+      
     </div>
   );
 }
