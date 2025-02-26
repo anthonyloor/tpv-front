@@ -460,7 +460,7 @@ function SalesCardActions({
         onClose={handleAlertClose}
         success={alertSuccess}
         message={alertMessage}
-      />ﬁ
+      />
 
       {/* TicketViewModal para ticket normal */}
       {ticketOrderId && (
@@ -510,7 +510,6 @@ function SalesCardActions({
           setIsDiscountModalOpen(false);
         }}
       />
-      
     </div>
   );
 }

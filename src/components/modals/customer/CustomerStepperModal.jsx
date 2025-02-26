@@ -14,6 +14,8 @@ export default function CustomerStepperModal({
   isOpen,
   onClose,
   onSelectClientAndAddress,
+  widthPercent = "50%",
+  heightPercent = "75%",
 }) {
   const [activeIndex, setActiveIndex] = useState(0); // 0 => Cliente, 1 => Dirección
   const toast = useRef(null);
@@ -357,7 +359,10 @@ export default function CustomerStepperModal({
         resizable={false}
         closable={true}
         modal
-        style={{ width: "40vw" }}
+        style={{
+          width: widthPercent,
+          height: heightPercent,
+        }}
       >
         <Steps
           model={stepsItems}
