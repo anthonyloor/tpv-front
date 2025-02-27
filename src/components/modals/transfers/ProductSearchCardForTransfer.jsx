@@ -163,7 +163,7 @@ const ProductSearchCardForTransfer = ({
       const item = {
         id_product: prod.id_product,
         id_product_attribute: prod.id_product_attribute,
-        product_name: `${prod.product_name} ${prod.combination_name}`, // Concatenar
+        product_name: `${prod.product_name} ${prod.combination_name}`,
         reference_combination: prod.reference_combination,
         ean13: prod.ean13,
         id_control_stock: prod.id_control_stock,

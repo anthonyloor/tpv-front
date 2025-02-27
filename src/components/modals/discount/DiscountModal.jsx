@@ -9,11 +9,34 @@ import { Dropdown } from "primereact/dropdown";
 import { Button } from "primereact/button";
 import { InputNumber } from "primereact/inputnumber";
 
-const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
+const DiscountModal = ({
+  isOpen,
+  onClose,
+  onDiscountApplied,
+  onProductDiscountApplied,
+  targetProduct, // producto seleccionado (puede ser null para descuento global)
+}) => {
   const [discountType, setDiscountType] = useState("percentage");
   const [discountValue, setDiscountValue] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const { createCartRuleWithResponse } = useCartRuleCreator();
+
+  // Verificar que el identificador se calcule correctamente utilizando ambas propiedades
+  const newTargetIdentifier =
+    targetProduct &&
+    targetProduct.id_product &&
+    targetProduct.id_product_attribute
+      ? `${targetProduct.id_product}-${targetProduct.id_product_attribute}`
+      : "";
+  // Se deja fullProductName tal como estaba:
+  const fullProductName =
+    targetProduct && targetProduct.product_name
+      ? `${targetProduct.product_name}${
+          targetProduct.combination_name
+            ? " " + targetProduct.combination_name
+            : ""
+        }`
+      : "";
 
   const handleApplyDiscount = () => {
     const value = parseFloat(discountValue);
@@ -23,14 +46,42 @@ const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
     }
     createCartRuleWithResponse(
       { discountType, value },
-      onDiscountApplied,
+      (discObj) => {
+        console.log(
+          "[DiscountModal] Resultado de la creación de descuento:",
+          discObj
+        );
+        if (newTargetIdentifier) {
+          let newPrice = targetProduct.final_price_incl_tax;
+          if (discountType === "amount") {
+            newPrice = targetProduct.final_price_incl_tax - value;
+          } else if (discountType === "percentage") {
+            newPrice = targetProduct.final_price_incl_tax * (1 - value / 100);
+          }
+          if (newPrice < 0) newPrice = 0;
+          console.log("[DiscountModal] Nuevo precio para producto:", newPrice);
+          if (onProductDiscountApplied) {
+            onProductDiscountApplied(
+              targetProduct.id_stock_available,
+              newPrice
+            );
+          }
+        }
+        if (onDiscountApplied) {
+          onDiscountApplied(discObj);
+        }
+        setDiscountValue("");
+        setErrorMessage("");
+        onClose();
+      },
       onClose,
       setDiscountValue,
-      setErrorMessage
+      setErrorMessage,
+      newTargetIdentifier,
+      fullProductName
     );
   };
 
-  // Opcional: podemos usar un Dropdown de PrimeReact para "Tipo de Descuento"
   const discountOptions = [
     { label: "Porcentaje (%)", value: "percentage" },
     { label: "Importe (€)", value: "amount" },
@@ -40,7 +91,11 @@ const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
     <Dialog
       visible={isOpen}
       onHide={onClose}
-      header="Descuento"
+      header={
+        targetProduct && targetProduct.id_product
+          ? `Descuento sobre producto: ${fullProductName}`
+          : "Descuento sobre venta"
+      }
       modal
       style={{ width: "40vw", maxWidth: "500px" }}
     >
@@ -56,9 +111,7 @@ const DiscountModal = ({ isOpen, onClose, onDiscountApplied }) => {
 
       <div className="mb-4">
         <label className="block font-medium mb-1">
-          {discountType === "percentage"
-            ? "Porcentaje de Descuento (%):"
-            : "Importe de Descuento (€):"}
+          {discountType === "percentage" ? "Porcentaje (%)" : "Importe (€)"}
         </label>
         <div className="flex items-center">
           <InputNumber

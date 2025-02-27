@@ -6,12 +6,15 @@ export function useCartRuleCreator() {
   const apiFetch = useApiFetch();
   const { employeeName, shopName } = useContext(AuthContext);
 
+  // Ahora se agrega el parámetro targetFullProductName (string vacío si no aplica)
   const createCartRuleWithResponse = async (
     { discountType, value },
     onDiscountApplied,
     onClose,
     resetDiscountValue,
-    setErrorMessage
+    setErrorMessage,
+    targetIdentifier, // Ej: "7371-24331"
+    targetFullProductName // Ej: "Short Push Up Talle Alto Gina Beige - L"
   ) => {
     const now = new Date();
     const oneYearLater = new Date(now);
@@ -20,11 +23,15 @@ export function useCartRuleCreator() {
     const date_to = oneYearLater.toISOString().split("T")[0] + " 23:59:59";
 
     const client = JSON.parse(localStorage.getItem("selectedClient"));
-    const description = `Descuento generado por ${employeeName} en ${shopName}`;
-    const name =
-      discountType === "percentage"
-        ? `Descuento de ${value}%`
-        : `Descuento de ${value}€`;
+    // Se usa targetIdentifier para el producto (si existe) y se utiliza targetFullProductName para el name
+    const name = targetIdentifier
+      ? `Descuento sobre ${targetFullProductName}`
+      : discountType === "percentage"
+      ? `Descuento de ${value}%`
+      : `Descuento de ${value}€`;
+    const description = targetIdentifier
+      ? `Producto: ${targetIdentifier}`
+      : `Descuento sobre venta generado por ${employeeName} en ${shopName}`;
     const reduction_percent = discountType === "percentage" ? value : 0;
     const reduction_amount = discountType === "amount" ? value : 0;
 

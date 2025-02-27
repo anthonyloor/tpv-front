@@ -35,6 +35,8 @@ function DesktopTPV() {
   } = useDiscounts();
 
   const [selectedProductForStock, setSelectedProductForStock] = useState(null);
+  const [selectedProductForDiscount, setSelectedProductForDiscount] =
+    useState(null);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden p-2 gap-2">
@@ -58,6 +60,7 @@ function DesktopTPV() {
               removeDiscountByIndex={removeDiscountByIndex}
               clearDiscounts={clearDiscounts}
               recentlyAddedId={recentlyAddedId}
+              setSelectedProductForDiscount={setSelectedProductForDiscount}
             />
           </div>
           <div className="flex flex-col w-[70%] bg-white rounded shadow overflow-hidden">
@@ -79,6 +82,7 @@ function DesktopTPV() {
               removeDiscountByIndex={removeDiscountByIndex}
               clearDiscounts={clearDiscounts}
               handleAddProduct={handleAddProduct}
+              selectedProductForDiscount={selectedProductForDiscount}
             />
           </div>
           <div className="flex flex-col w-[70%] bg-white rounded shadow overflow-hidden">

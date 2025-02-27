@@ -12,6 +12,7 @@ import ActionResultDialog from "../common/ActionResultDialog";
 import useFinalizeSale from "../../hooks/useFinalizeSale";
 import { AuthContext } from "../../contexts/AuthContext";
 import { toast } from "sonner";
+import { InputNumber } from "primereact/inputnumber";
 
 // Función auxiliar: simula consumo de importe de un vale
 function simulateDiscountConsumption(cartItems, appliedDiscounts) {
@@ -56,6 +57,9 @@ function SalesCardActions({
   removeDiscountByIndex,
   clearDiscounts,
   handleAddProduct,
+  selectedProductForDiscount,
+  widthPercent = "30%",
+  heightPercent = "50%",
 }) {
   const { idProfile } = useContext(AuthContext);
   const { isLoading, finalizeSale } = useFinalizeSale();
@@ -133,11 +137,13 @@ function SalesCardActions({
   };
 
   const handleDescuentoClick = () => {
-    if (idProfile === 1) {
-      setIsDiscountModalOpen(true);
-    } else {
-      setIsPinModalOpen(true);
+    if (cartItems.length === 0) {
+      toast.error(
+        "El carrito está vacío. Añade productos antes de aplicar descuentos."
+      );
+      return;
     }
+    setIsDiscountModalOpen(true);
   };
 
   const handlePinSuccess = () => {
@@ -263,10 +269,9 @@ function SalesCardActions({
     }
   };
 
-  const handleAmountChange = (method, amount) => {
-    const parsed = parseFloat(amount) || 0;
-    const value = isRectification ? -Math.abs(parsed) : parsed;
-    const updated = { ...amounts, [method]: value.toString() };
+  const handleAmountChange = (method, val) => {
+    const parsed = isRectification ? -Math.abs(val || 0) : val || 0;
+    const updated = { ...amounts, [method]: parsed.toString() };
     setAmounts(updated);
     updateChangeAmount(updated);
   };
@@ -293,6 +298,111 @@ function SalesCardActions({
     total < 0 && selectedMethods.length === 0
       ? `Se va a generar un vale descuento de ${Math.abs(total).toFixed(2)} €`
       : "";
+
+  // Agregar updateProductDiscount para aplicar descuento a un producto
+  const updateProductDiscount = (idStockAvailable, newDiscountedPrice) => {
+    setCartItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id_stock_available === idStockAvailable
+          ? { ...item, reduction_amount_tax_incl: newDiscountedPrice }
+          : item
+      )
+    );
+  };
+
+  // Función para actualizar productos según el descuento aplicado
+  const updateDiscountsForIdentifier = (discObj) => {
+    if (discObj.description.includes("producto")) {
+      // Descuento sobre producto específico
+      const match = discObj.description.match(/producto\s+([^\s]+)\s+generado/);
+      if (!match) return;
+      const identifier = match[1]; // ej: "EAN13'1234"
+      const matchingItems = cartItems.filter((item) => {
+        const prodId = item.EAN13 || "";
+        const ctrl = item.id_control_stock ? "'" + item.id_control_stock : "";
+        return prodId + ctrl === identifier;
+      });
+      if (matchingItems.length === 0) return;
+      if (discObj.reduction_amount > 0) {
+        const totalUnits = matchingItems.reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        );
+        const discountPerUnit = discObj.reduction_amount / totalUnits;
+        setCartItems((prevItems) =>
+          prevItems.map((item) => {
+            const prodId = item.EAN13 || "";
+            const ctrl = item.id_control_stock
+              ? "'" + item.id_control_stock
+              : "";
+            if (prodId + ctrl === identifier) {
+              return {
+                ...item,
+                reduction_amount_tax_incl: Math.max(
+                  0,
+                  item.final_price_incl_tax - discountPerUnit
+                ),
+              };
+            }
+            return item;
+          })
+        );
+      } else if (discObj.reduction_percent > 0) {
+        setCartItems((prevItems) =>
+          prevItems.map((item) => {
+            const newPrice =
+              item.final_price_incl_tax * (1 - discObj.reduction_percent / 100);
+            return {
+              ...item,
+              reduction_amount_tax_incl: Math.max(0, newPrice),
+            };
+          })
+        );
+      }
+    } else if (discObj.description.includes("venta")) {
+      // Descuento global para toda la venta
+      if (discObj.reduction_amount > 0) {
+        const totalUnits = cartItems.reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        );
+        const discountPerUnit = discObj.reduction_amount / totalUnits;
+        setCartItems((prevItems) =>
+          prevItems.map((item) => ({
+            ...item,
+            reduction_amount_tax_incl: Math.max(
+              0,
+              item.final_price_incl_tax - discountPerUnit
+            ),
+          }))
+        );
+      } else if (discObj.reduction_percent > 0) {
+        setCartItems((prevItems) =>
+          prevItems.map((item) => {
+            const newPrice =
+              item.final_price_incl_tax * (1 - discObj.reduction_percent / 100);
+            return {
+              ...item,
+              reduction_amount_tax_incl: Math.max(0, newPrice),
+            };
+          })
+        );
+      }
+    }
+  };
+
+  const handleDiscountApplied = (discObj) => {
+    addDiscount(discObj);
+    if (!selectedProductForDiscount) {
+      updateDiscountsForIdentifier(discObj);
+    }
+    setIsDiscountModalOpen(false);
+  };
+
+  console.log(
+    "[SalesCardActions] selectedProductForDiscount:",
+    selectedProductForDiscount
+  );
 
   return (
     <div
@@ -365,7 +475,12 @@ function SalesCardActions({
         modal
         draggable={false}
         resizable={false}
-        style={{ width: "70vw", minHeight: "70vh" }}
+        style={{
+          width: widthPercent,
+          height: heightPercent,
+          minWidth: "700px",
+          minHeight: "600px",
+        }}
       >
         <div
           className="p-6 flex flex-col gap-4"
@@ -422,18 +537,12 @@ function SalesCardActions({
                   // Permitir selección si total > 0 o si es rectificación
                   disabled={total === 0 ? true : false}
                 />
-                <input
-                  type="number"
-                  placeholder={`Importe en ${method}`}
-                  value={amounts[method]}
-                  onChange={(e) => handleAmountChange(method, e.target.value)}
+                <InputNumber
+                  value={amounts[method] ? parseFloat(amounts[method]) : null}
+                  onValueChange={(e) => handleAmountChange(method, e.value)}
                   disabled={!selectedMethods.includes(method)}
-                  className="flex-1 p-2 border rounded"
-                  style={{
-                    borderColor: "var(--surface-border)",
-                    backgroundColor: "var(--surface-50)",
-                    color: "var(--text-color)",
-                  }}
+                  placeholder={`Importe en ${method}`}
+                  className="flex-1"
                 />
               </div>
             ))}
@@ -505,10 +614,9 @@ function SalesCardActions({
       <DiscountModal
         isOpen={isDiscountModalOpen}
         onClose={() => setIsDiscountModalOpen(false)}
-        onDiscountApplied={(discObj) => {
-          addDiscount(discObj);
-          setIsDiscountModalOpen(false);
-        }}
+        onDiscountApplied={handleDiscountApplied}
+        onProductDiscountApplied={updateProductDiscount}
+        targetProduct={selectedProductForDiscount}
       />
     </div>
   );

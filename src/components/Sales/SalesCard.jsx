@@ -1,9 +1,5 @@
 // src/components/Sales/SalesCard.jsx
 
-// TO-DO: Reducir/mejorar diseño Descuentos Aplicados, totales y subtotales.
-//        Reducir margin separador. Incluir otro separador en el footer, antes de los totales.
-//        Mejorar diseño ticket, mejorar ticket/carrito añadiendo card y animacion de ir añadiendo y creando cards de forma como que aparece.
-
 import React, { useState, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { SplitButton } from "primereact/splitbutton";
@@ -34,6 +30,7 @@ function SalesCard({
   getParkedCarts,
   loadParkedCart,
   deleteParkedCart,
+  setSelectedProductForDiscount,
 }) {
   const { configData } = useContext(ConfigContext);
   const {
@@ -164,19 +161,6 @@ function SalesCard({
   }, 0);
   const total = subtotalProducts - totalDiscounts;
 
-  const quantityBodyTemplate = (rowData) => {
-    return (
-      <div className="flex align-items-center gap-2">
-        <Button
-          icon="pi pi-minus"
-          className="p-button p-button-secondary"
-          onClick={() => onDecreaseProduct(rowData.id_stock_available)}
-        />
-        <span>{rowData.quantity}</span>
-      </div>
-    );
-  };
-
   const actionBodyTemplate = (rowData) => {
     return (
       <Button
@@ -258,34 +242,60 @@ function SalesCard({
       <div className="flex-1 overflow-auto relative">
         <h4 className="font-bold text-lg mb-2">Productos en el Ticket</h4>
         {cartItems.length > 0 ? (
-          <DataTable
-            value={cartItems}
-            dataKey="id_stock_available"
-            className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
-            rowClassName={(rowData) => ({
-              "highlighted-row": rowData.id_stock_available === recentlyAddedId,
-            })}
-          >
-            <Column field="product_name" header="Nombre" />
-            <Column
-              header="Cantidad"
-              body={quantityBodyTemplate}
-              style={{ width: "8rem" }}
-            />
-            <Column
-              field="final_price_incl_tax"
-              header="Precio Unitario"
-              style={{ width: "10rem" }}
-            />
-            <Column
-              field={(rowData) =>
-                (rowData.final_price_incl_tax * rowData.quantity).toFixed(2)
-              }
-              header="Total"
-              style={{ width: "10rem" }}
-            />
-            <Column body={actionBodyTemplate} style={{ width: "4rem" }} />
-          </DataTable>
+          <>
+            <DataTable
+              value={cartItems}
+              selectionMode="single"
+              onSelectionChange={(e) => {
+                console.log("[SalesCard] Producto seleccionado:", e.value);
+                setSelectedProductForDiscount(e.value || null);
+              }}
+              dataKey="id_stock_available"
+            >
+              {/* Columnas */}
+              <Column
+                field="product_name"
+                header="Producto"
+                style={{ width: "50%" }}
+              />
+              <Column
+                header="Precio Und"
+                body={(rowData) =>
+                  `${rowData.final_price_incl_tax.toFixed(2)} €`
+                }
+                style={{ width: "13%", textAlign: "center" }}
+              />
+              <Column
+                header="Precio Descuento"
+                body={(rowData) =>
+                  rowData.reduction_amount_tax_incl !==
+                  rowData.final_price_incl_tax
+                    ? `${rowData.reduction_amount_tax_incl.toFixed(2)} €`
+                    : "-"
+                }
+                style={{ width: "13%", textAlign: "center" }}
+              />
+              <Column
+                header="Total €"
+                body={(rowData) =>
+                  (
+                    rowData.reduction_amount_tax_incl * rowData.quantity
+                  ).toFixed(2) + " €"
+                }
+                style={{ width: "13%", textAlign: "center" }}
+              />
+              <Column
+                field="quantity"
+                header="Cant."
+                body={(rowData) => rowData.quantity}
+                style={{ textAlign: "center" }}
+              />
+              <Column
+                body={actionBodyTemplate}
+                style={{ textAlign: "center" }}
+              />
+            </DataTable>
+          </>
         ) : (
           <p>No hay productos en el ticket.</p>
         )}

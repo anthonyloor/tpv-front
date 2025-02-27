@@ -60,6 +60,7 @@ export default function useFinalizeSale() {
         product_price: item.unit_price_tax_excl,
         product_ean13: item.ean13_combination,
         product_reference: item.reference_combination,
+        reduction_amount_tax_incl: item.reduction_amount_tax_incl,
         total_price_tax_incl: parseFloat(
           (item.final_price_incl_tax * item.quantity).toFixed(2)
         ),

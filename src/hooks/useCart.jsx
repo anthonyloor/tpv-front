@@ -118,14 +118,20 @@ export default function useCart(allowOutOfStockSales) {
 
     setCartItems((prevItems) => {
       if (existingProduct) {
-        // Actualizar cantidad
+        const newQty = existingProduct.quantity + quantity;
+        // Si ya existe un descuento aplicado, mantener el precio descontado proporcionalmente
+        const updatedDiscountedPrice =
+          existingProduct.reduction_amount_tax_incl; // O recalcúlalo según la regla de negocio
         return prevItems.map((item) =>
           item.id_stock_available === product.id_stock_available
-            ? { ...item, quantity: newQuantity }
+            ? {
+                ...item,
+                quantity: newQty,
+                reduction_amount_tax_incl: updatedDiscountedPrice,
+              }
             : item
         );
       } else {
-        // Agregar producto nuevo
         return [
           ...prevItems,
           {
@@ -134,6 +140,7 @@ export default function useCart(allowOutOfStockSales) {
             price_excl_tax: parseFloat(price_excl_tax.toFixed(2)),
             final_price_excl_tax: parseFloat(final_price_excl_tax.toFixed(2)),
             unit_price_tax_excl: parseFloat(final_price_excl_tax.toFixed(2)),
+            reduction_amount_tax_incl: product.final_price_incl_tax,
             tax_rate,
           },
         ];
