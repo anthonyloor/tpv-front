@@ -13,6 +13,7 @@ import CloseCashRegisterModal from "../modals/cashRegister/CloseCashRegisterModa
 import { useTheme } from "../ThemeSwitcher";
 import { SplitButton } from "primereact/splitbutton";
 import { InputSwitch } from "primereact/inputswitch";
+import PriceTags from "../modals/tags/PricesTags";
 
 const NavbarCard = () => {
   const navigate = useNavigate();
@@ -31,6 +32,8 @@ const NavbarCard = () => {
   const [isConfigurationModalOpen, setConfigurationModalOpen] = useState(false);
   const [isSalesReportModalOpen, setIsSalesReportModalOpen] = useState(false);
   const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
+
+  const [showPricesTags, setShowPricesTags] = useState(false);
 
   const [configModalView] = useState("config");
 
@@ -103,7 +106,7 @@ const NavbarCard = () => {
     {
       label: "Etiquetas",
       icon: "pi pi-barcode",
-      command: () => console.log("Clicked Labels"),
+      command: () => setShowPricesTags(true),
     },
     ...(idProfile === 1
       ? [
@@ -232,6 +235,13 @@ const NavbarCard = () => {
             onClose={() => setIsCashRegisterModalOpen(false)}
           />
         </PortalOrNormal>
+      )}
+      {/* Modal de Etiquetas */}
+      {showPricesTags && (
+        <PriceTags
+          isOpen={showPricesTags}
+          onHide={() => setShowPricesTags(false)}
+        />
       )}
     </>
   );
