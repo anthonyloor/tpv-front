@@ -112,10 +112,6 @@ export default function useCart(allowOutOfStockSales) {
       }
     }
 
-    const tax_rate = product.tax_rate !== undefined ? product.tax_rate : 0.21;
-    const price_excl_tax = product.price_incl_tax / (1 + tax_rate);
-    const final_price_excl_tax = product.final_price_incl_tax / (1 + tax_rate);
-
     setCartItems((prevItems) => {
       if (existingProduct) {
         const newQty = existingProduct.quantity + quantity;
@@ -137,11 +133,7 @@ export default function useCart(allowOutOfStockSales) {
           {
             ...product,
             quantity,
-            price_excl_tax: parseFloat(price_excl_tax.toFixed(2)),
-            final_price_excl_tax: parseFloat(final_price_excl_tax.toFixed(2)),
-            unit_price_tax_excl: parseFloat(final_price_excl_tax.toFixed(2)),
             reduction_amount_tax_incl: product.final_price_incl_tax,
-            tax_rate,
           },
         ];
       }

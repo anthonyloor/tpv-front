@@ -240,7 +240,6 @@ function SalesCard({
 
       {/* LISTA PRODUCTOS */}
       <div className="flex-1 overflow-auto relative">
-        <h4 className="font-bold text-lg mb-2">Productos en el Ticket</h4>
         {cartItems.length > 0 ? (
           <>
             <DataTable

@@ -289,50 +289,32 @@ function SalesCardActions({
       }
       // Si se intenta seleccionar otro método y "vale" ya está seleccionado, no se permite
       if (selectedMethods.includes("vale")) return;
-      // Para métodos originales, limitar el importe a devolver
+      // Agregar método original
+      setSelectedMethods((prev) => [...prev, method]);
       if (["efectivo", "tarjeta", "bizum"].includes(method)) {
-        const methodKey =
-          method === "efectivo"
-            ? "total_cash"
-            : method === "tarjeta"
-            ? "total_card"
-            : "total_bizum";
-        const originalAmount = parseFloat(
-          originalPaymentAmounts[methodKey] || "0"
-        );
-        const computedRemain = isRectification
+        const remain = isRectification
           ? Math.abs(total)
           : Math.max(0, total) - totalEntered;
-        const remain = Math.min(originalAmount, computedRemain);
+        // Limitar al monto original disponible para este método, si existe
+        const available = originalPaymentAmounts[method]
+          ? parseFloat(originalPaymentAmounts[method])
+          : remain;
         const newVal =
-          remain > 0
-            ? isRectification
-              ? (-remain).toFixed(2)
-              : remain.toFixed(2)
-            : "";
+          remain > available ? available.toFixed(2) : remain.toFixed(2);
         const updated = { ...amounts, [method]: newVal };
-        setSelectedMethods((prev) => [...prev, method]);
         setAmounts(updated);
         updateChangeAmount(updated);
-      } else {
-        setSelectedMethods((prev) => [...prev, method]);
       }
     }
   };
 
   const handleAmountChange = (method, val) => {
     let parsed = isRectification ? -Math.abs(val || 0) : val || 0;
-    if (["efectivo", "tarjeta", "bizum"].includes(method)) {
-      const methodKey =
-        method === "efectivo"
-          ? "total_cash"
-          : method === "tarjeta"
-          ? "total_card"
-          : "total_bizum";
-      const originalAmount = parseFloat(
-        originalPaymentAmounts[methodKey] || "0"
-      );
-      if (parsed > originalAmount) parsed = originalAmount;
+    if (isDevolucion && method !== "vale" && originalPaymentAmounts[method]) {
+      const available = parseFloat(originalPaymentAmounts[method]);
+      if (Math.abs(parsed) > available) {
+        parsed = isRectification ? -available : available;
+      }
     }
     const updated = { ...amounts, [method]: parsed.toString() };
     setAmounts(updated);
