@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
+import { DevolutionContext } from "../contexts/DevolutionContext";
 
 export default function useCart(allowOutOfStockSales) {
   const [cartItems, setCartItems] = useState([]);
@@ -9,24 +10,36 @@ export default function useCart(allowOutOfStockSales) {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [recentlyAddedId, setRecentlyAddedId] = useState(null);
   const { shopId } = useContext(AuthContext);
+  const { isDevolution, setIsDevolution } = useContext(DevolutionContext);
 
   const getCartKey = (shopId) => `cart_shop_${shopId}`;
   const getParkedCartsKey = (shopId) => `parked_carts_shop_${shopId}`;
 
+  // Modificado: cargar carrito con el campo isDevolution
   useEffect(() => {
     if (shopId) {
       const storedCart = localStorage.getItem(getCartKey(shopId));
-      if (storedCart) setCartItems(JSON.parse(storedCart));
+      if (storedCart) {
+        const cartData = JSON.parse(storedCart);
+        setCartItems(cartData.items);
+        if (cartData.isDevolution) {
+          setIsDevolution(true);
+        }
+      }
     }
     setIsInitialLoad(false);
   }, [shopId]);
 
+  // Modificado: guardar un objeto { items, isDevolution }
   useEffect(() => {
     if (isInitialLoad) return;
     if (shopId) {
-      localStorage.setItem(getCartKey(shopId), JSON.stringify(cartItems));
+      localStorage.setItem(
+        getCartKey(shopId),
+        JSON.stringify({ items: cartItems, isDevolution })
+      );
     }
-  }, [cartItems, isInitialLoad, shopId]);
+  }, [cartItems, isDevolution, isInitialLoad, shopId]);
 
   const saveCurrentCartAsParked = (name = null) => {
     if (!shopId) {
@@ -133,7 +146,10 @@ export default function useCart(allowOutOfStockSales) {
           {
             ...product,
             quantity,
-            reduction_amount_tax_incl: product.final_price_incl_tax,
+            reduction_amount_tax_incl:
+              typeof product.reduction_amount_tax_incl !== "undefined"
+                ? product.reduction_amount_tax_incl
+                : product.final_price_incl_tax,
           },
         ];
       }
@@ -174,9 +190,22 @@ export default function useCart(allowOutOfStockSales) {
   };
 
   const handleRemoveProduct = (idStockAvailable) => {
-    setCartItems((prevItems) =>
-      prevItems.filter((item) => item.id_stock_available !== idStockAvailable)
+    const product = cartItems.find(
+      (item) => item.id_stock_available === idStockAvailable
     );
+    if (
+      isDevolution &&
+      (product?.reference_combination === "rectificacion" ||
+        product?.quantity < 0)
+    ) {
+      // Si se elimina un producto devolutivo, se limpia todo el carrito y se restablece el modo devolución
+      setCartItems([]);
+      setIsDevolution(false);
+    } else {
+      setCartItems((prevItems) =>
+        prevItems.filter((item) => item.id_stock_available !== idStockAvailable)
+      );
+    }
   };
 
   return {

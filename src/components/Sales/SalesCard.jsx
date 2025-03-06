@@ -8,6 +8,7 @@ import { Divider } from "primereact/divider";
 
 import { ClientContext } from "../../contexts/ClientContext";
 import { ConfigContext } from "../../contexts/ConfigContext";
+import { DevolutionContext } from "../../contexts/DevolutionContext";
 
 import ParkedCartsModal from "../modals/parked/ParkedCartsModal";
 import AddressModal from "../modals/customer/AddressModal";
@@ -40,6 +41,7 @@ function SalesCard({
     setSelectedAddress,
     resetToDefaultClientAndAddress,
   } = useContext(ClientContext);
+  const { isDevolution, setIsDevolution } = useContext(DevolutionContext);
 
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] =
@@ -135,6 +137,7 @@ function SalesCard({
   const handleClearCart = () => {
     setCartItems([]);
     clearDiscounts();
+    setIsDevolution(false);
   };
   const parkedCarts = getParkedCarts();
   const handleLoadCart = (cartId) => {
@@ -159,7 +162,15 @@ function SalesCard({
       : redAmount;
     return sum + discountAmount;
   }, 0);
-  const total = subtotalProducts - totalDiscounts;
+  const total = isDevolution
+    ? cartItems.reduce(
+        (sum, item) => sum + item.reduction_amount_tax_incl * item.quantity,
+        0
+      )
+    : cartItems.reduce(
+        (sum, item) => sum + item.final_price_incl_tax * item.quantity,
+        0
+      );
 
   const actionBodyTemplate = (rowData) => {
     return (
@@ -357,7 +368,7 @@ function SalesCard({
         </div>
       )}
 
-      {/* TOTALES */}
+      {/* TOTALES y Descuentos */}
       <div
         className="mt-4 pt-4 border-t"
         style={{ borderColor: "var(--surface-border)" }}
@@ -382,7 +393,7 @@ function SalesCard({
         <div className="flex justify-between items-center mt-2">
           <span className="text-2xl font-bold">TOTAL:</span>
           <span className="text-2xl font-extrabold">
-            {Math.max(0, total).toFixed(2)} €
+            {Math.max(total).toFixed(2)} €
           </span>
         </div>
       </div>

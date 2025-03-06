@@ -1,6 +1,6 @@
 // src/components/modals/returns/ReturnsExchangesModal.jsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -9,6 +9,7 @@ import { InputText } from "primereact/inputtext";
 import TicketViewModal from "../ticket/TicketViewModal";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import { toast } from "sonner";
+import { DevolutionContext } from "../../../contexts/DevolutionContext";
 
 /**
  * Modal para gestionar devoluciones/cambios.
@@ -36,6 +37,8 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   const [viewTicketId, setViewTicketId] = useState(null);
 
   const apiFetch = useApiFetch();
+
+  const { setIsDevolution } = useContext(DevolutionContext);
 
   // Skeleton
   const skeletonData = new Array(6).fill(null).map((_, idx) => ({
@@ -315,9 +318,10 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         shop_name: "",
         id_shop: prod.id_shop,
       };
-      // Se añade con cantidad negativa
       onAddProduct(productForCart, null, null, false, -qtyToReturn);
     });
+    setIsDevolution(true);
+
     toast.success("Rectificación añadida y productos devueltos al carrito.");
     // Limpieza
     setOrderId("");

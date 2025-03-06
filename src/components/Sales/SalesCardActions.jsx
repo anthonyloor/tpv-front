@@ -13,6 +13,7 @@ import useFinalizeSale from "../../hooks/useFinalizeSale";
 import { AuthContext } from "../../contexts/AuthContext";
 import { toast } from "sonner";
 import { InputNumber } from "primereact/inputnumber";
+import { DevolutionContext } from "../../contexts/DevolutionContext";
 
 // Función auxiliar: simula consumo de importe de un vale
 function simulateDiscountConsumption(cartItems, appliedDiscounts) {
@@ -58,9 +59,17 @@ function SalesCardActions({
   clearDiscounts,
   handleAddProduct,
   selectedProductForDiscount,
-  widthPercent = "30%",
-  heightPercent = "50%",
+  widthPercent = "35%",
+  heightPercent = "60%",
 }) {
+  const {
+    isDevolution,
+    setIsDevolution,
+    originalPaymentMethods,
+    setOriginalPaymentMethods,
+    originalPaymentAmounts,
+    setOriginalPaymentAmounts,
+  } = useContext(DevolutionContext);
   const { idProfile } = useContext(AuthContext);
   const { isLoading, finalizeSale } = useFinalizeSale();
 
@@ -86,8 +95,6 @@ function SalesCardActions({
     bizum: "",
   });
   const [changeAmount, setChangeAmount] = useState(0);
-  const [originalPaymentMethods, setOriginalPaymentMethods] = useState([]);
-  const [originalPaymentAmounts, setOriginalPaymentAmounts] = useState({});
 
   useEffect(() => {
     // Leer payment methods originales de localStorage si existen
@@ -106,10 +113,15 @@ function SalesCardActions({
   // const [leftoverInfo, setLeftoverInfo] = useState([]); // Eliminado: no usado
 
   // Cálculo de totales
-  const subtotalProducts = cartItems.reduce(
-    (sum, item) => sum + item.final_price_incl_tax * item.quantity,
-    0
-  );
+  const subtotalProducts = isDevolution
+    ? cartItems.reduce(
+        (sum, item) => sum + item.reduction_amount_tax_incl * item.quantity,
+        0
+      )
+    : cartItems.reduce(
+        (sum, item) => sum + item.final_price_incl_tax * item.quantity,
+        0
+      );
 
   const isRectification = cartItems.some(
     (item) => item.reference_combination === "rectificacion"
@@ -123,11 +135,13 @@ function SalesCardActions({
       : redAmount;
     return sum + discountAmount;
   }, 0);
-  // total puede ser negativo
-  const total = subtotalProducts - totalDiscounts;
 
-  // Calcular si se trata de "devolución" (total negativo)
-  const isDevolucion = total < 0;
+  // Si es devolución, se muestran valores en negativo
+  const calculatedTotal = subtotalProducts - totalDiscounts;
+  const displayTotal = isDevolution
+    ? Math.abs(calculatedTotal)
+    : calculatedTotal;
+  const total = calculatedTotal;
 
   // Estados para alertas
   const [alertVisible, setAlertVisible] = useState(false);
@@ -192,6 +206,8 @@ function SalesCardActions({
     console.log("changeAmount:", changeAmount);
     console.log("giftTicket:", giftTicket);
     console.log("final total =>", total);
+    setOriginalPaymentMethods(originalPaymentMethods);
+    setOriginalPaymentAmounts(originalPaymentAmounts);
 
     finalizeSale(
       {
@@ -233,6 +249,7 @@ function SalesCardActions({
           setChangeAmount(0);
           setGiftTicket(false);
           setFinalSaleModalOpen(false);
+          setIsDevolution(false);
         },
         onError: (error) => {
           showAlert("Error al finalizar la venta: " + error.message, false);
@@ -259,7 +276,7 @@ function SalesCardActions({
 
   // Toggle de métodos
   const togglePaymentMethod = (method) => {
-    if (isDevolucion) {
+    if (isDevolution) {
       // Solo se permite si el método es "vale" o si pertenece a originalPaymentMethods
       if (method !== "vale" && !originalPaymentMethods.includes(method)) return;
       // Si ya se seleccionó "vale", no se permite añadir otro método
@@ -310,7 +327,7 @@ function SalesCardActions({
 
   const handleAmountChange = (method, val) => {
     let parsed = isRectification ? -Math.abs(val || 0) : val || 0;
-    if (isDevolucion && method !== "vale" && originalPaymentAmounts[method]) {
+    if (isDevolution && method !== "vale" && originalPaymentAmounts[method]) {
       const available = parseFloat(originalPaymentAmounts[method]);
       if (Math.abs(parsed) > available) {
         parsed = isRectification ? -available : available;
@@ -559,7 +576,7 @@ function SalesCardActions({
             <div className="flex justify-between mt-2">
               <span className="text-2xl font-bold">TOTAL:</span>
               <span className="text-2xl font-extrabold">
-                {Math.max(0, total).toFixed(2)} €
+                {displayTotal.toFixed(2)} €
               </span>
             </div>
           </div>
@@ -574,7 +591,7 @@ function SalesCardActions({
                   : method.charAt(0).toUpperCase() + method.slice(1);
               // Para métodos originales: solo se habilita si están en originalPaymentMethods
               // y, si "vale" está seleccionado, se deshabilitan
-              const disabled = isDevolucion
+              const disabled = isDevolution
                 ? method === "vale"
                   ? selectedMethods.some((m) => m !== "vale")
                   : !originalPaymentMethods.includes(method) ||
@@ -642,7 +659,8 @@ function SalesCardActions({
             className="p-button-success mt-3"
             style={{ padding: "1rem", fontSize: "1.125rem" }}
             disabled={
-              (Math.max(0, total) > 0 && totalEntered < Math.max(0, total)) ||
+              (Math.max(0, displayTotal) > 0 &&
+                totalEntered < Math.max(0, displayTotal)) ||
               isLoading
             }
             onClick={handleConfirmSale}
