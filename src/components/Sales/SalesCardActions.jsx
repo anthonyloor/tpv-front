@@ -61,6 +61,8 @@ function SalesCardActions({
   selectedProductForDiscount,
   widthPercent = "35%",
   heightPercent = "60%",
+  subtotal = 0,
+  total = 0,
 }) {
   const {
     isDevolution,
@@ -69,6 +71,7 @@ function SalesCardActions({
     setOriginalPaymentMethods,
     originalPaymentAmounts,
     setOriginalPaymentAmounts,
+    setIsDiscount,
   } = useContext(DevolutionContext);
   const { idProfile } = useContext(AuthContext);
   const { isLoading, finalizeSale } = useFinalizeSale();
@@ -106,22 +109,7 @@ function SalesCardActions({
     if (storedAmounts) {
       setOriginalPaymentAmounts(JSON.parse(storedAmounts));
     }
-  }, []);
-
-  // Vale leftover
-  // const [leftoverPreview, setLeftoverPreview] = useState([]); // Eliminado: no usado
-  // const [leftoverInfo, setLeftoverInfo] = useState([]); // Eliminado: no usado
-
-  // Cálculo de totales
-  const subtotalProducts = isDevolution
-    ? cartItems.reduce(
-        (sum, item) => sum + item.reduction_amount_tax_incl * item.quantity,
-        0
-      )
-    : cartItems.reduce(
-        (sum, item) => sum + item.final_price_incl_tax * item.quantity,
-        0
-      );
+  }, [setOriginalPaymentMethods, setOriginalPaymentAmounts]);
 
   const isRectification = cartItems.some(
     (item) => item.reference_combination === "rectificacion"
@@ -131,17 +119,13 @@ function SalesCardActions({
     const redPercent = disc.reduction_percent || 0;
     const redAmount = disc.reduction_amount || 0;
     const discountAmount = redPercent
-      ? subtotalProducts * (redPercent / 100)
+      ? subtotal * (redPercent / 100)
       : redAmount;
     return sum + discountAmount;
   }, 0);
 
   // Si es devolución, se muestran valores en negativo
-  const calculatedTotal = subtotalProducts - totalDiscounts;
-  const displayTotal = isDevolution
-    ? Math.abs(calculatedTotal)
-    : calculatedTotal;
-  const total = calculatedTotal;
+  const displayTotal = isDevolution ? Math.abs(total) : total;
 
   // Estados para alertas
   const [alertVisible, setAlertVisible] = useState(false);
@@ -189,7 +173,7 @@ function SalesCardActions({
       appliedDiscounts
     );
     // setLeftoverPreview(leftoverArray);
-    console.log("[handleFinalSale] Subtotal:", subtotalProducts);
+    console.log("[handleFinalSale] Subtotal:", subtotal);
     console.log("[handleFinalSale] totalDiscounts:", totalDiscounts);
     console.log("[handleFinalSale] total final:", Math.max(0, total));
     setFinalSaleModalOpen(true);
@@ -250,6 +234,7 @@ function SalesCardActions({
           setGiftTicket(false);
           setFinalSaleModalOpen(false);
           setIsDevolution(false);
+          setIsDiscount(false);
         },
         onError: (error) => {
           showAlert("Error al finalizar la venta: " + error.message, false);
@@ -458,6 +443,7 @@ function SalesCardActions({
     if (!selectedProductForDiscount) {
       updateDiscountsForIdentifier(discObj);
     }
+    setIsDiscount(true);
     setIsDiscountModalOpen(false);
   };
 
@@ -559,7 +545,7 @@ function SalesCardActions({
             <div className="flex justify-between">
               <span className="text-base">Subtotal Productos:</span>
               <span className="text-base font-bold">
-                {subtotalProducts.toFixed(2)} €
+                {subtotal.toFixed(2)} €
               </span>
             </div>
             {appliedDiscounts.length > 0 && (
@@ -576,7 +562,7 @@ function SalesCardActions({
             <div className="flex justify-between mt-2">
               <span className="text-2xl font-bold">TOTAL:</span>
               <span className="text-2xl font-extrabold">
-                {displayTotal.toFixed(2)} €
+                {total.toFixed(2)} €
               </span>
             </div>
           </div>

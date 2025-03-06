@@ -10,12 +10,12 @@ export default function useCart(allowOutOfStockSales) {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [recentlyAddedId, setRecentlyAddedId] = useState(null);
   const { shopId } = useContext(AuthContext);
-  const { isDevolution, setIsDevolution } = useContext(DevolutionContext);
+  const { isDevolution, setIsDevolution, isDiscount, setIsDiscount } =
+    useContext(DevolutionContext);
 
   const getCartKey = (shopId) => `cart_shop_${shopId}`;
   const getParkedCartsKey = (shopId) => `parked_carts_shop_${shopId}`;
 
-  // Modificado: cargar carrito con el campo isDevolution
   useEffect(() => {
     if (shopId) {
       const storedCart = localStorage.getItem(getCartKey(shopId));
@@ -24,22 +24,28 @@ export default function useCart(allowOutOfStockSales) {
         setCartItems(cartData.items);
         if (cartData.isDevolution) {
           setIsDevolution(true);
+        } else {
+          setIsDevolution(false);
+        }
+        if (cartData.isDiscount) {
+          setIsDiscount(true);
+        } else {
+          setIsDiscount(false);
         }
       }
     }
     setIsInitialLoad(false);
-  }, [shopId]);
+  }, [shopId, setIsDevolution, setIsDiscount]);
 
-  // Modificado: guardar un objeto { items, isDevolution }
   useEffect(() => {
     if (isInitialLoad) return;
     if (shopId) {
       localStorage.setItem(
         getCartKey(shopId),
-        JSON.stringify({ items: cartItems, isDevolution })
+        JSON.stringify({ items: cartItems, isDevolution, isDiscount })
       );
     }
-  }, [cartItems, isDevolution, isInitialLoad, shopId]);
+  }, [cartItems, isDevolution, isDiscount, isInitialLoad, shopId]);
 
   const saveCurrentCartAsParked = (name = null) => {
     if (!shopId) {
@@ -201,10 +207,12 @@ export default function useCart(allowOutOfStockSales) {
       // Si se elimina un producto devolutivo, se limpia todo el carrito y se restablece el modo devolución
       setCartItems([]);
       setIsDevolution(false);
+      setIsDiscount(false);
     } else {
       setCartItems((prevItems) =>
         prevItems.filter((item) => item.id_stock_available !== idStockAvailable)
       );
+      setIsDiscount(false);
     }
   };
 

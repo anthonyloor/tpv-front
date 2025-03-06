@@ -1,6 +1,6 @@
 // src/components/Sales/SalesCard.jsx
 
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { SplitButton } from "primereact/splitbutton";
 import { Button } from "primereact/button";
@@ -32,6 +32,7 @@ function SalesCard({
   loadParkedCart,
   deleteParkedCart,
   setSelectedProductForDiscount,
+  onTotalsChange = () => {},
 }) {
   const { configData } = useContext(ConfigContext);
   const {
@@ -41,7 +42,7 @@ function SalesCard({
     setSelectedAddress,
     resetToDefaultClientAndAddress,
   } = useContext(ClientContext);
-  const { isDevolution, setIsDevolution } = useContext(DevolutionContext);
+  const { isDevolution, setIsDevolution, isDiscount, setIsDiscount } = useContext(DevolutionContext);
 
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] =
@@ -138,6 +139,7 @@ function SalesCard({
     setCartItems([]);
     clearDiscounts();
     setIsDevolution(false);
+    setIsDiscount(false);
   };
   const parkedCarts = getParkedCarts();
   const handleLoadCart = (cartId) => {
@@ -162,7 +164,7 @@ function SalesCard({
       : redAmount;
     return sum + discountAmount;
   }, 0);
-  const total = isDevolution
+  const total = isDevolution || isDiscount
     ? cartItems.reduce(
         (sum, item) => sum + item.reduction_amount_tax_incl * item.quantity,
         0
@@ -171,6 +173,11 @@ function SalesCard({
         (sum, item) => sum + item.final_price_incl_tax * item.quantity,
         0
       );
+
+  // Enviar totales cuando cambien
+  useEffect(() => {
+    onTotalsChange({ subtotal: subtotalProducts, total });
+  }, [cartItems, appliedDiscounts, subtotalProducts, total, onTotalsChange]);
 
   const actionBodyTemplate = (rowData) => {
     return (
