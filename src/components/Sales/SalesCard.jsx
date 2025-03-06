@@ -260,34 +260,48 @@ function SalesCard({
               />
               <Column
                 header="Precio Und"
-                body={(rowData) =>
-                  `${rowData.final_price_incl_tax.toFixed(2)} €`
-                }
+                body={(rowData) => {
+                  if (rowData.reference_combination === "rectificacion")
+                    return "-";
+                  return `${rowData.final_price_incl_tax.toFixed(2)} €`;
+                }}
                 style={{ width: "13%", textAlign: "center" }}
               />
               <Column
                 header="Precio Descuento"
-                body={(rowData) =>
-                  rowData.reduction_amount_tax_incl !==
-                  rowData.final_price_incl_tax
-                    ? `${rowData.reduction_amount_tax_incl.toFixed(2)} €`
-                    : "-"
-                }
+                body={(rowData) => {
+                  // Si es línea de rectificación se devuelve "-"
+                  if (rowData.reference_combination === "rectificacion")
+                    return "-";
+                  // Verificar que reduction_amount_tax_incl no sea null ni undefined
+                  const discount = rowData.reduction_amount_tax_incl;
+                  return discount != null && !isNaN(discount)
+                    ? `${Number(discount).toFixed(2)} €`
+                    : "-";
+                }}
                 style={{ width: "13%", textAlign: "center" }}
               />
               <Column
-                header="Total €"
-                body={(rowData) =>
-                  (
-                    rowData.reduction_amount_tax_incl * rowData.quantity
-                  ).toFixed(2) + " €"
-                }
+                header="Total"
+                body={(rowData) => {
+                  // Si es línea de rectificación o discount es null, devolver "-"
+                  if (rowData.reference_combination === "rectificacion")
+                    return "-";
+                  const discount = rowData.reduction_amount_tax_incl;
+                  return discount != null && !isNaN(discount)
+                    ? `${(Number(discount) * rowData.quantity).toFixed(2)} €`
+                    : "-";
+                }}
                 style={{ width: "13%", textAlign: "center" }}
               />
               <Column
                 field="quantity"
                 header="Cant."
-                body={(rowData) => rowData.quantity}
+                body={(rowData) =>
+                  rowData.reference_combination === "rectificacion"
+                    ? "-"
+                    : rowData.quantity
+                }
                 style={{ textAlign: "center" }}
               />
               <Column

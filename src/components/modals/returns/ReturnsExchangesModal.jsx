@@ -8,6 +8,7 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import TicketViewModal from "../ticket/TicketViewModal";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { toast } from "sonner";
 
 /**
  * Modal para gestionar devoluciones/cambios.
@@ -81,13 +82,19 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         return;
       }
       // Almacenar métodos originales
-      if(data.payment){
-        const originalMethods = data.payment.split(",").map(m => m.trim());
-        localStorage.setItem("originalPaymentMethods", JSON.stringify(originalMethods));
+      if (data.payment) {
+        const originalMethods = data.payment.split(",").map((m) => m.trim());
+        localStorage.setItem(
+          "originalPaymentMethods",
+          JSON.stringify(originalMethods)
+        );
       }
       // Almacenar importes originales de los métodos de pago
-      if(data.payment_amounts){
-        localStorage.setItem("originalPaymentAmounts", JSON.stringify(data.payment_amounts));
+      if (data.payment_amounts) {
+        localStorage.setItem(
+          "originalPaymentAmounts",
+          JSON.stringify(data.payment_amounts)
+        );
       }
       const details = data.order_details.map((item) => ({
         ...item,
@@ -302,17 +309,16 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         ean13_combination: prod.product_ean13,
         price_incl_tax: prod.unit_price_tax_incl,
         final_price_incl_tax: prod.unit_price_tax_incl,
+        reduction_amount_tax_incl: prod.reduction_amount_tax_incl,
         tax_rate: 0.21,
         image_url: "",
         shop_name: "",
-        id_shop: prod.id_shop, // o la tienda original
+        id_shop: prod.id_shop,
       };
-      // Cantidad negativa
+      // Se añade con cantidad negativa
       onAddProduct(productForCart, null, null, false, -qtyToReturn);
     });
-
-    alert("Rectificación añadida y productos devueltos al carrito.");
-
+    toast.success("Rectificación añadida y productos devueltos al carrito.");
     // Limpieza
     setOrderId("");
     setOrderData(null);
@@ -408,7 +414,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               <Column
                 field="product_name"
                 header="Producto"
-                style={{ minWidth: "150px" }}
+                style={{ width: "50%" }}
                 body={(row) => {
                   if (isLoading) {
                     return (
@@ -419,45 +425,69 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                 }}
               />
               <Column
-                field="product_quantity"
-                header="Cant."
-                style={{ width: "70px", textAlign: "right" }}
-                body={(row) =>
-                  isLoading ? (
-                    <div className="bg-gray-200 h-3 w-8 ml-auto rounded animate-pulse" />
-                  ) : (
-                    row.product_quantity
-                  )
-                }
+                header="Precio Und"
+                style={{ width: "13%", textAlign: "center" }}
+                body={(row) => {
+                  if (isLoading) {
+                    return (
+                      <div className="bg-gray-200 h-3 w-10 ml-auto rounded animate-pulse" />
+                    );
+                  }
+                  if (row.reference_combination === "rectificacion") {
+                    return "-";
+                  }
+                  return row.unit_price_tax_incl
+                    ? `${row.unit_price_tax_incl.toFixed(2)} €`
+                    : "0.00";
+                }}
               />
               <Column
-                header="P/U (€)"
-                style={{ width: "90px", textAlign: "right" }}
-                body={(row) =>
-                  isLoading ? (
-                    <div className="bg-gray-200 h-3 w-10 ml-auto rounded animate-pulse" />
-                  ) : row.unit_price_tax_incl ? (
-                    row.unit_price_tax_incl.toFixed(2)
-                  ) : (
-                    "0.00"
-                  )
-                }
+                header="Precio Descuento"
+                style={{ width: "13%", textAlign: "center" }}
+                body={(row) => {
+                  // Si es línea de rectificación se devuelve "-"
+                  if (row.reference_combination === "rectificacion") return "-";
+                  // Verificar que reduction_amount_tax_incl no sea null ni undefined
+                  const discount = row.reduction_amount_tax_incl;
+                  return discount != null && !isNaN(discount)
+                    ? `${Number(discount).toFixed(2)} €`
+                    : "-";
+                }}
               />
               <Column
-                header="Total (€)"
-                style={{ width: "90px", textAlign: "right" }}
+                header="Total"
+                style={{ width: "13%", textAlign: "center" }}
                 body={(row) => {
                   if (isLoading) {
                     return (
                       <div className="bg-gray-200 h-3 w-12 ml-auto rounded animate-pulse" />
                     );
                   }
-                  return row.unit_price_tax_incl && row.product_quantity
-                    ? (row.unit_price_tax_incl * row.product_quantity).toFixed(
+                  // Si es línea de rectificación o discount es null, devolver "-"
+                  if (row.reference_combination === "rectificacion") return "-";
+                  const discount = row.reduction_amount_tax_incl;
+                  return discount != null && !isNaN(discount)
+                    ? `${(Number(discount) * row.product_quantity).toFixed(
                         2
-                      )
-                    : "0.00";
+                      )} €`
+                    : "-";
                 }}
+              />
+              <Column
+                field="product_quantity"
+                header="Cant."
+                style={{ textAlign: "center" }}
+                body={(row) =>
+                  isLoading ? (
+                    <div className="bg-gray-200 h-3 w-8 ml-auto rounded animate-pulse" />
+                  ) : (
+                    <>
+                      {row.reference_combination === "rectificacion"
+                        ? "-"
+                        : row.product_quantity}
+                    </>
+                  )
+                }
               />
               <Column
                 header="Devolver"
@@ -468,7 +498,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                       )
                     : devolverBodyTemplate
                 }
-                style={{ width: "90px", textAlign: "center" }}
+                style={{ textAlign: "center" }}
               />
             </DataTable>
           </div>

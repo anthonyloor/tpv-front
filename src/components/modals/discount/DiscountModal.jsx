@@ -28,14 +28,10 @@ const DiscountModal = ({
     targetProduct.id_product_attribute
       ? `${targetProduct.id_product}-${targetProduct.id_product_attribute}`
       : "";
-  // Se deja fullProductName tal como estaba:
-  const fullProductName =
+
+  const productName =
     targetProduct && targetProduct.product_name
-      ? `${targetProduct.product_name}${
-          targetProduct.combination_name
-            ? " " + targetProduct.combination_name
-            : ""
-        }`
+      ? `${targetProduct.product_name}${""}`
       : "";
 
   const handleApplyDiscount = () => {
@@ -78,7 +74,7 @@ const DiscountModal = ({
       setDiscountValue,
       setErrorMessage,
       newTargetIdentifier,
-      fullProductName
+      productName
     );
   };
 
@@ -93,7 +89,7 @@ const DiscountModal = ({
       onHide={onClose}
       header={
         targetProduct && targetProduct.id_product
-          ? `Descuento sobre producto: ${fullProductName}`
+          ? `Descuento sobre producto: ${productName}`
           : "Descuento sobre venta"
       }
       modal
