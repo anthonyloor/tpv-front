@@ -1,6 +1,6 @@
 // src/components/Sales/SalesCardActions.jsx
 
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import ReturnsExchangesModal from "../modals/returns/ReturnsExchangesModal";
@@ -86,6 +86,20 @@ function SalesCardActions({
     bizum: "",
   });
   const [changeAmount, setChangeAmount] = useState(0);
+  const [originalPaymentMethods, setOriginalPaymentMethods] = useState([]);
+  const [originalPaymentAmounts, setOriginalPaymentAmounts] = useState({});
+
+  useEffect(() => {
+    // Leer payment methods originales de localStorage si existen
+    const stored = localStorage.getItem("originalPaymentMethods");
+    if (stored) {
+      setOriginalPaymentMethods(JSON.parse(stored));
+    }
+    const storedAmounts = localStorage.getItem("originalPaymentAmounts");
+    if (storedAmounts) {
+      setOriginalPaymentAmounts(JSON.parse(storedAmounts));
+    }
+  }, []);
 
   // Vale leftover
   // const [leftoverPreview, setLeftoverPreview] = useState([]); // Eliminado: no usado
@@ -111,6 +125,9 @@ function SalesCardActions({
   }, 0);
   // total puede ser negativo
   const total = subtotalProducts - totalDiscounts;
+
+  // Calcular si se trata de "devolución" (total negativo)
+  const isDevolucion = total < 0;
 
   // Estados para alertas
   const [alertVisible, setAlertVisible] = useState(false);
@@ -242,6 +259,19 @@ function SalesCardActions({
 
   // Toggle de métodos
   const togglePaymentMethod = (method) => {
+    if (isDevolucion) {
+      // Solo se permite si el método es "vale" o si pertenece a originalPaymentMethods
+      if (method !== "vale" && !originalPaymentMethods.includes(method)) return;
+      // Si ya se seleccionó "vale", no se permite añadir otro método
+      if (selectedMethods.includes("vale") && method !== "vale") return;
+      // Si se intenta seleccionar "vale" y ya hay otros métodos, no se permite
+      if (
+        method === "vale" &&
+        selectedMethods.length > 0 &&
+        !selectedMethods.includes("vale")
+      )
+        return;
+    }
     if (selectedMethods.includes(method)) {
       // Quitar
       const updated = { ...amounts, [method]: "" };
@@ -249,13 +279,31 @@ function SalesCardActions({
       setAmounts(updated);
       updateChangeAmount(updated);
     } else {
-      // Agregar
-      setSelectedMethods((prev) => [...prev, method]);
-      // Si es rectificación, el importe se establece negativo
-      if (method === "tarjeta" || method === "bizum" || method === "efectivo") {
-        const remain = isRectification
+      // Si se selecciona "vale", escribir su importe fijo y deseleccionar cualquier otro
+      if (method === "vale") {
+        const updated = { ...amounts, vale: Math.abs(total).toFixed(2) };
+        setSelectedMethods(["vale"]);
+        setAmounts(updated);
+        updateChangeAmount(updated);
+        return;
+      }
+      // Si se intenta seleccionar otro método y "vale" ya está seleccionado, no se permite
+      if (selectedMethods.includes("vale")) return;
+      // Para métodos originales, limitar el importe a devolver
+      if (["efectivo", "tarjeta", "bizum"].includes(method)) {
+        const methodKey =
+          method === "efectivo"
+            ? "total_cash"
+            : method === "tarjeta"
+            ? "total_card"
+            : "total_bizum";
+        const originalAmount = parseFloat(
+          originalPaymentAmounts[methodKey] || "0"
+        );
+        const computedRemain = isRectification
           ? Math.abs(total)
           : Math.max(0, total) - totalEntered;
+        const remain = Math.min(originalAmount, computedRemain);
         const newVal =
           remain > 0
             ? isRectification
@@ -263,14 +311,29 @@ function SalesCardActions({
               : remain.toFixed(2)
             : "";
         const updated = { ...amounts, [method]: newVal };
+        setSelectedMethods((prev) => [...prev, method]);
         setAmounts(updated);
         updateChangeAmount(updated);
+      } else {
+        setSelectedMethods((prev) => [...prev, method]);
       }
     }
   };
 
   const handleAmountChange = (method, val) => {
-    const parsed = isRectification ? -Math.abs(val || 0) : val || 0;
+    let parsed = isRectification ? -Math.abs(val || 0) : val || 0;
+    if (["efectivo", "tarjeta", "bizum"].includes(method)) {
+      const methodKey =
+        method === "efectivo"
+          ? "total_cash"
+          : method === "tarjeta"
+          ? "total_card"
+          : "total_bizum";
+      const originalAmount = parseFloat(
+        originalPaymentAmounts[methodKey] || "0"
+      );
+      if (parsed > originalAmount) parsed = originalAmount;
+    }
     const updated = { ...amounts, [method]: parsed.toString() };
     setAmounts(updated);
     updateChangeAmount(updated);
@@ -521,35 +584,76 @@ function SalesCardActions({
 
           {/* Métodos de Pago */}
           <div className="flex flex-col gap-4">
-            {["efectivo", "tarjeta", "bizum"].map((method) => (
-              <div key={method} className="flex items-center gap-2">
-                <Button
-                  label={method.charAt(0).toUpperCase() + method.slice(1)}
-                  severity={
-                    selectedMethods.includes(method)
-                      ? method === "efectivo"
-                        ? "success"
-                        : "primary"
-                      : "secondary"
-                  }
-                  className="flex-1"
-                  onClick={() => togglePaymentMethod(method)}
-                  // Permitir selección si total > 0 o si es rectificación
-                  disabled={total === 0 ? true : false}
-                />
-                <InputNumber
-                  value={amounts[method] ? parseFloat(amounts[method]) : null}
-                  onValueChange={(e) => handleAmountChange(method, e.value)}
-                  disabled={!selectedMethods.includes(method)}
-                  placeholder={`Importe en ${method}`}
-                  className="flex-1"
-                />
-              </div>
-            ))}
+            {["efectivo", "tarjeta", "bizum", "vale"].map((method) => {
+              // Definir label; para "vale" se muestra el importe fijo
+              const label =
+                method === "vale"
+                  ? `Vale descuento: ${Math.abs(total).toFixed(2)} €`
+                  : method.charAt(0).toUpperCase() + method.slice(1);
+              // Para métodos originales: solo se habilita si están en originalPaymentMethods
+              // y, si "vale" está seleccionado, se deshabilitan
+              const disabled = isDevolucion
+                ? method === "vale"
+                  ? selectedMethods.some((m) => m !== "vale")
+                  : !originalPaymentMethods.includes(method) ||
+                    selectedMethods.includes("vale")
+                : false;
+              return (
+                <div key={method} className="flex items-center gap-2">
+                  <Button
+                    label={label}
+                    severity={
+                      selectedMethods.includes(method)
+                        ? method === "efectivo"
+                          ? "success"
+                          : "primary"
+                        : "secondary"
+                    }
+                    className="flex-1"
+                    onClick={() => togglePaymentMethod(method)}
+                    disabled={disabled}
+                  />
+                  <InputNumber
+                    value={
+                      method === "vale"
+                        ? parseFloat(Math.abs(total).toFixed(2))
+                        : amounts[method]
+                        ? parseFloat(amounts[method])
+                        : null
+                    }
+                    // Para "vale", el input queda inalterable
+                    onValueChange={(e) =>
+                      method === "vale"
+                        ? null
+                        : handleAmountChange(method, e.value)
+                    }
+                    disabled={
+                      method === "vale"
+                        ? true
+                        : !selectedMethods.includes(method)
+                    }
+                    placeholder={`Importe en ${method}`}
+                    className="flex-1"
+                  />
+                </div>
+              );
+            })}
           </div>
+
           {/* Mostrar mensaje de vale descuento si corresponde */}
           {voucherMessage && (
             <div className="mt-2 text-red-500 font-bold">{voucherMessage}</div>
+          )}
+          {/* Mostrar botón Vale descuento en devolución */}
+          {total < 0 && originalPaymentMethods.length > 0 && (
+            <div className="mt-2">
+              <Button
+                label={`Vale descuento: ${Math.abs(total).toFixed(2)} €`}
+                className="p-button-warning"
+                icon="pi pi-ticket"
+                disabled
+              />
+            </div>
           )}
           <Button
             label={isLoading ? "Procesando..." : "Confirmar Venta"}

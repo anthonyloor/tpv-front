@@ -80,6 +80,15 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         setOrderData(null);
         return;
       }
+      // Almacenar métodos originales
+      if(data.payment){
+        const originalMethods = data.payment.split(",").map(m => m.trim());
+        localStorage.setItem("originalPaymentMethods", JSON.stringify(originalMethods));
+      }
+      // Almacenar importes originales de los métodos de pago
+      if(data.payment_amounts){
+        localStorage.setItem("originalPaymentAmounts", JSON.stringify(data.payment_amounts));
+      }
       const details = data.order_details.map((item) => ({
         ...item,
         uniqueLineId: `${item.product_id}-${item.product_attribute_id}`,

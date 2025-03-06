@@ -1,6 +1,6 @@
-// src/components/modal/PricesTags.jsx
+// src/components/modal/tags/PricesTags.jsx
 
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { DataTable } from "primereact/datatable";
@@ -9,135 +9,139 @@ import { Button } from "primereact/button";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 
-const PricesTags = ({ isOpen, onHide }) => {
-  // Estados existentes
+export default function PricesTags({ isOpen, onHide }) {
+  // Estados principales
   const [searchTerm, setSearchTerm] = useState("");
-  const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  // Nuevos estados
+  const [results, setResults] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [showPrintModal, setShowPrintModal] = useState(false);
+
+  // Para el diálogo de confirmar cantidad
+  const [showQuantityDialog, setShowQuantityDialog] = useState(false);
   const [quantityPrint, setQuantityPrint] = useState(1);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const inputRef = useRef(null);
   const apiFetch = useApiFetch();
+  const inputRef = useRef(null);
 
-  // Al abrir el modal se reinician los estados y se enfoca el input
+  // Al abrir este diálogo principal, reiniciar estados
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
+      setIsLoading(false);
       setResults([]);
       setSelectedProduct(null);
+      setShowQuantityDialog(false);
+      setQuantityPrint(1);
+      setIsGenerating(false);
+
       if (inputRef.current) {
         inputRef.current.focus();
       }
     }
   }, [isOpen]);
 
-  // Función de agrupación similar a ProductSearchCard
+  // === 1) BÚSQUEDA DE PRODUCTOS =======================================================
   const groupProductsByProductName = (products) => {
-    const validProducts = products.filter(
-      (product) =>
-        product.id_product_attribute !== null ||
-        product.ean13_combination !== null ||
-        product.ean13_combination_0 !== null
+    // Agrupa productos por product_name
+    const valid = products.filter(
+      (p) =>
+        p.id_product_attribute !== null ||
+        p.ean13_combination !== null ||
+        p.ean13_combination_0 !== null
     );
-    return validProducts.reduce((acc, product) => {
-      const existingGroup = acc.find(
-        (group) => group.product_name === product.product_name
-      );
-      const productStock = {
-        shop_name: product.shop_name,
-        id_shop: product.id_shop,
-        quantity: product.quantity,
-        id_stock_available: product.id_stock_available,
+    return valid.reduce((acc, prod) => {
+      const existing = acc.find((g) => g.product_name === prod.product_name);
+      const shopStock = {
+        id_shop: prod.id_shop,
+        quantity: prod.quantity,
+        id_stock_available: prod.id_stock_available,
       };
-      if (existingGroup) {
-        const existingCombination = existingGroup.combinations.find(
-          (combination) =>
-            combination.id_product_attribute === product.id_product_attribute
+      if (existing) {
+        const existingComb = existing.combinations.find(
+          (c) => c.id_product_attribute === prod.id_product_attribute
         );
-        if (existingCombination) {
-          existingCombination.stocks.push(productStock);
+        if (existingComb) {
+          existingComb.stocks.push(shopStock);
         } else {
-          existingGroup.combinations.push({
-            ...product,
-            stocks: [productStock],
-          });
+          existing.combinations.push({ ...prod, stocks: [shopStock] });
         }
       } else {
         acc.push({
-          product_name: product.product_name,
-          image_url: product.image_url,
-          combinations: [
-            {
-              ...product,
-              stocks: [productStock],
-            },
-          ],
+          product_name: prod.product_name,
+          image_url: prod.image_url,
+          combinations: [{ ...prod, stocks: [shopStock] }],
         });
       }
       return acc;
     }, []);
   };
 
-  // Función de búsqueda que aplica el filtrado y la agrupación
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!searchTerm.trim()) return;
     setIsLoading(true);
-    try {
-      const response = await apiFetch(
-        `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
-          searchTerm
-        )}`,
-        { method: "GET" }
-      );
-      // Aplica filtrado de productos válidos y agrúpalos
-      const groupedProducts = groupProductsByProductName(response);
-      // Aplana los grupos en una lista única y añade la propiedad fullName
-      const flatProducts = groupedProducts.reduce((acc, group) => {
-        const combos = group.combinations.map((combo) => ({
-          ...combo,
-          fullName: `${group.product_name} ${
-            combo.combination_name || ""
-          }`.trim(),
-        }));
-        return acc.concat(combos);
-      }, []);
-      setResults(flatProducts);
-    } catch (error) {
-      console.error("Error buscando producto:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    apiFetch(
+      `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
+        searchTerm
+      )}`,
+      { method: "GET" }
+    )
+      .then((resp) => {
+        const grouped = groupProductsByProductName(resp);
+        // Aplana
+        const flat = [];
+        grouped.forEach((g) => {
+          g.combinations.forEach((comb) => {
+            flat.push({
+              ...comb,
+              fullName: `${g.product_name} ${
+                comb.combination_name || ""
+              }`.trim(),
+            });
+          });
+        });
+        setResults(flat);
+      })
+      .catch((err) => {
+        console.error("Error buscando producto:", err);
+      })
+      .finally(() => setIsLoading(false));
   };
 
-  // Permite buscar al presionar Enter
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
+    if (e.key === "Enter") handleSearch();
   };
 
-  // Nueva función para confirmar impresión
-  const handlePrintConfirm = async () => {
+  // === 2) AL PULSAR "IMPRIMIR ETIQUETAS" EN EL DIALOG PRINCIPAL =======================
+  const openQuantityDialog = () => {
     if (!selectedProduct) return;
-    const payload = {
-      quantity_print: quantityPrint,
-      id_control_stock: selectedProduct.id_control_stock
-        ? selectedProduct.id_control_stock
-        : null,
-      ean13:
-        selectedProduct.ean13_combination ||
-        selectedProduct.ean13_combination_0 ||
-        "",
-      id_product: selectedProduct.id_product,
-      id_product_attribute: selectedProduct.id_product_attribute,
-      id_shop: selectedProduct.id_shop,
-      quantity: selectedProduct.quantity,
-    };
-    console.log("Confirmando impresión, payload:", payload);
+    setShowQuantityDialog(true);
+  };
+
+  // === 3) CONFIRMAR LA CANTIDAD Y GENERAR ETIQUETAS EN NUEVA VENTANA ==================
+  const handleConfirmQuantity = async () => {
+    if (!selectedProduct) return;
+
+    setIsGenerating(true);
+
     try {
+      // Comentamos la llamada a get_product_price_tag para no perderla
+      /*
+      const payload = {
+        quantity_print: quantityPrint,
+        id_control_stock: selectedProduct.id_control_stock
+          ? selectedProduct.id_control_stock
+          : null,
+        ean13:
+          selectedProduct.ean13_combination ||
+          selectedProduct.ean13_combination_0 ||
+          "",
+        id_product: selectedProduct.id_product,
+        id_product_attribute: selectedProduct.id_product_attribute,
+        id_shop: selectedProduct.id_shop,
+        quantity: selectedProduct.quantity,
+      };
+      
       let response = await apiFetch(
         "https://apitpv.anthonyloor.com/get_product_price_tag",
         {
@@ -146,200 +150,306 @@ const PricesTags = ({ isOpen, onHide }) => {
           body: JSON.stringify(payload),
         }
       );
+      
       // Aseguramos que response sea arreglo
-      if (!Array.isArray(response)) { response = [response]; }
-      // Se arma el texto de código de barras para cada etiqueta
-      // usaremos el ean13 concatenado con "'" + id_control_stock si existe
+      if (!Array.isArray(response)) { 
+        response = [response]; 
+      }
+      */
+
+      // Obtenemos el EAN13 del producto seleccionado
+      const ean13 =
+        selectedProduct.ean13_combination ||
+        selectedProduct.ean13_combination_0 ||
+        "0000000000000"; // EAN13 por defecto si no hay ninguno
+
+      // Generamos el HTML para la ventana de impresión
+      // Usaremos JsBarcode para generar los códigos de barras directamente en la ventana
       let htmlContent = `
         <!DOCTYPE html>
         <html lang="es">
           <head>
             <meta charset="UTF-8" />
-            <title>Vista Etiquetas</title>
-            <!-- Incluir bwip‑js vía CDN -->
-            <script src="https://unpkg.com/bwip-js@latest/dist/bwip-js-min.js"></script>
+            <title>Etiquetas de Producto</title>
+            <!-- Incluimos JsBarcode desde CDN -->
+            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
             <style>
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 20px;
+              }
               .label {
                 border: 1px solid #000;
-                padding: 5px;
-                margin: 10px;
-                width: 60mm;
-                height: 28mm;
-                font-family: Arial, sans-serif;
+                padding: 5mm;
+                margin-bottom: 10mm;
+                width: 90mm;
+                height: 29mm;
+                box-sizing: border-box;
+                page-break-after: always;
               }
-              .line1 { font-size: 14px; font-weight: bold; }
-              .line2 { display: flex; align-items: center; }
-              .barcode-container { width: 40mm; }
-              .combination { margin-left: 5px; }
-              .line3 { text-align: right; font-size: 16px; margin-top: 5px; }
+              .product-name { 
+                font-size: 14px; 
+                font-weight: bold; 
+                margin-bottom: 2mm;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+              .barcode-row { 
+                display: flex; 
+                align-items: center;
+                margin-bottom: 2mm;
+              }
+              .barcode-container { 
+                width: 40mm; 
+              }
+              svg.barcode {
+                width: 100%;
+                height: auto;
+              }
+              .combination { 
+                margin-left: 3mm; 
+                font-size: 12px;
+              }
+              .footer-row { 
+                display: flex; 
+                justify-content: space-between; 
+                font-size: 14px;
+              }
+              .print-button {
+                margin-bottom: 20px;
+              }
+              .print-button button {
+                padding: 8px 16px;
+                margin-right: 10px;
+                cursor: pointer;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+              }
+              .print-button button.close {
+                background-color: #f44336;
+              }
+              @media print {
+                body {
+                  padding: 0;
+                }
+                .label {
+                  border: none;
+                  margin-bottom: 0;
+                }
+                .print-button {
+                  display: none;
+                }
+              }
             </style>
           </head>
-          <body>`;
-      response.forEach((label, index) => {
-        // Generamos el texto del barcode: si id_control_stock existe, concatenar "'" + id_control_stock
-        const barcodeText = label.id_control_stock 
-          ? label.ean13 + "'" + label.id_control_stock 
-          : label.ean13;
+          <body>
+            <div class="print-button">
+              <button onclick="window.print()">Imprimir</button>
+              <button class="close" onclick="window.close()">Cerrar</button>
+            </div>`;
+
+      // Generamos un div para cada etiqueta
+      for (let i = 0; i < quantityPrint; i++) {
         htmlContent += `
           <div class="label">
-            <div class="line1">${selectedProduct.fullName}</div>
-            <div class="line2">
-              <div id="barcode-${index}" class="barcode-container"></div>
-              <div class="combination">${selectedProduct.combination_name || ""}</div>
+            <div class="product-name">${selectedProduct.fullName}</div>
+            <div class="barcode-row">
+              <div class="barcode-container">
+                <svg class="barcode" id="barcode-${i}"></svg>
+              </div>
+              <div class="combination">${
+                selectedProduct.combination_name || ""
+              }</div>
             </div>
-            <div class="line3">${selectedProduct.price ? selectedProduct.price.toFixed(2) + " €" : ""}</div>
+            <div class="footer-row">
+              <span>${ean13}</span>
+              <span>${
+                selectedProduct.price
+                  ? selectedProduct.price.toFixed(2) + " €"
+                  : ""
+              }</span>
+            </div>
           </div>
         `;
-      });
+      }
+
+      // Añadimos el script para generar los códigos de barras con JsBarcode
       htmlContent += `
             <script>
+              // Función para generar los códigos de barras cuando el DOM esté listo
               document.addEventListener('DOMContentLoaded', function() {
-                const labels = document.querySelectorAll('.label');
-                labels.forEach((element, index) => {
-                  // Obtenemos el texto del barcode para cada etiqueta desde el array de respuesta
-                  // Usamos el mismo valor que generamos en el HTML para simplificar 
-                  const barcodeData = element.querySelector('.barcode-container').id === "barcode-" + index 
-                    ? responseData[index].ean13 + (responseData[index].id_control_stock ? "'" + responseData[index].id_control_stock : "") 
-                    : "";
-                  // Para evitar complicaciones, usaremos el mismo valor almacenado en un atributo data en cada contenedor
-                  // Mejor: en el HTML, grabamos data-barcode en el contenedor:
-                  // Como alternativa, reconstruimos el valor aquí:
-                  let txt = element.querySelector('.barcode-container').getAttribute('data-barcode');
-                  if (!txt) { txt = ""; }
-                  BwipJS.toSVG({
-                    bcid: 'ean13',
-                    text: txt,
-                    scale: 3,
-                    height: 10,
-                    includetext: true,
-                    textxalign: 'center'
-                  }, function(err, svg) {
-                    if (!err) {
-                      element.querySelector('.barcode-container').innerHTML = svg;
-                    } else {
-                      console.error("Error generando barcode:", err);
-                    }
-                  });
-                });
-              });
-              // Para pasar la data de la respuesta al script, inyectamos la variable responseData
-              var responseData = ${JSON.stringify(response)};
-              // Además, asignamos el atributo data-barcode a cada contenedor
-              document.addEventListener('DOMContentLoaded', function() {
-                responseData.forEach((item, index) => {
-                  const container = document.getElementById("barcode-" + index);
-                  if (container) {
-                    const txt = item.id_control_stock ? item.ean13 + "'" + item.id_control_stock : item.ean13;
-                    container.setAttribute("data-barcode", txt);
+                // Aseguramos que el EAN13 tenga 13 dígitos
+                let ean13 = "${ean13}";
+                if (ean13.length < 13) {
+                  ean13 = ean13.padStart(13, '0');
+                } else if (ean13.length > 13) {
+                  ean13 = ean13.substring(0, 13);
+                }
+                
+                // Generamos los códigos de barras para cada etiqueta
+                for (let i = 0; i < ${quantityPrint}; i++) {
+                  try {
+                    JsBarcode("#barcode-" + i, ean13, {
+                      format: "EAN13",
+                      width: 2,
+                      height: 50,
+                      displayValue: true,
+                      fontSize: 12,
+                      margin: 0
+                    });
+                  } catch (error) {
+                    console.error("Error generando código de barras:", error);
+                    document.getElementById("barcode-" + i).insertAdjacentHTML('afterend', 
+                      '<div style="color: red; font-size: 10px;">Error al generar código de barras</div>');
                   }
-                });
+                }
               });
             </script>
           </body>
         </html>`;
+
+      // Abrimos una nueva ventana y escribimos el HTML
       const printWindow = window.open("", "_blank", "width=800,height=600");
-      printWindow.document.open();
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+
+        // Enfocamos la ventana para que el usuario la vea
+        printWindow.focus();
+      } else {
+        alert("Por favor, permite las ventanas emergentes para esta página.");
+      }
     } catch (error) {
-      console.error("Error al solicitar impresión:", error);
+      console.error("Error al generar etiquetas:", error);
+      alert("Error al generar las etiquetas. Por favor, inténtelo de nuevo.");
     } finally {
-      setShowPrintModal(false);
+      setIsGenerating(false);
+      setShowQuantityDialog(false);
     }
   };
 
-  // Plantillas para las columnas de la tabla
-  const fullNameBodyTemplate = (rowData) => rowData.fullName;
-  const priceBodyTemplate = (rowData) =>
-    rowData.price ? rowData.price.toFixed(2) + " €" : "";
-  const eanBodyTemplate = (rowData) =>
-    rowData.ean13_combination || rowData.ean13_combination_0 || "";
-  const quantityBodyTemplate = (rowData) => rowData.quantity;
+  // === Render principal ===============================================================
 
   return (
-    <Dialog
-      header="Etiquetas"
-      visible={isOpen}
-      onHide={onHide}
-      modal
-      style={{ width: "50vw" }}
-      draggable={false}
-      resizable={false}
-    >
-      <div className="p-4">
-        <div className="mb-4 flex items-center">
-          <InputText
-            ref={inputRef}
-            placeholder="Buscar producto por referencia o EAN13..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
-            onKeyDown={handleKeyDown}
-            className="w-full"
-          />
-          <Button icon="pi pi-search" onClick={handleSearch} className="ml-2" />
-        </div>
-        {isLoading ? (
-          <div className="flex items-center justify-center">
-            <ProgressSpinner />
-          </div>
-        ) : (
-          // Modificación: se añade selección a la DataTable
-          <DataTable
-            value={results}
-            responsiveLayout="scroll"
-            selectionMode="single"
-            selection={selectedProduct}
-            onSelectionChange={(e) => setSelectedProduct(e.value)}
-          >
-            <Column selectionMode="single" headerStyle={{ width: "3em" }} />
-            <Column header="Nombre Completo" body={fullNameBodyTemplate} />
-            <Column
-              header="Precio"
-              body={priceBodyTemplate}
-              style={{ textAlign: "right" }}
-            />
-            <Column header="EAN13" body={eanBodyTemplate} />
-            <Column
-              header="Cantidad"
-              body={quantityBodyTemplate}
-              style={{ textAlign: "right" }}
-            />
-          </DataTable>
-        )}
-        {/* Botón para imprimir etiquetas */}
-        <div className="mt-4">
-          <Button
-            label="Imprimir etiquetas"
-            onClick={() => {
-              console.log("Producto seleccionado:", selectedProduct);
-              setShowPrintModal(true);
-            }}
-            disabled={!selectedProduct}
-          />
-        </div>
-      </div>
-
-      {/* Modal para solicitar número de etiquetas a imprimir */}
+    <>
+      {/* 1) DIALOG PRINCIPAL */}
       <Dialog
-        header="Número de etiquetas a imprimir"
-        visible={showPrintModal}
-        onHide={() => setShowPrintModal(false)}
+        header="Etiquetas de Producto"
+        visible={isOpen}
+        onHide={onHide}
         modal
+        style={{ width: "60vw", maxWidth: "800px" }}
       >
         <div className="p-4">
-          <InputText
-            type="number"
-            value={quantityPrint}
-            onChange={(e) => setQuantityPrint(Number(e.target.value))}
-            className="w-full"
-          />
+          {/* Búsqueda */}
+          <div className="mb-4 flex items-center">
+            <InputText
+              ref={inputRef}
+              placeholder="Buscar por referencia o EAN13..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
+              onKeyDown={handleKeyDown}
+              className="w-full"
+            />
+            <Button
+              icon="pi pi-search"
+              onClick={handleSearch}
+              className="ml-2"
+            />
+          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center">
+              <ProgressSpinner />
+            </div>
+          ) : (
+            <DataTable
+              value={results}
+              responsiveLayout="scroll"
+              selectionMode="single"
+              selection={selectedProduct}
+              onSelectionChange={(e) => setSelectedProduct(e.value)}
+              emptyMessage="No hay resultados"
+            >
+              <Column selectionMode="single" headerStyle={{ width: "3em" }} />
+              <Column
+                header="Nombre Completo"
+                body={(rowData) => rowData.fullName}
+              />
+              <Column
+                header="Precio"
+                body={(rowData) =>
+                  rowData.price ? rowData.price.toFixed(2) + " €" : ""
+                }
+                style={{ textAlign: "right" }}
+              />
+              <Column
+                header="EAN13"
+                body={(rowData) =>
+                  rowData.ean13_combination || rowData.ean13_combination_0 || ""
+                }
+              />
+              <Column
+                header="Cantidad"
+                body={(rowData) => rowData.quantity}
+                style={{ textAlign: "right" }}
+              />
+            </DataTable>
+          )}
+          {/* Botón para "Imprimir etiquetas" => abre diálogo de cantidad */}
           <div className="mt-4 flex justify-end">
-            <Button label="Confirmar" onClick={handlePrintConfirm} />
+            <Button
+              label="Imprimir etiquetas"
+              icon="pi pi-print"
+              onClick={openQuantityDialog}
+              disabled={!selectedProduct}
+            />
           </div>
         </div>
       </Dialog>
-    </Dialog>
-  );
-};
 
-export default PricesTags;
+      {/* 2) DIALOG PARA CONFIRMAR CANTIDAD */}
+      <Dialog
+        header="Número de etiquetas a imprimir"
+        visible={showQuantityDialog}
+        onHide={() => !isGenerating && setShowQuantityDialog(false)}
+        modal
+        style={{ width: "30vw", maxWidth: "400px" }}
+        closable={!isGenerating}
+      >
+        <div className="p-4">
+          <label className="block mb-2">Cantidad de etiquetas:</label>
+          <InputText
+            type="number"
+            value={quantityPrint}
+            onChange={(e) =>
+              setQuantityPrint(Math.max(1, Number(e.target.value)))
+            }
+            className="w-full"
+            min="1"
+            disabled={isGenerating}
+          />
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              label="Cancelar"
+              className="p-button-secondary"
+              onClick={() => setShowQuantityDialog(false)}
+              disabled={isGenerating}
+            />
+            <Button
+              label="Confirmar"
+              icon="pi pi-check"
+              onClick={handleConfirmQuantity}
+              loading={isGenerating}
+              loadingIcon="pi pi-spinner pi-spin"
+            />
+          </div>
+        </div>
+      </Dialog>
+    </>
+  );
+}

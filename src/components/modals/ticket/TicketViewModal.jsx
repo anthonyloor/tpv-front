@@ -14,6 +14,8 @@ const TicketViewModal = ({
   printOnOpen = false,
   giftTicket = false,
   changeAmount = 0,
+  widthPercent = "25%",
+  heightPercent = "30%",
 }) => {
   const { configData } = useContext(ConfigContext);
   const [fetchedData, setFetchedData] = useState(null);
@@ -285,7 +287,12 @@ const TicketViewModal = ({
       modal
       draggable={false}
       resizable={false}
-      style={{ width: "40vw" }}
+      style={{
+        width: widthPercent,
+        height: heightPercent,
+        minWidth: "750px",
+        minHeight: "600px",
+      }}
     >
       <div className="p-4">
         {error && <p className="text-red-500">{error}</p>}
