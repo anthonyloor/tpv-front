@@ -261,6 +261,24 @@ function SalesCardActions({
 
   // Toggle de métodos
   const togglePaymentMethod = (method) => {
+    // Si se va a agregar un método nuevo, deseleccionar aquellos sin importe válido.
+    if (!selectedMethods.includes(method)) {
+      const validMethods = selectedMethods.filter((m) => {
+        const val = amounts[m];
+        return val !== "" && !isNaN(parseFloat(val)) && parseFloat(val) > 0;
+      });
+      if (validMethods.length !== selectedMethods.length) {
+        const updatedAmounts = { ...amounts };
+        selectedMethods.forEach((m) => {
+          if (!validMethods.includes(m)) {
+            updatedAmounts[m] = "";
+          }
+        });
+        setSelectedMethods(validMethods);
+        setAmounts(updatedAmounts);
+        updateChangeAmount(updatedAmounts);
+      }
+    }
     if (isDevolution) {
       // Solo se permite si el método es "vale" o si pertenece a originalPaymentMethods
       if (method !== "vale" && !originalPaymentMethods.includes(method)) return;
@@ -341,10 +359,9 @@ function SalesCardActions({
 
   // Mostrar mensaje de vale descuento si total es negativo y sin métodos de pago seleccionados
   // Voucher se genera solo si total < 0 y no se selecciona ningún método
-  const voucherMessage =
-    total < 0 && selectedMethods.length === 0
-      ? `Se va a generar un vale descuento de ${Math.abs(total).toFixed(2)} €`
-      : "";
+  const voucherMessage = selectedMethods.includes("vale")
+    ? `Se va a generar un vale descuento de ${Math.abs(total).toFixed(2)} €`
+    : "";
 
   // Agregar updateProductDiscount para aplicar descuento a un producto
   const updateProductDiscount = (idStockAvailable, newDiscountedPrice) => {
@@ -451,6 +468,11 @@ function SalesCardActions({
     "[SalesCardActions] selectedProductForDiscount:",
     selectedProductForDiscount
   );
+
+  // Agregar variable para definir los métodos de pago según modo de devolución
+  const paymentMethods = isDevolution
+    ? ["efectivo", "tarjeta", "bizum", "vale"]
+    : ["efectivo", "tarjeta", "bizum"];
 
   return (
     <div
@@ -565,11 +587,20 @@ function SalesCardActions({
                 {total.toFixed(2)} €
               </span>
             </div>
+            {/* Mostrar cambio a devolver en venta normal */}
+            {!isDevolution && totalEntered > total && (
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-xl font-medium">Cambio a devolver:</span>
+                <span className="text-xl font-bold">
+                  {(totalEntered - total).toFixed(2)} €
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Métodos de Pago */}
           <div className="flex flex-col gap-4">
-            {["efectivo", "tarjeta", "bizum", "vale"].map((method) => {
+            {paymentMethods.map((method) => {
               // Definir label; para "vale" se muestra el importe fijo
               const label =
                 method === "vale"
@@ -606,16 +637,17 @@ function SalesCardActions({
                         ? parseFloat(amounts[method])
                         : null
                     }
-                    // Para "vale", el input queda inalterable
                     onValueChange={(e) =>
                       method === "vale"
                         ? null
                         : handleAmountChange(method, e.value)
                     }
+                    // Si es devolución, o el método no está seleccionado, deshabilitar el input
                     disabled={
-                      method === "vale"
+                      isDevolution ||
+                      (method === "vale"
                         ? true
-                        : !selectedMethods.includes(method)
+                        : !selectedMethods.includes(method))
                     }
                     placeholder={`Importe en ${method}`}
                     className="flex-1"
@@ -625,20 +657,9 @@ function SalesCardActions({
             })}
           </div>
 
-          {/* Mostrar mensaje de vale descuento si corresponde */}
+          {/* Mostrar mensaje de vale descuento */}
           {voucherMessage && (
             <div className="mt-2 text-red-500 font-bold">{voucherMessage}</div>
-          )}
-          {/* Mostrar botón Vale descuento en devolución */}
-          {total < 0 && originalPaymentMethods.length > 0 && (
-            <div className="mt-2">
-              <Button
-                label={`Vale descuento: ${Math.abs(total).toFixed(2)} €`}
-                className="p-button-warning"
-                icon="pi pi-ticket"
-                disabled
-              />
-            </div>
           )}
           <Button
             label={isLoading ? "Procesando..." : "Confirmar Venta"}
