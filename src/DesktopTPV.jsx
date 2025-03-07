@@ -1,6 +1,6 @@
 // src/DesktopTPV.jsx
 
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useCallback } from "react";
 import { ConfigContext } from "./contexts/ConfigContext";
 import NavbarCard from "./components/Navbar/NavbarCard";
 import SalesCard from "./components/Sales/SalesCard";
@@ -39,9 +39,9 @@ function DesktopTPV() {
     useState(null);
   const [totals, setTotals] = useState({ subtotal: 0, total: 0 });
 
-  const handleTotalsChange = ({ subtotal, total }) => {
+  const handleTotalsChange = useCallback(({ subtotal, total }) => {
     setTotals({ subtotal, total });
-  };
+  }, []);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden p-2 gap-2">

@@ -38,8 +38,11 @@ export default function useFinalizeSale() {
         (it) =>
           it.id_product !== 0 || it.reference_combination === "rectificacion"
       );
+      const factorTax = 1.21;
       const total_paid_tax_excl = normalItems.reduce(
-        (sum, item) => sum + item.final_price_excl_tax * item.quantity,
+        (sum, item) =>
+          sum +
+          (parseFloat(item.final_price_incl_tax) / factorTax) * item.quantity,
         0
       );
       const total_products = total_paid_tax_excl;
@@ -53,22 +56,23 @@ export default function useFinalizeSale() {
         product_attribute_id: item.id_product_attribute,
         stock_available_id: item.id_stock_available,
         id_control_stock: item.id_control_stock,
-        product_name: `${item.product_name} ${
-          item.combination_name || ""
-        }`.trim(),
+        product_name: item.product_name,
         product_quantity: item.quantity,
-        product_price: item.unit_price_tax_excl,
+        product_price: item.final_price_incl_tax,
         product_ean13: item.ean13_combination,
         product_reference: item.reference_combination,
         reduction_amount_tax_incl: item.reduction_amount_tax_incl,
         total_price_tax_incl: parseFloat(
           (item.final_price_incl_tax * item.quantity).toFixed(2)
         ),
+        // Se recalcula total_price_tax_excl usando final_price_incl_tax y factorTax
         total_price_tax_excl: parseFloat(
-          (item.final_price_excl_tax * item.quantity).toFixed(2)
+          ((item.final_price_incl_tax / factorTax) * item.quantity).toFixed(2)
         ),
         unit_price_tax_incl: item.final_price_incl_tax,
-        unit_price_tax_excl: item.final_price_excl_tax,
+        unit_price_tax_excl: parseFloat(
+          (item.final_price_incl_tax / factorTax).toFixed(2)
+        ),
         id_shop: item.id_shop,
       }));
 
@@ -86,7 +90,6 @@ export default function useFinalizeSale() {
       let total_discounts = 0;
       const discountsArray = [];
       const leftoverArray = [];
-      const factorTax = 1.21;
 
       appliedDiscounts.forEach((disc) => {
         let discountValue = 0;

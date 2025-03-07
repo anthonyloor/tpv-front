@@ -1,6 +1,6 @@
 // src/components/Navbar/NavbarCard.jsx
 
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import { isMobile } from "react-device-detect";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
@@ -144,9 +144,9 @@ const NavbarCard = () => {
   const { theme, setTheme } = useTheme();
   const isDarkTheme = theme === "lara-dark-indigo";
 
-  const toggleTheme = (e) => {
+  const toggleTheme = useCallback((e) => {
     setTheme(e.value ? "lara-dark-indigo" : "lara-light-indigo");
-  };
+  }, [setTheme]);
 
   // Opciones del SplitButton
   const menuItems = [

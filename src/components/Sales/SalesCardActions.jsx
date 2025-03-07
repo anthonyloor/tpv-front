@@ -1,6 +1,6 @@
 // src/components/Sales/SalesCardActions.jsx
 
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import ReturnsExchangesModal from "../modals/returns/ReturnsExchangesModal";
@@ -363,19 +363,29 @@ function SalesCardActions({
     ? `Se va a generar un vale descuento de ${Math.abs(total).toFixed(2)} €`
     : "";
 
-  // Agregar updateProductDiscount para aplicar descuento a un producto
+  // Actualizamos la función para marcar el descuento aplicado en un producto
   const updateProductDiscount = (idStockAvailable, newDiscountedPrice) => {
     setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id_stock_available === idStockAvailable
-          ? { ...item, reduction_amount_tax_incl: newDiscountedPrice }
-          : item
-      )
+      prevItems.map((item) => {
+        if (item.id_stock_available === idStockAvailable) {
+          const discountAmount = Math.max(
+            0,
+            item.final_price_incl_tax - newDiscountedPrice
+          );
+          return {
+            ...item,
+            reduction_amount_tax_incl: newDiscountedPrice,
+            discountApplied: true,
+            discountAmount,
+          };
+        }
+        return item;
+      })
     );
   };
 
   // Función para actualizar productos según el descuento aplicado
-  const updateDiscountsForIdentifier = (discObj) => {
+  const updateDiscountsForIdentifier = useCallback((discObj) => {
     if (discObj.description.includes("producto")) {
       // Descuento sobre producto específico
       const match = discObj.description.match(/producto\s+([^\s]+)\s+generado/);
@@ -453,7 +463,7 @@ function SalesCardActions({
         );
       }
     }
-  };
+  }, [cartItems, setCartItems]);
 
   const handleDiscountApplied = (discObj) => {
     addDiscount(discObj);

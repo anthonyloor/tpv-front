@@ -1,6 +1,6 @@
 // src/components/Sales/SalesCard.jsx
 
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import { Dialog } from "primereact/dialog";
 import { SplitButton } from "primereact/splitbutton";
 import { Button } from "primereact/button";
@@ -190,6 +190,30 @@ function SalesCard({
     );
   };
 
+  const [expandedRows, setExpandedRows] = useState(null);
+  
+  // Función para mostrar la fila expandida con el descuento si el producto tiene un descuento aplicado específico
+  const rowExpansionTemplate = (data) => {
+    if (data.discountApplied && data.discountAmount > 0) {
+      return (
+        <div style={{ padding: "1em", backgroundColor: "#f9f9f9" }}>
+          <strong>Descuento aplicado: </strong> {data.discountAmount.toFixed(2)} €
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Memoriza la función para actualizar selectedProductForDiscount solo si cambia
+  const memoizedSelectionChange = useCallback((e) => {
+    const newSelection = e.value || null;
+    setSelectedProductForDiscount((prev) =>
+      JSON.stringify(prev) === JSON.stringify(newSelection)
+        ? prev
+        : newSelection
+    );
+  }, [setSelectedProductForDiscount]);
+
   return (
     <div
       className="h-full flex flex-col p-3 relative"
@@ -262,14 +286,14 @@ function SalesCard({
           <>
             <DataTable
               value={cartItems}
-              selectionMode="single"
-              onSelectionChange={(e) => {
-                console.log("[SalesCard] Producto seleccionado:", e.value);
-                setSelectedProductForDiscount(e.value || null);
-              }}
               dataKey="id_stock_available"
+              expandedRows={expandedRows}
+              rowExpansionTemplate={rowExpansionTemplate}
+              onRowToggle={(e) => setExpandedRows(e.data)}
+              selectionMode="single"
+              onSelectionChange={memoizedSelectionChange}
             >
-              {/* Columnas */}
+              <Column expander style={{ width: "3em" }} />
               <Column
                 field="product_name"
                 header="Producto"
