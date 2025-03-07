@@ -42,7 +42,8 @@ function SalesCard({
     setSelectedAddress,
     resetToDefaultClientAndAddress,
   } = useContext(ClientContext);
-  const { isDevolution, setIsDevolution, isDiscount, setIsDiscount } = useContext(DevolutionContext);
+  const { isDevolution, setIsDevolution, isDiscount, setIsDiscount } =
+    useContext(DevolutionContext);
 
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] =
@@ -152,6 +153,7 @@ function SalesCard({
     }
   };
   // === CALCULOS TOTALES
+  /*
   const subtotalProducts = cartItems.reduce(
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
     0
@@ -173,11 +175,39 @@ function SalesCard({
         (sum, item) => sum + item.final_price_incl_tax * item.quantity,
         0
       );
+      */
+
+  const subtotalProducts = cartItems.reduce(
+    (sum, item) => sum + item.final_price_incl_tax * item.quantity,
+    0
+  );
+  const totalDiscounts = cartItems.reduce(
+    (sum, item) =>
+      item.discountApplied ? sum + item.discountAmount * item.quantity : sum,
+    0
+  );
+  const total = cartItems.reduce((sum, item) => {
+    const price = item.discountApplied
+      ? item.reduction_amount_tax_incl
+      : item.final_price_incl_tax;
+    return sum + price * item.quantity;
+  }, 0);
 
   // Enviar totales cuando cambien
   useEffect(() => {
-    onTotalsChange({ subtotal: subtotalProducts, total });
-  }, [cartItems, appliedDiscounts, subtotalProducts, total, onTotalsChange]);
+    onTotalsChange({
+      subtotal: subtotalProducts,
+      total,
+      totalDiscounts,
+    });
+  }, [
+    cartItems,
+    appliedDiscounts,
+    subtotalProducts,
+    total,
+    totalDiscounts,
+    onTotalsChange,
+  ]);
 
   const actionBodyTemplate = (rowData) => {
     return (
@@ -190,29 +220,51 @@ function SalesCard({
     );
   };
 
-  const [expandedRows, setExpandedRows] = useState(null);
-  
-  // Función para mostrar la fila expandida con el descuento si el producto tiene un descuento aplicado específico
-  const rowExpansionTemplate = (data) => {
-    if (data.discountApplied && data.discountAmount > 0) {
-      return (
-        <div style={{ padding: "1em", backgroundColor: "#f9f9f9" }}>
-          <strong>Descuento aplicado: </strong> {data.discountAmount.toFixed(2)} €
-        </div>
-      );
+  const expandedRows = cartItems.filter(
+    (item) => item.discountApplied && item.discountAmount > 0
+  );
+
+  const rowExpansionTemplate = (data) => (
+    <div style={{ padding: "1em", backgroundColor: "var(--surface-50)" }}>
+      <strong>Descuento aplicado: </strong>
+      {data.discountAmount.toFixed(2)} €
+    </div>
+  );
+
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const handleRowClick = (e) => {
+    if (
+      selectedProduct &&
+      selectedProduct.id_stock_available === e.data.id_stock_available
+    ) {
+      setSelectedProduct(null);
+      setSelectedProductForDiscount(null);
+    } else {
+      setSelectedProduct(e.data);
+      setSelectedProductForDiscount(e.data);
     }
-    return null;
   };
 
+  // Función para definir clase en la fila seleccionada
+  const rowClassName = (data) =>
+    selectedProduct &&
+    data.id_stock_available === selectedProduct.id_stock_available
+      ? "selected-row"
+      : "";
+
   // Memoriza la función para actualizar selectedProductForDiscount solo si cambia
-  const memoizedSelectionChange = useCallback((e) => {
-    const newSelection = e.value || null;
-    setSelectedProductForDiscount((prev) =>
-      JSON.stringify(prev) === JSON.stringify(newSelection)
-        ? prev
-        : newSelection
-    );
-  }, [setSelectedProductForDiscount]);
+  const memoizedSelectionChange = useCallback(
+    (e) => {
+      const newSelection = e.value || null;
+      setSelectedProductForDiscount((prev) =>
+        JSON.stringify(prev) === JSON.stringify(newSelection)
+          ? prev
+          : newSelection
+      );
+    },
+    [setSelectedProductForDiscount]
+  );
 
   return (
     <div
@@ -289,11 +341,12 @@ function SalesCard({
               dataKey="id_stock_available"
               expandedRows={expandedRows}
               rowExpansionTemplate={rowExpansionTemplate}
-              onRowToggle={(e) => setExpandedRows(e.data)}
+              // Eliminamos onRowToggle ya que no se permite colapsar/expandir
               selectionMode="single"
-              onSelectionChange={memoizedSelectionChange}
+              selection={selectedProduct}
+              onRowClick={handleRowClick}
+              rowClassName={rowClassName}
             >
-              <Column expander style={{ width: "3em" }} />
               <Column
                 field="product_name"
                 header="Producto"
@@ -301,20 +354,18 @@ function SalesCard({
               />
               <Column
                 header="Precio Und"
-                body={(rowData) => {
-                  if (rowData.reference_combination === "rectificacion")
-                    return "-";
-                  return `${rowData.final_price_incl_tax.toFixed(2)} €`;
-                }}
+                body={(rowData) =>
+                  rowData.reference_combination === "rectificacion"
+                    ? "-"
+                    : `${rowData.final_price_incl_tax.toFixed(2)} €`
+                }
                 style={{ width: "13%", textAlign: "center" }}
               />
               <Column
                 header="Precio Descuento"
                 body={(rowData) => {
-                  // Si es línea de rectificación se devuelve "-"
                   if (rowData.reference_combination === "rectificacion")
                     return "-";
-                  // Verificar que reduction_amount_tax_incl no sea null ni undefined
                   const discount = rowData.reduction_amount_tax_incl;
                   return discount != null && !isNaN(discount)
                     ? `${Number(discount).toFixed(2)} €`
@@ -325,7 +376,6 @@ function SalesCard({
               <Column
                 header="Total"
                 body={(rowData) => {
-                  // Si es línea de rectificación o discount es null, devolver "-"
                   if (rowData.reference_combination === "rectificacion")
                     return "-";
                   const discount = rowData.reduction_amount_tax_incl;

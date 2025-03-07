@@ -37,11 +37,18 @@ function DesktopTPV() {
   const [selectedProductForStock, setSelectedProductForStock] = useState(null);
   const [selectedProductForDiscount, setSelectedProductForDiscount] =
     useState(null);
-  const [totals, setTotals] = useState({ subtotal: 0, total: 0 });
+  const [totals, setTotals] = useState({
+    subtotal: 0,
+    total: 0,
+    totalDiscounts: 0,
+  });
 
-  const handleTotalsChange = useCallback(({ subtotal, total }) => {
-    setTotals({ subtotal, total });
-  }, []);
+  const handleTotalsChange = useCallback(
+    ({ subtotal, total, totalDiscounts }) => {
+      setTotals({ subtotal, total, totalDiscounts });
+    },
+    []
+  );
 
   return (
     <div className="flex flex-col h-screen overflow-hidden p-2 gap-2">
@@ -91,6 +98,7 @@ function DesktopTPV() {
               selectedProductForDiscount={selectedProductForDiscount}
               subtotal={totals.subtotal}
               total={totals.total}
+              totalDiscounts={totals.totalDiscounts}
             />
           </div>
           <div className="flex flex-col w-[70%] bg-white rounded shadow overflow-hidden">

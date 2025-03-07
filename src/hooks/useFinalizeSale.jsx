@@ -58,21 +58,25 @@ export default function useFinalizeSale() {
         id_control_stock: item.id_control_stock,
         product_name: item.product_name,
         product_quantity: item.quantity,
-        product_price: item.final_price_incl_tax,
+        product_price: parseFloat(
+          (item.final_price_incl_tax / factorTax).toFixed(2)
+        ),
         product_ean13: item.ean13_combination,
         product_reference: item.reference_combination,
-        reduction_amount_tax_incl: item.reduction_amount_tax_incl,
+        reduction_amount_tax_incl:
+          typeof item.reduction_amount_tax_incl === "number"
+            ? item.reduction_amount_tax_incl
+            : 0,
         total_price_tax_incl: parseFloat(
           (item.final_price_incl_tax * item.quantity).toFixed(2)
         ),
-        // Se recalcula total_price_tax_excl usando final_price_incl_tax y factorTax
         total_price_tax_excl: parseFloat(
           ((item.final_price_incl_tax / factorTax) * item.quantity).toFixed(2)
         ),
-        unit_price_tax_incl: item.final_price_incl_tax,
         unit_price_tax_excl: parseFloat(
           (item.final_price_incl_tax / factorTax).toFixed(2)
         ),
+        unit_price_tax_incl: item.final_price_incl_tax,
         id_shop: item.id_shop,
       }));
 

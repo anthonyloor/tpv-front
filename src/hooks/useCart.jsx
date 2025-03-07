@@ -155,7 +155,7 @@ export default function useCart(allowOutOfStockSales) {
             reduction_amount_tax_incl:
               typeof product.reduction_amount_tax_incl !== "undefined"
                 ? product.reduction_amount_tax_incl
-                : product.final_price_incl_tax,
+                : 0,
           },
         ];
       }

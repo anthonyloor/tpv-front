@@ -63,6 +63,7 @@ function SalesCardActions({
   heightPercent = "60%",
   subtotal = 0,
   total = 0,
+  totalDiscounts = 0,
 }) {
   const {
     isDevolution,
@@ -114,15 +115,6 @@ function SalesCardActions({
   const isRectification = cartItems.some(
     (item) => item.reference_combination === "rectificacion"
   );
-
-  const totalDiscounts = appliedDiscounts.reduce((sum, disc) => {
-    const redPercent = disc.reduction_percent || 0;
-    const redAmount = disc.reduction_amount || 0;
-    const discountAmount = redPercent
-      ? subtotal * (redPercent / 100)
-      : redAmount;
-    return sum + discountAmount;
-  }, 0);
 
   // Si es devolución, se muestran valores en negativo
   const displayTotal = isDevolution ? Math.abs(total) : total;
