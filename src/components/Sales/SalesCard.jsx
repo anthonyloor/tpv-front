@@ -186,12 +186,25 @@ function SalesCard({
       item.discountApplied ? sum + item.discountAmount * item.quantity : sum,
     0
   );
-  const total = cartItems.reduce((sum, item) => {
-    const price = item.discountApplied
-      ? item.reduction_amount_tax_incl
-      : item.final_price_incl_tax;
-    return sum + price * item.quantity;
-  }, 0);
+  const total =
+    isDevolution || isDiscount
+      ? cartItems.reduce(
+          (sum, item) => sum + item.reduction_amount_tax_incl * item.quantity,
+          0
+        )
+      : cartItems.reduce((sum, item) => {
+          const price = item.discountApplied
+            ? item.reduction_amount_tax_incl
+            : item.final_price_incl_tax;
+          return sum + price * item.quantity;
+        }, 0);
+
+  // Determinar si al menos un producto tiene descuento informado (> 0)
+  const showDiscountColumn = cartItems.some(
+    (item) =>
+      item.reduction_amount_tax_incl != null &&
+      Number(item.reduction_amount_tax_incl) > 0
+  );
 
   // Enviar totales cuando cambien
   useEffect(() => {
@@ -210,11 +223,12 @@ function SalesCard({
   ]);
 
   const actionBodyTemplate = (rowData) => {
+    // Botón X: más grande, sin fondo; se aplica estilo para modo claro y oscuro (usa variables CSS)
     return (
       <Button
         tooltip="Eliminar"
         icon="pi pi-times"
-        className="p-button p-button-warning"
+        className="p-button p-button-text"
         onClick={() => onRemoveProduct(rowData.id_stock_available)}
       />
     );
@@ -341,12 +355,25 @@ function SalesCard({
               dataKey="id_stock_available"
               expandedRows={expandedRows}
               rowExpansionTemplate={rowExpansionTemplate}
-              // Eliminamos onRowToggle ya que no se permite colapsar/expandir
               selectionMode="single"
               selection={selectedProduct}
               onRowClick={handleRowClick}
               rowClassName={rowClassName}
             >
+              <Column
+                header=""
+                body={(rowData) => (
+                  <i
+                    className={
+                      rowData.id_stock_available ===
+                      selectedProduct?.id_stock_available
+                        ? "pi pi-circle-on"
+                        : "pi pi-circle-off"
+                    }
+                  />
+                )}
+                style={{ width: "3%", textAlign: "center" }}
+              />
               <Column
                 field="product_name"
                 header="Producto"
@@ -361,27 +388,33 @@ function SalesCard({
                 }
                 style={{ width: "13%", textAlign: "center" }}
               />
-              <Column
-                header="Precio Descuento"
-                body={(rowData) => {
-                  if (rowData.reference_combination === "rectificacion")
-                    return "-";
-                  const discount = rowData.reduction_amount_tax_incl;
-                  return discount != null && !isNaN(discount)
-                    ? `${Number(discount).toFixed(2)} €`
-                    : "-";
-                }}
-                style={{ width: "13%", textAlign: "center" }}
-              />
+              {showDiscountColumn && (
+                <Column
+                  header="Precio Descuento"
+                  body={(rowData) => {
+                    if (rowData.reference_combination === "rectificacion")
+                      return "-";
+                    const discount = rowData.reduction_amount_tax_incl;
+                    return discount != null && !isNaN(discount)
+                      ? `${Number(discount).toFixed(2)} €`
+                      : "-";
+                  }}
+                  style={{ width: "13%", textAlign: "center" }}
+                />
+              )}
               <Column
                 header="Total"
                 body={(rowData) => {
                   if (rowData.reference_combination === "rectificacion")
                     return "-";
-                  const discount = rowData.reduction_amount_tax_incl;
-                  return discount != null && !isNaN(discount)
-                    ? `${(Number(discount) * rowData.quantity).toFixed(2)} €`
-                    : "-";
+                  const discount =
+                    Number(rowData.reduction_amount_tax_incl) || 0;
+                  const unitPrice = Number(rowData.final_price_incl_tax);
+                  const totalValue =
+                    showDiscountColumn && discount > 0
+                      ? discount * rowData.quantity
+                      : unitPrice * rowData.quantity;
+                  return `${totalValue.toFixed(2)} €`;
                 }}
                 style={{ width: "13%", textAlign: "center" }}
               />
