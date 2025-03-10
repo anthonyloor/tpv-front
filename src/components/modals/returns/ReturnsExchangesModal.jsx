@@ -9,7 +9,7 @@ import { InputText } from "primereact/inputtext";
 import TicketViewModal from "../ticket/TicketViewModal";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import { toast } from "sonner";
-import { DevolutionContext } from "../../../contexts/DevolutionContext";
+import { CartContext } from "../../../contexts/CartContext";
 
 /**
  * Modal para gestionar devoluciones/cambios.
@@ -38,7 +38,11 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
 
   const apiFetch = useApiFetch();
 
-  const { setIsDevolution } = useContext(DevolutionContext);
+  const {
+    setIsDevolution,
+    setOriginalPaymentMethods,
+    setOriginalPaymentAmounts,
+  } = useContext(CartContext);
 
   // Skeleton
   const skeletonData = new Array(6).fill(null).map((_, idx) => ({
@@ -83,21 +87,6 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         setError("No se encontró la venta o no tiene detalles.");
         setOrderData(null);
         return;
-      }
-      // Almacenar métodos originales
-      if (data.payment) {
-        const originalMethods = data.payment.split(",").map((m) => m.trim());
-        localStorage.setItem(
-          "originalPaymentMethods",
-          JSON.stringify(originalMethods)
-        );
-      }
-      // Almacenar importes originales de los métodos de pago
-      if (data.payment_amounts) {
-        localStorage.setItem(
-          "originalPaymentAmounts",
-          JSON.stringify(data.payment_amounts)
-        );
       }
       const details = data.order_details.map((item) => ({
         ...item,
@@ -320,6 +309,16 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       };
       onAddProduct(productForCart, null, null, false, -qtyToReturn);
     });
+
+    // Ahora, actualizar los valores originales de pago desde la venta obtenida
+    if (orderData.payment) {
+      const originalMethods = orderData.payment.split(",").map((m) => m.trim());
+      setOriginalPaymentMethods(originalMethods);
+    }
+    if (orderData.payment_amounts) {
+      setOriginalPaymentAmounts(orderData.payment_amounts);
+    }
+
     setIsDevolution(true);
 
     toast.success("Rectificación añadida y productos devueltos al carrito.");

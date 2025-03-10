@@ -8,7 +8,7 @@ import { Divider } from "primereact/divider";
 
 import { ClientContext } from "../../contexts/ClientContext";
 import { ConfigContext } from "../../contexts/ConfigContext";
-import { DevolutionContext } from "../../contexts/DevolutionContext";
+import { CartContext } from "../../contexts/CartContext";
 
 import ParkedCartsModal from "../modals/parked/ParkedCartsModal";
 import AddressModal from "../modals/customer/AddressModal";
@@ -32,6 +32,7 @@ function SalesCard({
   loadParkedCart,
   deleteParkedCart,
   setSelectedProductForDiscount,
+  selectedProductForDiscount,
   onTotalsChange = () => {},
 }) {
   const { configData } = useContext(ConfigContext);
@@ -42,8 +43,14 @@ function SalesCard({
     setSelectedAddress,
     resetToDefaultClientAndAddress,
   } = useContext(ClientContext);
-  const { isDevolution, setIsDevolution, isDiscount, setIsDiscount } =
-    useContext(DevolutionContext);
+  const {
+    isDevolution,
+    setIsDevolution,
+    isDiscount,
+    setIsDiscount,
+    setOriginalPaymentMethods,
+    setOriginalPaymentAmounts,
+  } = useContext(CartContext);
 
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] =
@@ -141,6 +148,9 @@ function SalesCard({
     clearDiscounts();
     setIsDevolution(false);
     setIsDiscount(false);
+    setSelectedProductForDiscount(null);
+    setOriginalPaymentMethods([]);
+    setOriginalPaymentAmounts({});
   };
   const parkedCarts = getParkedCarts();
   const handleLoadCart = (cartId) => {
@@ -153,11 +163,11 @@ function SalesCard({
     }
   };
   // === CALCULOS TOTALES
-  /*
   const subtotalProducts = cartItems.reduce(
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
     0
   );
+  // Calculate discounts based on applied discount rules
   const totalDiscounts = appliedDiscounts.reduce((sum, disc) => {
     const redPercent = disc.reduction_percent || 0;
     const redAmount = disc.reduction_amount || 0;
@@ -166,38 +176,14 @@ function SalesCard({
       : redAmount;
     return sum + discountAmount;
   }, 0);
-  const total = isDevolution || isDiscount
-    ? cartItems.reduce(
-        (sum, item) => sum + item.reduction_amount_tax_incl * item.quantity,
-        0
-      )
-    : cartItems.reduce(
-        (sum, item) => sum + item.final_price_incl_tax * item.quantity,
-        0
-      );
-      */
-
-  const subtotalProducts = cartItems.reduce(
-    (sum, item) => sum + item.final_price_incl_tax * item.quantity,
-    0
-  );
-  const totalDiscounts = cartItems.reduce(
-    (sum, item) =>
-      item.discountApplied ? sum + item.discountAmount * item.quantity : sum,
-    0
-  );
-  const total =
-    isDevolution || isDiscount
-      ? cartItems.reduce(
-          (sum, item) => sum + item.reduction_amount_tax_incl * item.quantity,
-          0
-        )
-      : cartItems.reduce((sum, item) => {
-          const price = item.discountApplied
-            ? item.reduction_amount_tax_incl
-            : item.final_price_incl_tax;
-          return sum + price * item.quantity;
-        }, 0);
+  const total = cartItems.reduce((sum, item) => {
+    const price =
+      item.reduction_amount_tax_incl != null &&
+      item.reduction_amount_tax_incl > 0
+        ? item.reduction_amount_tax_incl
+        : item.final_price_incl_tax;
+    return sum + price * item.quantity;
+  }, 0);
 
   // Determinar si al menos un producto tiene descuento informado (> 0)
   const showDiscountColumn = cartItems.some(
@@ -222,6 +208,66 @@ function SalesCard({
     onTotalsChange,
   ]);
 
+  // Función para quitar descuento aplicado a un producto y eliminar el descuento en appliedDiscounts
+  const removeProductDiscount = (idStockAvailable) => {
+    setCartItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id_stock_available === idStockAvailable
+          ? {
+              ...item,
+              reduction_amount_tax_incl: 0, // se establece a 0
+              discountApplied: false,
+              discountAmount: 0,
+            }
+          : item
+      )
+    );
+    const product = cartItems.find(
+      (item) => item.id_stock_available === idStockAvailable
+    );
+    if (product) {
+      // Utilizamos id_product y id_product_attribute para formar el identificador, en minúsculas
+      const identifier =
+        product.id_product && product.id_product_attribute
+          ? `${product.id_product}-${product.id_product_attribute}`.toLowerCase()
+          : "";
+      appliedDiscounts.forEach((disc, index) => {
+        if (disc.description) {
+          const descLower = disc.description.toLowerCase();
+          if (
+            descLower.includes("producto") &&
+            descLower.includes(identifier)
+          ) {
+            removeDiscountByIndex(index);
+          }
+        }
+      });
+    }
+  };
+
+  // Función para quitar el descuento global; se busca su índice en appliedDiscounts y se elimina,
+  // y actualiza todos los productos para fijar su campo reduction_amount_tax_incl a 0.
+  const removeGlobalDiscount = () => {
+    const globalDiscount = appliedDiscounts.find(
+      (disc) => disc.description && disc.description.includes("venta")
+    );
+    if (globalDiscount) {
+      const idx = appliedDiscounts.findIndex((disc) => disc === globalDiscount);
+      if (idx >= 0) {
+        removeDiscountByIndex(idx);
+      }
+    }
+    // Actualizar todos los productos: quitar el precio descuento y reduction_amount_tax_incl a 0
+    setCartItems((prevItems) =>
+      prevItems.map((item) => ({
+        ...item,
+        reduction_amount_tax_incl: 0,
+        discountApplied: false,
+        discountAmount: 0,
+      }))
+    );
+  };
+
   const actionBodyTemplate = (rowData) => {
     // Botón X: más grande, sin fondo; se aplica estilo para modo claro y oscuro (usa variables CSS)
     return (
@@ -238,10 +284,21 @@ function SalesCard({
     (item) => item.discountApplied && item.discountAmount > 0
   );
 
+  // Modificar rowExpansionTemplate para incluir botón "X" y quitar descuento por producto
   const rowExpansionTemplate = (data) => (
-    <div style={{ padding: "1em", backgroundColor: "var(--surface-50)" }}>
-      <strong>Descuento aplicado: </strong>
-      {data.discountAmount.toFixed(2)} €
+    <div style={{ backgroundColor: "var(--surface-50)" }}>
+      <div className="flex justify-between items-center">
+        <span>
+          <strong>Descuento aplicado: </strong>
+          {data.discountAmount.toFixed(2)} €
+        </span>
+        <Button
+          icon="pi pi-times"
+          className="p-button-rounded p-button-danger p-button-text"
+          tooltip="Quitar descuento"
+          onClick={() => removeProductDiscount(data.id_stock_available)}
+        />
+      </div>
     </div>
   );
 
@@ -260,6 +317,12 @@ function SalesCard({
     }
   };
 
+  useEffect(() => {
+    if (!selectedProductForDiscount) {
+      setSelectedProduct(null);
+    }
+  }, [selectedProductForDiscount]);
+
   // Función para definir clase en la fila seleccionada
   const rowClassName = (data) =>
     selectedProduct &&
@@ -267,18 +330,13 @@ function SalesCard({
       ? "selected-row"
       : "";
 
-  // Memoriza la función para actualizar selectedProductForDiscount solo si cambia
-  const memoizedSelectionChange = useCallback(
-    (e) => {
-      const newSelection = e.value || null;
-      setSelectedProductForDiscount((prev) =>
-        JSON.stringify(prev) === JSON.stringify(newSelection)
-          ? prev
-          : newSelection
-      );
-    },
-    [setSelectedProductForDiscount]
+  // Agregar filtro para descuentos globales (sobre venta) donde disc.description incluya "venta"
+  const globalDiscounts = appliedDiscounts.filter(
+    (disc) => disc.description && disc.description.includes("venta")
   );
+
+  // Agregar antes del return la obtención del descuento global (solo se permite uno)
+  const globalDiscount = globalDiscounts.length > 0 ? globalDiscounts[0] : null;
 
   return (
     <div
@@ -289,7 +347,7 @@ function SalesCard({
       }}
     >
       {/* CABECERA */}
-      <div className="flex justify-between items-center mb-4 gap-4">
+      <div className="flex justify-between items-center gap-4">
         <div className="flex-1">
           <SplitButton
             label={clientLabel}
@@ -359,6 +417,25 @@ function SalesCard({
               selection={selectedProduct}
               onRowClick={handleRowClick}
               rowClassName={rowClassName}
+              footer={
+                globalDiscount ? (
+                  <div className="p-datatable-footer flex justify-between items-center">
+                    <span>
+                      Descuento de{" "}
+                      {globalDiscount.reduction_percent
+                        ? `${globalDiscount.reduction_percent}%`
+                        : `${globalDiscount.reduction_amount} €`}{" "}
+                      sobre la venta
+                    </span>
+                    <Button
+                      icon="pi pi-times"
+                      className="p-button-rounded p-button-danger p-button-text"
+                      tooltip="Quitar descuento global"
+                      onClick={removeGlobalDiscount}
+                    />
+                  </div>
+                ) : null
+              }
             >
               <Column
                 header=""
@@ -438,49 +515,6 @@ function SalesCard({
           <p>No hay productos en el ticket.</p>
         )}
       </div>
-
-      {/* DESCUENTOS */}
-      {appliedDiscounts.length > 0 && (
-        <div
-          className="p-3 rounded mt-4"
-          style={{
-            backgroundColor: "var(--surface-50)",
-            color: "var(--text-color)",
-          }}
-        >
-          <h4 className="font-bold text-lg mb-2">Descuentos Aplicados</h4>
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="text-left">Etiqueta</th>
-                <th className="text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appliedDiscounts.map((disc, index) => {
-                const label = disc.name || `Descuento #${index + 1}`;
-                return (
-                  <tr
-                    key={index}
-                    className="border-b"
-                    style={{ borderColor: "var(--surface-border)" }}
-                  >
-                    <td className="py-2">{label}</td>
-                    <td className="py-2 text-right">
-                      <Button
-                        tooltip="Eliminar"
-                        className="p-button-danger p-button-sm"
-                        icon="pi pi-times"
-                        onClick={() => removeDiscountByIndex(index)}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       {/* TOTALES y Descuentos */}
       <div

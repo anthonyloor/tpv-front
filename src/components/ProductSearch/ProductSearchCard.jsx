@@ -10,8 +10,10 @@ import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import useProductSearch from "../../hooks/useProductSearch";
+import { CartContext } from "../../contexts/CartContext";
 
 const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
+  const { setIsDevolution } = useContext(CartContext);
   const [searchTerm, setSearchTerm] = useState("");
   const searchInputRef = useRef(null);
 
@@ -19,6 +21,24 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const { shopId, shopName } = useContext(AuthContext);
   const allowOutOfStockSales = configData?.allow_out_of_stock_sales || false;
   const apiFetch = useApiFetch();
+
+  // Función wrapper: al añadir producto, marcar isDevolution a false
+  const handleAddProductWrapper = (
+    product,
+    stockQuantity,
+    exceedsStockCallback,
+    forceAdd = false,
+    quantity = 1
+  ) => {
+    setIsDevolution(false);
+    onAddProduct(
+      product,
+      stockQuantity,
+      exceedsStockCallback,
+      forceAdd,
+      quantity
+    );
+  };
 
   const {
     groupedProducts,
@@ -33,7 +53,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     apiFetch,
     shopId,
     allowOutOfStockSales,
-    onAddProduct,
+    onAddProduct: handleAddProductWrapper,
     onAddDiscount,
   });
 

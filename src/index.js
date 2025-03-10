@@ -14,7 +14,7 @@ import { ClientProvider } from "./contexts/ClientContext";
 import { BrowserRouter as Router } from "react-router-dom";
 import PinProvider from "./contexts/PinContext";
 import { PrimeReactProvider } from "primereact/api";
-import { DevolutionProvider } from "./contexts/DevolutionContext";
+import { CartProvider } from "./contexts/CartContext";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -24,11 +24,11 @@ root.render(
         <Router>
           <ConfigProvider>
             <ClientProvider>
-              <DevolutionProvider>
+              <CartProvider>
                 <PinProvider>
                   <App />
                 </PinProvider>
-              </DevolutionProvider>
+              </CartProvider>
             </ClientProvider>
           </ConfigProvider>
         </Router>

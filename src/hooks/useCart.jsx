@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
-import { DevolutionContext } from "../contexts/DevolutionContext";
+import { CartContext } from "../contexts/CartContext";
 
 export default function useCart(allowOutOfStockSales) {
   const [cartItems, setCartItems] = useState([]);
@@ -11,7 +11,7 @@ export default function useCart(allowOutOfStockSales) {
   const [recentlyAddedId, setRecentlyAddedId] = useState(null);
   const { shopId } = useContext(AuthContext);
   const { isDevolution, setIsDevolution, isDiscount, setIsDiscount } =
-    useContext(DevolutionContext);
+    useContext(CartContext);
 
   const getCartKey = (shopId) => `cart_shop_${shopId}`;
   const getParkedCartsKey = (shopId) => `parked_carts_shop_${shopId}`;

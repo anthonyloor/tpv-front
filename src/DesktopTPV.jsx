@@ -96,6 +96,7 @@ function DesktopTPV() {
               clearDiscounts={clearDiscounts}
               handleAddProduct={handleAddProduct}
               selectedProductForDiscount={selectedProductForDiscount}
+              setSelectedProductForDiscount={setSelectedProductForDiscount}
               subtotal={totals.subtotal}
               total={totals.total}
               totalDiscounts={totals.totalDiscounts}

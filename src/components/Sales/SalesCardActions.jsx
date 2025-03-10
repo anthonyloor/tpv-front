@@ -13,7 +13,8 @@ import useFinalizeSale from "../../hooks/useFinalizeSale";
 import { AuthContext } from "../../contexts/AuthContext";
 import { toast } from "sonner";
 import { InputNumber } from "primereact/inputnumber";
-import { DevolutionContext } from "../../contexts/DevolutionContext";
+import { CartContext } from "../../contexts/CartContext";
+import { ClientContext } from "../../contexts/ClientContext"; // <--- nuevo
 
 // Función auxiliar: simula consumo de importe de un vale
 function simulateDiscountConsumption(cartItems, appliedDiscounts) {
@@ -59,6 +60,7 @@ function SalesCardActions({
   clearDiscounts,
   handleAddProduct,
   selectedProductForDiscount,
+  setSelectedProductForDiscount,
   widthPercent = "35%",
   heightPercent = "60%",
   subtotal = 0,
@@ -73,8 +75,9 @@ function SalesCardActions({
     originalPaymentAmounts,
     setOriginalPaymentAmounts,
     setIsDiscount,
-  } = useContext(DevolutionContext);
+  } = useContext(CartContext);
   const { idProfile } = useContext(AuthContext);
+  const { resetToDefaultClientAndAddress } = useContext(ClientContext); // <--- nuevo
   const { isLoading, finalizeSale } = useFinalizeSale();
 
   // Modales
@@ -101,15 +104,29 @@ function SalesCardActions({
   const [changeAmount, setChangeAmount] = useState(0);
 
   useEffect(() => {
-    // Leer payment methods originales de localStorage si existen
-    const stored = localStorage.getItem("originalPaymentMethods");
-    if (stored) {
-      setOriginalPaymentMethods(JSON.parse(stored));
-    }
-    const storedAmounts = localStorage.getItem("originalPaymentAmounts");
-    if (storedAmounts) {
-      setOriginalPaymentAmounts(JSON.parse(storedAmounts));
-    }
+    // Leer datos de pago actualizados al dispararse el evento personalizado
+    const handlePaymentDataUpdated = () => {
+      const storedMethods = localStorage.getItem("originalPaymentMethods");
+      if (storedMethods) {
+        setOriginalPaymentMethods(JSON.parse(storedMethods));
+      }
+      const storedAmounts = localStorage.getItem("originalPaymentAmounts");
+      if (storedAmounts) {
+        const parsed = JSON.parse(storedAmounts);
+        const mapped = {
+          efectivo: parsed.total_cash,
+          tarjeta: parsed.total_card,
+          bizum: parsed.total_bizum,
+        };
+        setOriginalPaymentAmounts(mapped);
+      }
+    };
+    window.addEventListener("paymentDataUpdated", handlePaymentDataUpdated);
+    return () =>
+      window.removeEventListener(
+        "paymentDataUpdated",
+        handlePaymentDataUpdated
+      );
   }, [setOriginalPaymentMethods, setOriginalPaymentAmounts]);
 
   const isRectification = cartItems.some(
@@ -149,6 +166,39 @@ function SalesCardActions({
         "El carrito está vacío. Añade productos antes de aplicar descuentos."
       );
       return;
+    }
+    console.log("[handleDescuentoClick] appliedDiscounts:", appliedDiscounts);
+    if (
+      appliedDiscounts.some(
+        (d) => d.description && d.description.includes("venta")
+      )
+    ) {
+      toast.error(
+        "No se pueden aplicar descuentos a productos si ya se ha aplicado un descuento sobre toda la venta."
+      );
+      setSelectedProductForDiscount(null);
+      return;
+    }
+    if (selectedProductForDiscount) {
+      // Intentando aplicar descuento a producto
+
+      if (selectedProductForDiscount.discountApplied) {
+        toast.error("Ese producto ya tiene un descuento aplicado.");
+        setSelectedProductForDiscount(null);
+        return;
+      }
+    } else {
+      // Intentando aplicar descuento global
+      if (
+        appliedDiscounts.some(
+          (d) => d.description && !d.description.includes("venta")
+        )
+      ) {
+        toast.error(
+          "No se pueden aplicar descuentos globales si ya se han aplicado descuentos en productos."
+        );
+        return;
+      }
     }
     setIsDiscountModalOpen(true);
   };
@@ -203,7 +253,6 @@ function SalesCardActions({
           newCartRuleCode,
         }) => {
           showAlert("Venta finalizada correctamente", true);
-          // Guardar estado
           setTicketOrderId(orderId);
           setGiftTicketTM(giftTicket);
           setChangeAmount(changeAmount);
@@ -214,11 +263,10 @@ function SalesCardActions({
           if (newCartRuleCode) setNewCartRuleCode(newCartRuleCode);
           // setLeftoverInfo(leftoverArray);
 
-          // Limpiar carrito y descuentos
+          // Limpiar carrito y descuentos y asignar el cliente por defecto
           setCartItems([]);
           clearDiscounts();
-          localStorage.removeItem("selectedAddress");
-          localStorage.removeItem("selectedClient");
+          resetToDefaultClientAndAddress();
 
           setSelectedMethods([]);
           setAmounts({ efectivo: "", tarjeta: "", bizum: "" });
@@ -227,6 +275,9 @@ function SalesCardActions({
           setFinalSaleModalOpen(false);
           setIsDevolution(false);
           setIsDiscount(false);
+          // Limpiar los valores originales de pago en CartContext
+          setOriginalPaymentMethods([]);
+          setOriginalPaymentAmounts({});
         },
         onError: (error) => {
           showAlert("Error al finalizar la venta: " + error.message, false);
@@ -377,87 +428,124 @@ function SalesCardActions({
   };
 
   // Función para actualizar productos según el descuento aplicado
-  const updateDiscountsForIdentifier = useCallback((discObj) => {
-    if (discObj.description.includes("producto")) {
-      // Descuento sobre producto específico
-      const match = discObj.description.match(/producto\s+([^\s]+)\s+generado/);
-      if (!match) return;
-      const identifier = match[1]; // ej: "EAN13'1234"
-      const matchingItems = cartItems.filter((item) => {
-        const prodId = item.EAN13 || "";
-        const ctrl = item.id_control_stock ? "'" + item.id_control_stock : "";
-        return prodId + ctrl === identifier;
-      });
-      if (matchingItems.length === 0) return;
-      if (discObj.reduction_amount > 0) {
-        const totalUnits = matchingItems.reduce(
-          (sum, item) => sum + item.quantity,
-          0
+  const updateDiscountsForIdentifier = useCallback(
+    (discObj) => {
+      if (discObj.description.includes("producto")) {
+        // Descuento sobre producto específico
+        const match = discObj.description.match(
+          /producto\s+([^\s]+)\s+generado/
         );
-        const discountPerUnit = discObj.reduction_amount / totalUnits;
-        setCartItems((prevItems) =>
-          prevItems.map((item) => {
-            const prodId = item.EAN13 || "";
-            const ctrl = item.id_control_stock
-              ? "'" + item.id_control_stock
-              : "";
-            if (prodId + ctrl === identifier) {
+        if (!match) return;
+        const identifier = match[1]; // ej: "EAN13'1234"
+        const matchingItems = cartItems.filter((item) => {
+          const prodId = item.EAN13 || "";
+          const ctrl = item.id_control_stock ? "'" + item.id_control_stock : "";
+          return prodId + ctrl === identifier;
+        });
+        if (matchingItems.length === 0) return;
+        if (discObj.reduction_amount > 0) {
+          const totalUnits = matchingItems.reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          );
+          const discountPerUnit = discObj.reduction_amount / totalUnits;
+          setCartItems((prevItems) =>
+            prevItems.map((item) => {
+              const prodId = item.EAN13 || "";
+              const ctrl = item.id_control_stock
+                ? "'" + item.id_control_stock
+                : "";
+              if (prodId + ctrl === identifier) {
+                return {
+                  ...item,
+                  reduction_amount_tax_incl: Math.max(
+                    0,
+                    item.final_price_incl_tax - discountPerUnit
+                  ),
+                };
+              }
+              return item;
+            })
+          );
+        } else if (discObj.reduction_percent > 0) {
+          setCartItems((prevItems) =>
+            prevItems.map((item) => {
+              const newPrice =
+                item.final_price_incl_tax *
+                (1 - discObj.reduction_percent / 100);
               return {
                 ...item,
-                reduction_amount_tax_incl: Math.max(
-                  0,
-                  item.final_price_incl_tax - discountPerUnit
-                ),
+                reduction_amount_tax_incl: Math.max(0, newPrice),
               };
-            }
-            return item;
-          })
-        );
-      } else if (discObj.reduction_percent > 0) {
-        setCartItems((prevItems) =>
-          prevItems.map((item) => {
-            const newPrice =
-              item.final_price_incl_tax * (1 - discObj.reduction_percent / 100);
-            return {
+            })
+          );
+        }
+      } else if (discObj.description.includes("venta")) {
+        // Descuento global para toda la venta
+        if (discObj.reduction_amount > 0) {
+          const totalUnits = cartItems.reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          );
+          const discountPerUnit = discObj.reduction_amount / totalUnits;
+          setCartItems((prevItems) =>
+            prevItems.map((item) => ({
               ...item,
-              reduction_amount_tax_incl: Math.max(0, newPrice),
-            };
-          })
-        );
+              reduction_amount_tax_incl: Math.max(
+                0,
+                item.final_price_incl_tax - discountPerUnit
+              ),
+            }))
+          );
+        } else if (discObj.reduction_percent > 0) {
+          setCartItems((prevItems) =>
+            prevItems.map((item) => {
+              const newPrice =
+                item.final_price_incl_tax *
+                (1 - discObj.reduction_percent / 100);
+              return {
+                ...item,
+                reduction_amount_tax_incl: Math.max(0, newPrice),
+              };
+            })
+          );
+        }
       }
-    } else if (discObj.description.includes("venta")) {
-      // Descuento global para toda la venta
-      if (discObj.reduction_amount > 0) {
-        const totalUnits = cartItems.reduce(
-          (sum, item) => sum + item.quantity,
-          0
-        );
-        const discountPerUnit = discObj.reduction_amount / totalUnits;
-        setCartItems((prevItems) =>
-          prevItems.map((item) => ({
-            ...item,
-            reduction_amount_tax_incl: Math.max(
-              0,
-              item.final_price_incl_tax - discountPerUnit
-            ),
-          }))
-        );
-      } else if (discObj.reduction_percent > 0) {
-        setCartItems((prevItems) =>
-          prevItems.map((item) => {
-            const newPrice =
-              item.final_price_incl_tax * (1 - discObj.reduction_percent / 100);
-            return {
-              ...item,
-              reduction_amount_tax_incl: Math.max(0, newPrice),
-            };
-          })
-        );
-      }
-    }
-  }, [cartItems, setCartItems]);
+    },
+    [cartItems, setCartItems]
+  );
 
   const handleDiscountApplied = (discObj) => {
+    const isGlobal =
+      discObj.description && discObj.description.includes("venta");
+    const hasProductDiscount = appliedDiscounts.some(
+      (d) => d.description && !d.description.includes("venta")
+    );
+    const hasGlobalDiscount = appliedDiscounts.some(
+      (d) => d.description && d.description.includes("venta")
+    );
+
+    if (isGlobal && hasProductDiscount) {
+      toast.error(
+        "No se pueden aplicar descuentos globales junto con descuentos de productos."
+      );
+      return;
+    }
+    if (!isGlobal && hasGlobalDiscount) {
+      toast.error(
+        "No se pueden aplicar descuentos de productos si ya existe un descuento global sobre la venta."
+      );
+      return;
+    }
+    if (
+      !isGlobal &&
+      selectedProductForDiscount &&
+      selectedProductForDiscount.discountApplied
+    ) {
+      toast.error("Ese producto ya tiene un descuento aplicado.");
+      return;
+    }
+
     addDiscount(discObj);
     if (!selectedProductForDiscount) {
       updateDiscountsForIdentifier(discObj);
@@ -465,11 +553,6 @@ function SalesCardActions({
     setIsDiscount(true);
     setIsDiscountModalOpen(false);
   };
-
-  console.log(
-    "[SalesCardActions] selectedProductForDiscount:",
-    selectedProductForDiscount
-  );
 
   // Agregar variable para definir los métodos de pago según modo de devolución
   const paymentMethods = isDevolution
@@ -610,6 +693,10 @@ function SalesCardActions({
                   : method.charAt(0).toUpperCase() + method.slice(1);
               // Para métodos originales: solo se habilita si están en originalPaymentMethods
               // y, si "vale" está seleccionado, se deshabilitan
+              console.log(
+                "[SalesCardActions] originalPaymentMethods:",
+                originalPaymentMethods
+              );
               const disabled = isDevolution
                 ? method === "vale"
                   ? selectedMethods.some((m) => m !== "vale")
