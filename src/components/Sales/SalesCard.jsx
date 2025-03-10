@@ -167,17 +167,18 @@ function SalesCard({
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
     0
   );
+  console.log("subtotalProducts", subtotalProducts);
 
-  const totalDiscounts = appliedDiscounts.reduce((sum, disc) => {
-    const redPercent = disc.reduction_percent || 0;
-    const redAmount = disc.reduction_amount || 0;
-    const discountAmount = redPercent
-      ? subtotalProducts * (redPercent / 100)
-      : redAmount;
-    return sum + discountAmount;
+  const totalDiscounts = cartItems.reduce((sum, item) => {
+    // Only add discount amounts for products that actually have discounts applied
+    if (item.discountApplied && item.discountAmount > 0) {
+      return sum + item.discountAmount * item.quantity;
+    }
+    return sum;
   }, 0);
 
   const total = cartItems.reduce((sum, item) => {
+    console.log("item", item);
     const price =
       item.discountApplied &&
       item.reduction_amount_tax_incl < item.final_price_incl_tax

@@ -132,18 +132,39 @@ const useProductSearch = ({
           return;
         }
         const client = JSON.parse(localStorage.getItem("selectedClient"));
-        if (client && data.id_customer && client.id_customer !== data.id_customer) {
-          alert("Vale descuento no válido, motivo: no pertenece al cliente seleccionado");
+        if (
+          client &&
+          data.id_customer &&
+          client.id_customer !== data.id_customer
+        ) {
+          alert(
+            "Vale descuento no válido, motivo: no pertenece al cliente seleccionado"
+          );
           return;
         }
+        // Leer el carrito para calcular el total actual
+        let currentCartTotal = 0;
+        const cartRaw = localStorage.getItem(`cart_shop_${shopId}`);
+        if (cartRaw) {
+          const parsedCart = JSON.parse(cartRaw);
+          if (parsedCart && parsedCart.items) {
+            currentCartTotal = parsedCart.items.reduce(
+              (sum, item) => sum + item.final_price_incl_tax * item.quantity,
+              0
+            );
+          }
+        }
+        // Crear objeto descuento para toda la venta (global)
+        const discObj = {
+          name: data.name || "",
+          description: data.description ? data.description + " venta" : "venta",
+          code: data.code || "",
+          reduction_amount: data.reduction_amount
+            ? Math.min(data.reduction_amount, currentCartTotal)
+            : 0,
+          reduction_percent: data.reduction_percent || 0,
+        };
         if (data && onAddDiscount) {
-          const discObj = {
-            name: data.name || "",
-            description: data.description || "",
-            code: data.code || "",
-            reduction_amount: data.reduction_amount || 0,
-            reduction_percent: data.reduction_percent || 0,
-          };
           onAddDiscount(discObj);
         }
         setGroupedProducts([]);
@@ -220,7 +241,9 @@ const useProductSearch = ({
         }
       } catch (error) {
         console.error("Error en la búsqueda por EAN13 con apóstrofe:", error);
-        alert("Error al buscar producto por EAN13 con apóstrofe. Inténtalo de nuevo.");
+        alert(
+          "Error al buscar producto por EAN13 con apóstrofe. Inténtalo de nuevo."
+        );
       } finally {
         setIsLoading(false);
       }
