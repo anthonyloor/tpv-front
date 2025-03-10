@@ -54,37 +54,37 @@ function StoreStockPanel({ product }) {
 
   return (
     <div
-      className="pl-3 h-full"
+      className="flex flex-col h-full p-3"
       style={{
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",
       }}
     >
-      <h4 className="font-bold text-lg mb-2">{mainTitle}</h4>
-
-      <div className="flex gap-4">
-        {shops.map((shop) => {
-          const displayName = shop.id_shop === 1 ? "Online" : shop.name;
-          const qty = stocksByShop[shop.id_shop] ?? 0;
-          return (
-            <Card
-              key={shop.id_shop}
-              className="p-shadow-2"
-              style={{
-                backgroundColor: "var(--surface-card)",
-                color: "var(--text-color)",
-                width: "150px",
-              }}
-              header={
-                <div className="text-center text-xl font-bold">
-                  {displayName}
+      <span className="font-bold text-lg m-2">{mainTitle}</span>
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-3">
+          {shops.map((shop) => {
+            const displayName = shop.id_shop === 1 ? "Online" : shop.name;
+            const qty = stocksByShop[shop.id_shop] ?? 0;
+            return (
+              <Card
+                key={shop.id_shop}
+                className="shadow-2 border-round"
+                style={{
+                  backgroundColor: "var(--surface-card)",
+                  color: "var(--text-color)",
+                  width: "18%",
+                }}
+              >
+                <div className="text-center">
+                  <div className="text-lg font-semibold">
+                    {displayName}: <span className="text-2xl">{qty}</span>
+                  </div>
                 </div>
-              }
-            >
-              <div className="text-center text-2xl font-bold">{qty}</div>
-            </Card>
-          );
-        })}
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

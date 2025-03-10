@@ -575,6 +575,29 @@ function SalesCardActions({
     ? ["efectivo", "tarjeta", "bizum", "vale"]
     : ["efectivo", "tarjeta", "bizum"];
 
+  // Agregar estado para modo compacto cuando el alto es <=1060px o el ancho es <=1730px
+  const [isCompact, setIsCompact] = useState(
+    window.innerHeight <= 1060 || window.innerWidth <= 1730
+  );
+  useEffect(() => {
+    const handleResize = () => {
+      setIsCompact(window.innerHeight <= 1060 || window.innerWidth <= 1730);
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Definir los labels originales
+  const labels = {
+    pedidos: "Pedidos Online",
+    devoluciones: "Devoluciones",
+    reimprimir: "Reimprimir",
+    anadir: "Añadir Manual",
+    descuento: "Descuento",
+    finalizar: "Finalizar Venta",
+  };
+
   return (
     <div
       className="flex flex-col h-full p-3"
@@ -583,56 +606,57 @@ function SalesCardActions({
         color: "var(--text-color)",
       }}
     >
-      {/* Columna Izquierda: 2 filas de 2 botones */}
-      <div className="space-y-2">
-        {/* 1) Devoluciones y Reimprimir */}
-        <div className="flex gap-2">
-          <Button
-            label="Pedidos Online"
-            icon="pi pi-shopping-cart"
-            className="flex-1"
-            onClick={() => {
-              /* Aún sin acción */
-            }}
-          />
-          <Button
-            label="Devoluciones"
-            icon="pi pi-undo"
-            className="flex-1"
-            onClick={openReturnsModal}
-          />
-          <Button
-            label="Reimprimir"
-            icon="pi pi-print"
-            className="flex-1"
-            onClick={openReprintModal}
-          />
-        </div>
-
-        {/* 2) Añadir Manual y Descuento */}
-        <div className="flex gap-2">
-          <Button
-            label="Añadir Manual"
-            icon="pi pi-plus"
-            className="flex-1"
-            onClick={handleAddManual}
-          />
-          <Button
-            label="Descuento"
-            icon="pi pi-percentage"
-            className="flex-1"
-            onClick={handleDescuentoClick}
-          />
-        </div>
+      {/* Primera fila de botones */}
+      <div className="flex gap-2">
+        <Button
+          label={isCompact ? "" : labels.pedidos}
+          icon="pi pi-shopping-cart"
+          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
+          onClick={() => {
+            /* ...existing code... */
+          }}
+        />
+        <Button
+          label={isCompact ? "" : labels.devoluciones}
+          icon="pi pi-undo"
+          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
+          onClick={openReturnsModal}
+        />
+        <Button
+          label={isCompact ? "" : labels.reimprimir}
+          icon="pi pi-print"
+          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
+          onClick={openReprintModal}
+        />
       </div>
 
-      {/* Columna Derecha: Botón Finalizar Venta */}
-      <div className="mt-auto">
+      {/* Segunda fila de botones */}
+      <div className="flex gap-2 mt-2">
         <Button
-          label={isLoading ? "Procesando..." : "Finalizar Venta"}
+          label={isCompact ? "" : labels.anadir}
+          icon="pi pi-plus"
+          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
+          onClick={handleAddManual}
+        />
+        <Button
+          label={isCompact ? "" : labels.descuento}
+          icon="pi pi-percentage"
+          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
+          onClick={handleDescuentoClick}
+        />
+      </div>
+      <div className="flex gap-2 mt-2">
+        <Button
+          label={
+            isCompact ? "" : isLoading ? "Procesando..." : labels.finalizar
+          }
           icon="pi pi-check"
-          className="p-button-primary w-full"
-          style={{ fontSize: "1.5rem", padding: "1.25rem" }}
+          className={
+            isCompact
+              ? "p-button-primary w-full p-button-icon-only"
+              : "p-button-primary w-full"
+          }
+          style={{ fontSize: "1.25rem" }}
           disabled={cartItems.length === 0 || isLoading}
           onClick={handleFinalSale}
         />

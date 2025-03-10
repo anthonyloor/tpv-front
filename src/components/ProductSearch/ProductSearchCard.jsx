@@ -17,6 +17,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const searchInputRef = useRef(null);
 
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
   const { configData } = useContext(ConfigContext);
   const { shopId, shopName } = useContext(AuthContext);
   const allowOutOfStockSales = configData?.allow_out_of_stock_sales || false;
@@ -122,6 +124,22 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     }, 100);
   };
 
+  // Nueva plantilla para el ícono en la primera columna
+  const selectionBodyTemplate = (rowData) => {
+    const isSelected =
+      selectedProduct &&
+      selectedProduct.id_product_attribute === rowData.id_product_attribute;
+    return (
+      <span
+        className={
+          isSelected
+            ? "pi pi-check-circle text-green-500"
+            : "pi pi-circle text-gray-500"
+        }
+      ></span>
+    );
+  };
+
   return (
     <div
       className="p-3 h-full flex flex-col"
@@ -167,11 +185,20 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           rowGroupMode="subheader"
           groupRowTemplate={groupHeaderTemplate}
           selectionMode="single"
+          onSelectionChange={(e) => {
+            setSelectedProduct(e.value);
+            if (onClickProduct) onClickProduct(e.value);
+          }}
           onRowSelect={onRowSelect}
           dataKey="id_product_attribute"
           scrollable
-          className="p-datatable-sm"
         >
+          <Column
+            header=""
+            body={selectionBodyTemplate}
+            style={{ width: "2rem", textAlign: "center" }}
+          />
+
           <Column
             field="combination_name"
             header="Combinación"
