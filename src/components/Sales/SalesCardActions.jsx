@@ -486,13 +486,18 @@ function SalesCardActions({
           );
           const discountPerUnit = discObj.reduction_amount / totalUnits;
           setCartItems((prevItems) =>
-            prevItems.map((item) => ({
-              ...item,
-              reduction_amount_tax_incl: Math.max(
+            prevItems.map((item) => {
+              const newPrice = Math.max(
                 0,
                 item.final_price_incl_tax - discountPerUnit
-              ),
-            }))
+              );
+              return {
+                ...item,
+                reduction_amount_tax_incl: newPrice,
+                discountApplied: true,
+                discountAmount: item.final_price_incl_tax - newPrice,
+              };
+            })
           );
         } else if (discObj.reduction_percent > 0) {
           setCartItems((prevItems) =>
@@ -503,6 +508,9 @@ function SalesCardActions({
               return {
                 ...item,
                 reduction_amount_tax_incl: Math.max(0, newPrice),
+                discountApplied: true,
+                discountAmount:
+                  item.final_price_incl_tax - Math.max(0, newPrice),
               };
             })
           );
