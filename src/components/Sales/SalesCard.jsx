@@ -167,7 +167,7 @@ function SalesCard({
     (sum, item) => sum + item.final_price_incl_tax * item.quantity,
     0
   );
-  // Calculate discounts based on applied discount rules
+
   const totalDiscounts = appliedDiscounts.reduce((sum, disc) => {
     const redPercent = disc.reduction_percent || 0;
     const redAmount = disc.reduction_amount || 0;
@@ -176,23 +176,16 @@ function SalesCard({
       : redAmount;
     return sum + discountAmount;
   }, 0);
+
   const total = cartItems.reduce((sum, item) => {
     const price =
-      item.reduction_amount_tax_incl != null &&
-      item.reduction_amount_tax_incl > 0
+      item.discountApplied &&
+      item.reduction_amount_tax_incl < item.final_price_incl_tax
         ? item.reduction_amount_tax_incl
         : item.final_price_incl_tax;
     return sum + price * item.quantity;
   }, 0);
 
-  // Determinar si al menos un producto tiene descuento informado (> 0)
-  const showDiscountColumn = cartItems.some(
-    (item) =>
-      item.reduction_amount_tax_incl != null &&
-      Number(item.reduction_amount_tax_incl) > 0
-  );
-
-  // Enviar totales cuando cambien
   useEffect(() => {
     onTotalsChange({
       subtotal: subtotalProducts,
@@ -461,11 +454,11 @@ function SalesCard({
                     return "-";
 
                   const originalPrice = rowData.final_price_incl_tax;
-                  const discount = Number(
-                    rowData.reduction_amount_tax_incl || 0
-                  );
-
-                  if (discount > 0) {
+                  // Usamos discountApplied para determinar si hay descuento aplicado
+                  if (
+                    rowData.discountApplied &&
+                    rowData.reduction_amount_tax_incl < originalPrice
+                  ) {
                     return (
                       <div>
                         <span
@@ -484,7 +477,7 @@ function SalesCard({
                             fontWeight: "bold",
                           }}
                         >
-                          {discount.toFixed(2)} €
+                          {rowData.reduction_amount_tax_incl.toFixed(2)} €
                         </span>
                       </div>
                     );
@@ -499,13 +492,16 @@ function SalesCard({
                 body={(rowData) => {
                   if (rowData.reference_combination === "rectificacion")
                     return "-";
-                  const discount =
-                    Number(rowData.reduction_amount_tax_incl) || 0;
                   const unitPrice = Number(rowData.final_price_incl_tax);
                   const originalTotal = unitPrice * rowData.quantity;
-                  const discountedTotal = discount * rowData.quantity;
-
-                  if (showDiscountColumn && discount > 0) {
+                  const discountedTotal =
+                    Number(rowData.reduction_amount_tax_incl) *
+                    rowData.quantity;
+                  if (
+                    rowData.discountApplied &&
+                    rowData.reduction_amount_tax_incl <
+                      rowData.final_price_incl_tax
+                  ) {
                     return (
                       <div>
                         <span
