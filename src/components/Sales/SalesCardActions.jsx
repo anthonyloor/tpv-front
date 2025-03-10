@@ -520,6 +520,17 @@ function SalesCardActions({
     [cartItems, setCartItems]
   );
 
+  // Escuchar evento global para aplicar descuento directo
+  useEffect(() => {
+    const handleGlobalDiscount = (e) => {
+      updateDiscountsForIdentifier(e.detail);
+    };
+    window.addEventListener("globalDiscountApplied", handleGlobalDiscount);
+    return () => {
+      window.removeEventListener("globalDiscountApplied", handleGlobalDiscount);
+    };
+  }, [updateDiscountsForIdentifier]);
+
   const handleDiscountApplied = (discObj) => {
     const isGlobal =
       discObj.description && discObj.description.includes("venta");

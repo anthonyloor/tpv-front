@@ -166,6 +166,10 @@ const useProductSearch = ({
         };
         if (data && onAddDiscount) {
           onAddDiscount(discObj);
+          // Disparar evento para actualizar el descuento global en el carrito
+          window.dispatchEvent(
+            new CustomEvent("globalDiscountApplied", { detail: discObj })
+          );
         }
         setGroupedProducts([]);
       } catch (error) {
