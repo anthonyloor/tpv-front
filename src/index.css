@@ -79,3 +79,7 @@ code {
   width: 100%;
   margin-bottom: 1rem;
 }
+
+.custom-cell-padding td {
+  padding: 0.5rem 0.5rem !important;
+}

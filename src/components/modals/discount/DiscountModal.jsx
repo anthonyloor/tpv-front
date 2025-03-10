@@ -14,7 +14,8 @@ const DiscountModal = ({
   onClose,
   onDiscountApplied,
   onProductDiscountApplied,
-  targetProduct, // producto seleccionado (puede ser null para descuento global)
+  targetProduct,
+  cartTotal = 0,
 }) => {
   const [discountType, setDiscountType] = useState("percentage");
   const [discountValue, setDiscountValue] = useState("");
@@ -40,6 +41,29 @@ const DiscountModal = ({
       setErrorMessage("Introduce un valor válido para el descuento.");
       return;
     }
+    // Validación para porcentaje
+    if (discountType === "percentage" && value > 100) {
+      setErrorMessage("El descuento porcentual no puede ser mayor a 100%.");
+      return;
+    }
+    // Validación para importe: calcular máximo permitido
+    if (discountType === "amount") {
+      let maxAllowed = 0;
+      if (targetProduct) {
+        maxAllowed =
+          targetProduct.final_price_incl_tax * targetProduct.quantity;
+      } else {
+        maxAllowed = cartTotal;
+      }
+      if (value > maxAllowed) {
+        setErrorMessage(
+          targetProduct
+            ? "El descuento no puede superar el total del producto."
+            : "El descuento no puede superar el total de la venta."
+        );
+        return;
+      }
+    }
     createCartRuleWithResponse(
       { discountType, value },
       (discObj) => {
@@ -48,14 +72,17 @@ const DiscountModal = ({
           discObj
         );
         if (newTargetIdentifier) {
-          let newPrice = targetProduct.final_price_incl_tax;
+          let newPrice;
           if (discountType === "amount") {
-            newPrice = targetProduct.final_price_incl_tax - value;
+            newPrice =
+              (targetProduct.final_price_incl_tax * targetProduct.quantity -
+                value) /
+              targetProduct.quantity;
           } else if (discountType === "percentage") {
             newPrice = targetProduct.final_price_incl_tax * (1 - value / 100);
           }
           if (newPrice < 0) newPrice = 0;
-          console.log("[DiscountModal] Nuevo precio para producto:", newPrice);
+
           if (onProductDiscountApplied) {
             onProductDiscountApplied(
               targetProduct.id_stock_available,

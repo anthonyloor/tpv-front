@@ -284,13 +284,12 @@ function SalesCard({
     (item) => item.discountApplied && item.discountAmount > 0
   );
 
-  // Modificar rowExpansionTemplate para incluir botón "X" y quitar descuento por producto
   const rowExpansionTemplate = (data) => (
     <div style={{ backgroundColor: "var(--surface-50)" }}>
       <div className="flex justify-between items-center">
         <span>
           <strong>Descuento aplicado: </strong>
-          {data.discountAmount.toFixed(2)} €
+          {(data.discountAmount * data.quantity).toFixed(2)} €
         </span>
         <Button
           icon="pi pi-times"
@@ -346,7 +345,6 @@ function SalesCard({
         color: "var(--text-color)",
       }}
     >
-      {/* CABECERA */}
       <div className="flex justify-between items-center gap-4">
         <div className="flex-1">
           <SplitButton
@@ -404,7 +402,6 @@ function SalesCard({
 
       <Divider style={{ borderColor: "var(--surface-border)" }} />
 
-      {/* LISTA PRODUCTOS */}
       <div className="flex-1 overflow-auto relative">
         {cartItems.length > 0 ? (
           <>
@@ -417,6 +414,7 @@ function SalesCard({
               selection={selectedProduct}
               onRowClick={handleRowClick}
               rowClassName={rowClassName}
+              className="custom-cell-padding"
               footer={
                 globalDiscount ? (
                   <div className="p-datatable-footer flex justify-between items-center">
@@ -458,27 +456,44 @@ function SalesCard({
               />
               <Column
                 header="Precio Und"
-                body={(rowData) =>
-                  rowData.reference_combination === "rectificacion"
-                    ? "-"
-                    : `${rowData.final_price_incl_tax.toFixed(2)} €`
-                }
-                style={{ width: "13%", textAlign: "center" }}
+                body={(rowData) => {
+                  if (rowData.reference_combination === "rectificacion")
+                    return "-";
+
+                  const originalPrice = rowData.final_price_incl_tax;
+                  const discount = Number(
+                    rowData.reduction_amount_tax_incl || 0
+                  );
+
+                  if (discount > 0) {
+                    return (
+                      <div>
+                        <span
+                          style={{
+                            textDecoration: "line-through",
+                            fontSize: "0.85em",
+                            opacity: "0.8",
+                          }}
+                        >
+                          {originalPrice.toFixed(2)} €
+                        </span>
+                        <br />
+                        <span
+                          style={{
+                            color: "var(--red-500)",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {discount.toFixed(2)} €
+                        </span>
+                      </div>
+                    );
+                  } else {
+                    return `${originalPrice.toFixed(2)} €`;
+                  }
+                }}
+                style={{ width: "20%", textAlign: "center" }}
               />
-              {showDiscountColumn && (
-                <Column
-                  header="Precio Descuento"
-                  body={(rowData) => {
-                    if (rowData.reference_combination === "rectificacion")
-                      return "-";
-                    const discount = rowData.reduction_amount_tax_incl;
-                    return discount != null && !isNaN(discount)
-                      ? `${Number(discount).toFixed(2)} €`
-                      : "-";
-                  }}
-                  style={{ width: "13%", textAlign: "center" }}
-                />
-              )}
               <Column
                 header="Total"
                 body={(rowData) => {
@@ -487,11 +502,35 @@ function SalesCard({
                   const discount =
                     Number(rowData.reduction_amount_tax_incl) || 0;
                   const unitPrice = Number(rowData.final_price_incl_tax);
-                  const totalValue =
-                    showDiscountColumn && discount > 0
-                      ? discount * rowData.quantity
-                      : unitPrice * rowData.quantity;
-                  return `${totalValue.toFixed(2)} €`;
+                  const originalTotal = unitPrice * rowData.quantity;
+                  const discountedTotal = discount * rowData.quantity;
+
+                  if (showDiscountColumn && discount > 0) {
+                    return (
+                      <div>
+                        <span
+                          style={{
+                            textDecoration: "line-through",
+                            fontSize: "0.85em",
+                            opacity: "0.8",
+                          }}
+                        >
+                          {originalTotal.toFixed(2)} €
+                        </span>
+                        <br />
+                        <span
+                          style={{
+                            color: "var(--red-500)",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {discountedTotal.toFixed(2)} €
+                        </span>
+                      </div>
+                    );
+                  } else {
+                    return `${originalTotal.toFixed(2)} €`;
+                  }
                 }}
                 style={{ width: "13%", textAlign: "center" }}
               />
@@ -516,7 +555,6 @@ function SalesCard({
         )}
       </div>
 
-      {/* TOTALES y Descuentos */}
       <div
         className="mt-4 pt-4 border-t"
         style={{ borderColor: "var(--surface-border)" }}

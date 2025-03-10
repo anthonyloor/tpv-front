@@ -391,12 +391,6 @@ function SalesCardActions({
       0
     );
     const newChange = totalEnteredAmount - finalTotal;
-    console.log(
-      "[updateChangeAmount]",
-      finalTotal,
-      totalEnteredAmount,
-      newChange
-    );
     setChangeAmount(newChange);
   };
 
@@ -411,13 +405,16 @@ function SalesCardActions({
     setCartItems((prevItems) =>
       prevItems.map((item) => {
         if (item.id_stock_available === idStockAvailable) {
+          // Redondear el nuevo precio unitario a 2 decimales
+          const newPriceRounded = Number(newDiscountedPrice.toFixed(2));
+          // Calcular el descuento asegurando que no sea negativo
           const discountAmount = Math.max(
             0,
-            item.final_price_incl_tax - newDiscountedPrice
+            item.final_price_incl_tax - newPriceRounded
           );
           return {
             ...item,
-            reduction_amount_tax_incl: newDiscountedPrice,
+            reduction_amount_tax_incl: newPriceRounded,
             discountApplied: true,
             discountAmount,
           };
@@ -689,14 +686,8 @@ function SalesCardActions({
               // Definir label; para "vale" se muestra el importe fijo
               const label =
                 method === "vale"
-                  ? `Vale descuento: ${Math.abs(total).toFixed(2)} €`
+                  ? `Generar vale descuento`
                   : method.charAt(0).toUpperCase() + method.slice(1);
-              // Para métodos originales: solo se habilita si están en originalPaymentMethods
-              // y, si "vale" está seleccionado, se deshabilitan
-              console.log(
-                "[SalesCardActions] originalPaymentMethods:",
-                originalPaymentMethods
-              );
               const disabled = isDevolution
                 ? method === "vale"
                   ? selectedMethods.some((m) => m !== "vale")
@@ -817,6 +808,7 @@ function SalesCardActions({
         onDiscountApplied={handleDiscountApplied}
         onProductDiscountApplied={updateProductDiscount}
         targetProduct={selectedProductForDiscount}
+        cartTotal={total}
       />
     </div>
   );
