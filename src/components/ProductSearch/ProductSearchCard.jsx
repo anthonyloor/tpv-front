@@ -32,7 +32,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     forceAdd = false,
     quantity = 1
   ) => {
-    setIsDevolution(false);
     onAddProduct(
       product,
       stockQuantity,

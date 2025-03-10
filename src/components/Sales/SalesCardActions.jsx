@@ -77,7 +77,7 @@ function SalesCardActions({
     setIsDiscount,
   } = useContext(CartContext);
   const { idProfile } = useContext(AuthContext);
-  const { resetToDefaultClientAndAddress } = useContext(ClientContext); // <--- nuevo
+  const { resetToDefaultClientAndAddress } = useContext(ClientContext);
   const { isLoading, finalizeSale } = useFinalizeSale();
 
   // Modales
@@ -217,7 +217,7 @@ function SalesCardActions({
     // setLeftoverPreview(leftoverArray);
     console.log("[handleFinalSale] Subtotal:", subtotal);
     console.log("[handleFinalSale] totalDiscounts:", totalDiscounts);
-    console.log("[handleFinalSale] total final:", Math.max(0, total));
+    console.log("[handleFinalSale] total final:", Math.max(0, total.toFixed(2)));
     setFinalSaleModalOpen(true);
   };
 
@@ -302,8 +302,12 @@ function SalesCardActions({
     0
   );
 
+  // Agregar variable para ignorar métodos originales si total > 0
+  const ignoreOriginalPayments = total > 0;
+
   // Toggle de métodos
   const togglePaymentMethod = (method) => {
+
     // Si se va a agregar un método nuevo, deseleccionar aquellos sin importe válido.
     if (!selectedMethods.includes(method)) {
       const validMethods = selectedMethods.filter((m) => {
@@ -322,7 +326,7 @@ function SalesCardActions({
         updateChangeAmount(updatedAmounts);
       }
     }
-    if (isDevolution) {
+    if (isDevolution && !ignoreOriginalPayments) {
       // Solo se permite si el método es "vale" o si pertenece a originalPaymentMethods
       if (method !== "vale" && !originalPaymentMethods.includes(method)) return;
       // Si ya se seleccionó "vale", no se permite añadir otro método
@@ -369,11 +373,17 @@ function SalesCardActions({
         updateChangeAmount(updated);
       }
     }
+    console.log("amounts:", amounts);
   };
 
   const handleAmountChange = (method, val) => {
     let parsed = isRectification ? -Math.abs(val || 0) : val || 0;
-    if (isDevolution && method !== "vale" && originalPaymentAmounts[method]) {
+    if (
+      isDevolution &&
+      !ignoreOriginalPayments &&
+      method !== "vale" &&
+      originalPaymentAmounts[method]
+    ) {
       const available = parseFloat(originalPaymentAmounts[method]);
       if (Math.abs(parsed) > available) {
         parsed = isRectification ? -available : available;
@@ -629,7 +639,6 @@ function SalesCardActions({
           onClick={openReprintModal}
         />
       </div>
-
       {/* Segunda fila de botones */}
       <div className="flex gap-2 mt-2">
         <Button
@@ -661,7 +670,6 @@ function SalesCardActions({
           onClick={handleFinalSale}
         />
       </div>
-
       {/* Dialog: Finalizar Venta */}
       <Dialog
         header="Finalizar Venta"
@@ -728,15 +736,21 @@ function SalesCardActions({
             {paymentMethods.map((method) => {
               // Definir label; para "vale" se muestra el importe fijo
               const label =
-                method === "vale"
+                total >= 0 && method === "vale"
+                  ? null
+                  : method === "vale"
                   ? `Generar vale descuento`
                   : method.charAt(0).toUpperCase() + method.slice(1);
-              const disabled = isDevolution
-                ? method === "vale"
-                  ? selectedMethods.some((m) => m !== "vale")
-                  : !originalPaymentMethods.includes(method) ||
-                    selectedMethods.includes("vale")
-                : false;
+              if (label === null) {
+                return null;
+              }
+              const disabled =
+                isDevolution && !ignoreOriginalPayments
+                  ? method === "vale"
+                    ? selectedMethods.some((m) => m !== "vale")
+                    : !originalPaymentMethods.includes(method) ||
+                      selectedMethods.includes("vale")
+                  : false;
               return (
                 <div key={method} className="flex items-center gap-2">
                   <Button
@@ -797,14 +811,12 @@ function SalesCardActions({
           />
         </div>
       </Dialog>
-
       <ActionResultDialog
         visible={alertVisible}
         onClose={handleAlertClose}
         success={alertSuccess}
         message={alertMessage}
       />
-
       {/* TicketViewModal para ticket normal */}
       {ticketOrderId && (
         <TicketViewModal
@@ -818,7 +830,6 @@ function SalesCardActions({
           showCloseButton
         />
       )}
-
       {/* TicketViewModal para cart rule */}
       {cartRuleModalOpen && newCartRuleCode && (
         <TicketViewModal
@@ -832,7 +843,6 @@ function SalesCardActions({
           height="tall"
         />
       )}
-
       {/* Modales varios */}
       <ReturnsExchangesModal
         isOpen={isReturnsModalOpen}

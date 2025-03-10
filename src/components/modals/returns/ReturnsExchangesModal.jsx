@@ -287,6 +287,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     onAddProduct(rectProduct, null, null, false, 1);
 
     // 2) Añadir las líneas con cantidades negativas
+    console.log("Productos seleccionados:", selectedRows);
     selectedRows.forEach((prod) => {
       const key = prod.uniqueLineId;
       const qtyToReturn = returnQuantities[key] ?? prod.product_quantity;
@@ -306,6 +307,9 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         image_url: "",
         shop_name: "",
         id_shop: prod.id_shop,
+        discountApplied:
+          prod.reduction_amount_tax_incl != null &&
+          prod.reduction_amount_tax_incl < prod.unit_price_tax_incl,
       };
       onAddProduct(productForCart, null, null, false, -qtyToReturn);
     });
@@ -439,22 +443,35 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                   if (row.reference_combination === "rectificacion") {
                     return "-";
                   }
-                  return row.unit_price_tax_incl
-                    ? `${row.unit_price_tax_incl.toFixed(2)} €`
-                    : "0.00";
-                }}
-              />
-              <Column
-                header="Precio Descuento"
-                style={{ width: "13%", textAlign: "center" }}
-                body={(row) => {
-                  // Si es línea de rectificación se devuelve "-"
-                  if (row.reference_combination === "rectificacion") return "-";
-                  // Verificar que reduction_amount_tax_incl no sea null ni undefined
-                  const discount = row.reduction_amount_tax_incl;
-                  return discount != null && !isNaN(discount)
-                    ? `${Number(discount).toFixed(2)} €`
-                    : "-";
+                  const originalPrice = row.unit_price_tax_incl;
+                  if (
+                    row.reduction_amount_tax_incl &&
+                    row.reduction_amount_tax_incl < originalPrice
+                  ) {
+                    return (
+                      <div>
+                        <span
+                          style={{
+                            textDecoration: "line-through",
+                            fontSize: "0.85em",
+                            opacity: "0.8",
+                          }}
+                        >
+                          {originalPrice.toFixed(2)} €
+                        </span>
+                        <br />
+                        <span
+                          style={{
+                            color: "var(--red-500)",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {row.reduction_amount_tax_incl.toFixed(2)} €
+                        </span>
+                      </div>
+                    );
+                  }
+                  return `${originalPrice.toFixed(2)} €`;
                 }}
               />
               <Column
@@ -466,14 +483,41 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                       <div className="bg-gray-200 h-3 w-12 ml-auto rounded animate-pulse" />
                     );
                   }
-                  // Si es línea de rectificación o discount es null, devolver "-"
-                  if (row.reference_combination === "rectificacion") return "-";
-                  const discount = row.reduction_amount_tax_incl;
-                  return discount != null && !isNaN(discount)
-                    ? `${(Number(discount) * row.product_quantity).toFixed(
-                        2
-                      )} €`
-                    : "-";
+                  if (row.reference_combination === "rectificacion") {
+                    return "-";
+                  }
+                  const originalTotal =
+                    row.unit_price_tax_incl * row.product_quantity;
+                  if (
+                    row.reduction_amount_tax_incl &&
+                    row.reduction_amount_tax_incl < row.unit_price_tax_incl
+                  ) {
+                    const discountedTotal =
+                      row.reduction_amount_tax_incl * row.product_quantity;
+                    return (
+                      <div>
+                        <span
+                          style={{
+                            textDecoration: "line-through",
+                            fontSize: "0.85em",
+                            opacity: "0.8",
+                          }}
+                        >
+                          {originalTotal.toFixed(2)} €
+                        </span>
+                        <br />
+                        <span
+                          style={{
+                            color: "var(--red-500)",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {discountedTotal.toFixed(2)} €
+                        </span>
+                      </div>
+                    );
+                  }
+                  return `${originalTotal.toFixed(2)} €`;
                 }}
               />
               <Column

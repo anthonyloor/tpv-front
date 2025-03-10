@@ -163,11 +163,15 @@ function SalesCard({
     }
   };
   // === CALCULOS TOTALES
-  const subtotalProducts = cartItems.reduce(
-    (sum, item) => sum + item.final_price_incl_tax * item.quantity,
-    0
-  );
-  console.log("subtotalProducts", subtotalProducts);
+
+  const subtotalProducts = cartItems.reduce((sum, item) => {
+    const subprice =
+      item.discountApplied ||
+      item.reduction_amount_tax_incl < item.final_price_incl_tax
+        ? item.reduction_amount_tax_incl
+        : item.final_price_incl_tax;
+    return sum + subprice * item.quantity;
+  }, 0);
 
   const totalDiscounts = cartItems.reduce((sum, item) => {
     // Only add discount amounts for products that actually have discounts applied
@@ -453,37 +457,69 @@ function SalesCard({
                 body={(rowData) => {
                   if (rowData.reference_combination === "rectificacion")
                     return "-";
-
-                  const originalPrice = rowData.final_price_incl_tax;
-                  // Usamos discountApplied para determinar si hay descuento aplicado
-                  if (
-                    rowData.discountApplied &&
-                    rowData.reduction_amount_tax_incl < originalPrice
-                  ) {
-                    return (
-                      <div>
-                        <span
-                          style={{
-                            textDecoration: "line-through",
-                            fontSize: "0.85em",
-                            opacity: "0.8",
-                          }}
-                        >
-                          {originalPrice.toFixed(2)} €
-                        </span>
-                        <br />
-                        <span
-                          style={{
-                            color: "var(--red-500)",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {rowData.reduction_amount_tax_incl.toFixed(2)} €
-                        </span>
-                      </div>
-                    );
+                  if (isDevolution) {
+                    const originalPrice = rowData.price_incl_tax;
+                    if (
+                      rowData.reduction_amount_tax_incl &&
+                      rowData.reduction_amount_tax_incl !== 0 &&
+                      rowData.reduction_amount_tax_incl < originalPrice
+                    ) {
+                      return (
+                        <div>
+                          <span
+                            style={{
+                              textDecoration: "line-through",
+                              fontSize: "0.85em",
+                              opacity: "0.8",
+                            }}
+                          >
+                            {originalPrice.toFixed(2)} €
+                          </span>
+                          <br />
+                          <span
+                            style={{
+                              color: "var(--red-500)",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {rowData.reduction_amount_tax_incl.toFixed(2)} €
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      return `${originalPrice.toFixed(2)} €`;
+                    }
                   } else {
-                    return `${originalPrice.toFixed(2)} €`;
+                    const originalPrice = rowData.final_price_incl_tax;
+                    if (
+                      rowData.discountApplied &&
+                      rowData.reduction_amount_tax_incl < originalPrice
+                    ) {
+                      return (
+                        <div>
+                          <span
+                            style={{
+                              textDecoration: "line-through",
+                              fontSize: "0.85em",
+                              opacity: "0.8",
+                            }}
+                          >
+                            {originalPrice.toFixed(2)} €
+                          </span>
+                          <br />
+                          <span
+                            style={{
+                              color: "var(--red-500)",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {rowData.reduction_amount_tax_incl.toFixed(2)} €
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      return `${originalPrice.toFixed(2)} €`;
+                    }
                   }
                 }}
                 style={{ width: "20%", textAlign: "center" }}
@@ -493,40 +529,77 @@ function SalesCard({
                 body={(rowData) => {
                   if (rowData.reference_combination === "rectificacion")
                     return "-";
-                  const unitPrice = Number(rowData.final_price_incl_tax);
-                  const originalTotal = unitPrice * rowData.quantity;
-                  const discountedTotal =
-                    Number(rowData.reduction_amount_tax_incl) *
-                    rowData.quantity;
-                  if (
-                    rowData.discountApplied &&
-                    rowData.reduction_amount_tax_incl <
-                      rowData.final_price_incl_tax
-                  ) {
-                    return (
-                      <div>
-                        <span
-                          style={{
-                            textDecoration: "line-through",
-                            fontSize: "0.85em",
-                            opacity: "0.8",
-                          }}
-                        >
-                          {originalTotal.toFixed(2)} €
-                        </span>
-                        <br />
-                        <span
-                          style={{
-                            color: "var(--red-500)",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {discountedTotal.toFixed(2)} €
-                        </span>
-                      </div>
-                    );
+                  if (isDevolution) {
+                    const originalTotal =
+                      rowData.price_incl_tax * rowData.quantity;
+                    if (
+                      rowData.reduction_amount_tax_incl &&
+                      rowData.reduction_amount_tax_incl !== 0 &&
+                      rowData.reduction_amount_tax_incl < rowData.price_incl_tax
+                    ) {
+                      const discountedTotal =
+                        rowData.reduction_amount_tax_incl * rowData.quantity;
+                      return (
+                        <div>
+                          <span
+                            style={{
+                              textDecoration: "line-through",
+                              fontSize: "0.85em",
+                              opacity: "0.8",
+                            }}
+                          >
+                            {originalTotal.toFixed(2)} €
+                          </span>
+                          <br />
+                          <span
+                            style={{
+                              color: "var(--red-500)",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {discountedTotal.toFixed(2)} €
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      return `${originalTotal.toFixed(2)} €`;
+                    }
                   } else {
-                    return `${originalTotal.toFixed(2)} €`;
+                    const unitPrice = Number(rowData.final_price_incl_tax);
+                    const originalTotal = unitPrice * rowData.quantity;
+                    const discountedTotal =
+                      Number(rowData.reduction_amount_tax_incl) *
+                      rowData.quantity;
+                    if (
+                      rowData.discountApplied &&
+                      rowData.reduction_amount_tax_incl <
+                        rowData.final_price_incl_tax
+                    ) {
+                      return (
+                        <div>
+                          <span
+                            style={{
+                              textDecoration: "line-through",
+                              fontSize: "0.85em",
+                              opacity: "0.8",
+                            }}
+                          >
+                            {originalTotal.toFixed(2)} €
+                          </span>
+                          <br />
+                          <span
+                            style={{
+                              color: "var(--red-500)",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {discountedTotal.toFixed(2)} €
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      return `${originalTotal.toFixed(2)} €`;
+                    }
                   }
                 }}
                 style={{ width: "13%", textAlign: "center" }}
