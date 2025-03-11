@@ -17,20 +17,41 @@ const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [step, setStep] = useState(1); // 1: Buscar Cliente, 2: Seleccionar Dirección
   const dt = useRef(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Fetch Clientes
   const fetchCustomers = async (filter) => {
     try {
-      const data = await apiFetch(
+      const response = await apiFetch(
         `https://apitpv.anthonyloor.com/get_customers_filtered?filter=${encodeURIComponent(
           filter
         )}`,
         { method: "POST", body: JSON.stringify({}) }
       );
-      setCustomers(data);
+      // Si response tiene "message", se considera sin resultados.
+      if (response && response.message) {
+        setCustomers([]);
+        setErrorMessage("");
+      } else if (Array.isArray(response) && response.length === 0) {
+        setCustomers([]);
+        setErrorMessage("");
+      } else {
+        setCustomers(response);
+        setErrorMessage("");
+      }
     } catch (error) {
       console.error("Error al buscar clientes:", error);
-      setCustomers([]);
+      if (
+        (error.status && error.status === 404) ||
+        (error instanceof SyntaxError &&
+          error.message.includes("Unexpected token"))
+      ) {
+        setCustomers([]);
+        setErrorMessage("");
+      } else {
+        setCustomers([]);
+        setErrorMessage("Error al buscar clientes.");
+      }
     }
   };
 

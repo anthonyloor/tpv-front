@@ -98,7 +98,17 @@ export default function CustomerStepperModal({
       setErrorMessage("");
     } catch (error) {
       console.error(error);
-      setErrorMessage("Error al buscar clientes.");
+      if (
+        (error.status && error.status === 404) ||
+        (error instanceof SyntaxError &&
+          error.message.includes("Unexpected token"))
+      ) {
+        setClients([]);
+        setErrorMessage("");
+      } else {
+        setErrorMessage("Error al buscar clientes.");
+        setClients([]);
+      }
     }
   };
 
@@ -172,33 +182,6 @@ export default function CustomerStepperModal({
 
   const renderStepClient = () => (
     <div className="p-4">
-      {/* Campo Buscar */}
-      <div className="mb-3">
-        <span className="p-input-icon-left w-full">
-          <div className="p-input-icon-left">
-            <i className="pi pi-search absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none" />
-          </div>
-          <InputText
-            placeholder="Buscar cliente..."
-            className="w-full pl-9 pr-9"
-            value={searchTerm}
-            onChange={(e) => {
-              const val = e.target.value;
-              setSearchTerm(val);
-              if (!val.trim()) {
-                fetchAllClients();
-              } else if (val.length >= 3) {
-                fetchFilteredClients(val);
-              }
-            }}
-          />
-        </span>
-      </div>
-
-      {errorMessage && (
-        <p className="text-red-500 text-sm mb-2">{errorMessage}</p>
-      )}
-
       {/* Toolbar: Crear/Editar/Eliminar + Refrescar */}
       <Toolbar
         left={
@@ -247,6 +230,33 @@ export default function CustomerStepperModal({
         className="mb-3"
       />
 
+      {/* Campo Buscar */}
+      <div className="mb-3">
+        <span className="p-input-icon-left w-full">
+          <div className="p-input-icon-left">
+            <i className="pi pi-search absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none" />
+          </div>
+          <InputText
+            placeholder="Buscar cliente..."
+            className="w-full pl-9 pr-9"
+            value={searchTerm}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchTerm(val);
+              if (!val.trim()) {
+                fetchAllClients();
+              } else if (val.length >= 3) {
+                fetchFilteredClients(val);
+              }
+            }}
+          />
+        </span>
+      </div>
+
+      {errorMessage && (
+        <p className="text-red-500 text-sm mb-2">{errorMessage}</p>
+      )}
+
       <DataTable
         ref={dt}
         value={clients}
@@ -260,7 +270,7 @@ export default function CustomerStepperModal({
         paginator
         rows={10}
         rowsPerPageOptions={[10, 20, 30]}
-        emptyMessage="No se encontraron clientes"
+        emptyMessage="Sin resultados"
         className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
       >
         <Column field="id_customer" header="ID" style={{ width: "60px" }} />
