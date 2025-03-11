@@ -18,21 +18,22 @@ export default function useCart(allowOutOfStockSales) {
 
   useEffect(() => {
     if (shopId) {
-      const storedCart = localStorage.getItem(getCartKey(shopId));
-      if (storedCart) {
-        const cartData = JSON.parse(storedCart);
-        setCartItems(cartData.items);
-        if (cartData.isDevolution) {
-          setIsDevolution(true);
-        } else {
-          setIsDevolution(false);
-        }
-        if (cartData.isDiscount) {
-          setIsDiscount(true);
-        } else {
-          setIsDiscount(false);
-        }
+      const storageKey = getCartKey(shopId);
+      let storedCart = localStorage.getItem(storageKey);
+      if (!storedCart) {
+        // Asigna valor por defecto si no hay carrito guardado
+        const defaultCart = {
+          items: [],
+          isDevolution: false,
+          isDiscount: false,
+        };
+        localStorage.setItem(storageKey, JSON.stringify(defaultCart));
+        storedCart = JSON.stringify(defaultCart);
       }
+      const cartData = JSON.parse(storedCart);
+      setCartItems(cartData.items || []);
+      setIsDevolution(cartData.isDevolution || false);
+      setIsDiscount(cartData.isDiscount || false);
     }
     setIsInitialLoad(false);
   }, [shopId, setIsDevolution, setIsDiscount]);

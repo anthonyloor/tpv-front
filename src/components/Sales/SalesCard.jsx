@@ -166,7 +166,7 @@ function SalesCard({
 
   const subtotalProducts = cartItems.reduce((sum, item) => {
     const subprice =
-      item.discountApplied ||
+      item.discountApplied &&
       item.reduction_amount_tax_incl < item.final_price_incl_tax
         ? item.reduction_amount_tax_incl
         : item.final_price_incl_tax;

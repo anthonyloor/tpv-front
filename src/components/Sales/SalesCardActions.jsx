@@ -14,7 +14,7 @@ import { AuthContext } from "../../contexts/AuthContext";
 import { toast } from "sonner";
 import { InputNumber } from "primereact/inputnumber";
 import { CartContext } from "../../contexts/CartContext";
-import { ClientContext } from "../../contexts/ClientContext"; // <--- nuevo
+import { ClientContext } from "../../contexts/ClientContext";
 
 // Función auxiliar: simula consumo de importe de un vale
 function simulateDiscountConsumption(cartItems, appliedDiscounts) {
@@ -214,10 +214,6 @@ function SalesCardActions({
       cartItems,
       appliedDiscounts
     );
-    // setLeftoverPreview(leftoverArray);
-    console.log("[handleFinalSale] Subtotal:", subtotal);
-    console.log("[handleFinalSale] totalDiscounts:", totalDiscounts);
-    console.log("[handleFinalSale] total final:", Math.max(0, total.toFixed(2)));
     setFinalSaleModalOpen(true);
   };
 
@@ -307,7 +303,6 @@ function SalesCardActions({
 
   // Toggle de métodos
   const togglePaymentMethod = (method) => {
-
     // Si se va a agregar un método nuevo, deseleccionar aquellos sin importe válido.
     if (!selectedMethods.includes(method)) {
       const validMethods = selectedMethods.filter((m) => {
@@ -373,7 +368,6 @@ function SalesCardActions({
         updateChangeAmount(updated);
       }
     }
-    console.log("amounts:", amounts);
   };
 
   const handleAmountChange = (method, val) => {

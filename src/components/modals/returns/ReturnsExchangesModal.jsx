@@ -307,9 +307,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         image_url: "",
         shop_name: "",
         id_shop: prod.id_shop,
-        discountApplied:
-          prod.reduction_amount_tax_incl != null &&
-          prod.reduction_amount_tax_incl < prod.unit_price_tax_incl,
+        discountApplied: prod.reduction_amount_tax_incl !== 0,
       };
       onAddProduct(productForCart, null, null, false, -qtyToReturn);
     });
