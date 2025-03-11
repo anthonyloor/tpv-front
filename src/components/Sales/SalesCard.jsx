@@ -2,7 +2,6 @@
 
 import React, { useState, useContext, useEffect, useCallback } from "react";
 import { Dialog } from "primereact/dialog";
-import { SplitButton } from "primereact/splitbutton";
 import { Button } from "primereact/button";
 import { Divider } from "primereact/divider";
 
@@ -344,57 +343,45 @@ function SalesCard({
       }}
     >
       <div className="flex justify-between items-center gap-4">
-        <div className="flex-1">
-          <SplitButton
+        <div className="flex space-x-2 flex-1">
+          <Button
+            icon="pi pi-search"
+            tooltip="Buscar cliente"
+            onClick={handleSearchClient}
+          />
+          <Button
             label={clientLabel}
             icon="pi pi-users"
-            onClick={handleClientSplitButtonClick}
-            model={[
-              {
-                label: "Buscar cliente",
-                icon: "pi pi-search",
-                command: handleSearchClient,
-              },
-              {
-                label: "Cambiar dirección",
-                icon: "pi pi-map-marker",
-                command: () => setIsAddressModalOpen(true),
-              },
-              {
-                label: "Cliente por defecto",
-                icon: "pi pi-refresh",
-                command: resetToDefaultClientAndAddress,
-              },
-            ]}
             className="w-full"
+            onClick={handleClientSplitButtonClick}
+          />
+          <Button
+            icon="pi pi-refresh"
+            tooltip="Cliente por defecto"
+            onClick={resetToDefaultClientAndAddress}
           />
         </div>
         <div>
-          <SplitButton
-            label="Tickets"
-            tooltip="Ver tickets aparcados"
-            tooltipOptions={{ position: "bottom" }}
-            icon="pi pi-receipt"
-            onClick={() => setIsParkedCartsModalOpen(true)}
-            model={[
-              {
-                label: "Tickets Aparcados",
-                icon: "pi pi-list",
-                command: () => setIsParkedCartsModalOpen(true),
-              },
-              {
-                label: "Guardar Ticket",
-                icon: "pi pi-file-plus",
-                command: handleParkCart,
-              },
-              {
-                label: "Borrar Ticket",
-                icon: "pi pi-trash",
-                command: handleClearCart,
-              },
-            ]}
-            className="p-button-warning"
-          />
+          <div className="flex space-x-2">
+            <Button
+              icon="pi pi-file-plus"
+              tooltip="Guardar Ticket"
+              severity="warning"
+              onClick={handleParkCart}
+            />
+            <Button
+              label="Tickets"
+              icon="pi pi-list"
+              severity="warning"
+              onClick={() => setIsParkedCartsModalOpen(true)}
+            />
+            <Button
+              icon="pi pi-trash"
+              tooltip="Borrar Ticket"
+              severity="warning"
+              onClick={handleClearCart}
+            />
+          </div>
         </div>
       </div>
 
