@@ -8,6 +8,7 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import CreateCustomerModal from "./CreateCustomerModal";
 import CreateAddressModal from "./CreateAddressModal";
+import { useApiFetch } from "../../utils/useApiFetch";
 import { Toast } from "primereact/toast";
 
 export default function CustomerStepperModal({
@@ -19,6 +20,7 @@ export default function CustomerStepperModal({
 }) {
   const [activeIndex, setActiveIndex] = useState(0); // 0 => Cliente, 1 => Dirección
   const toast = useRef(null);
+  const apiFetch = useApiFetch();
 
   // Listas de datos
   const [clients, setClients] = useState([]);
@@ -83,33 +85,21 @@ export default function CustomerStepperModal({
       });
   };
 
-  const fetchFilteredClients = (filter) => {
-    const token = localStorage.getItem("token");
-    fetch(
-      `https://apitpv.anthonyloor.com/get_customers_filtered?filter=${encodeURIComponent(
-        filter
-      )}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({}),
-      }
-    )
-      .then((res) => {
-        if (!res.ok) throw new Error("Error al buscar clientes");
-        return res.json();
-      })
-      .then((data) => {
-        setClients(data);
-        setErrorMessage("");
-      })
-      .catch((error) => {
-        console.error(error);
-        setErrorMessage("Error al buscar clientes.");
-      });
+  const fetchFilteredClients = async (filter) => {
+    try {
+      const data = await apiFetch(
+        "https://apitpv.anthonyloor.com/get_customers_filtered",
+        {
+          method: "POST",
+          body: JSON.stringify({ filter, origin: "mayret" }),
+        }
+      );
+      setClients(data);
+      setErrorMessage("");
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Error al buscar clientes.");
+    }
   };
 
   const fetchAddressesForClient = (client) => {
