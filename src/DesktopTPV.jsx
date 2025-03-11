@@ -52,13 +52,12 @@ function DesktopTPV() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden p-2 gap-2">
-      <div className="flex-none rounded shadow">
+      <header className="flex-none">
         <NavbarCard />
-      </div>
-
-      <div className="flex-auto flex flex-col gap-2 rounded overflow-hidden">
-        <div className="flex-1 flex overflow-hidden rounded gap-2">
-          <div className="flex flex-col w-[35%] shadow rounded overflow-hidden">
+      </header>
+      <main className="flex-1 flex flex-col gap-2 overflow-auto">
+        <div className="flex flex-grow gap-2">
+          <div className="w-1/2 shadow rounded overflow-hidden">
             <SalesCard
               cartItems={cartItems}
               setCartItems={setCartItems}
@@ -76,7 +75,7 @@ function DesktopTPV() {
               onTotalsChange={handleTotalsChange}
             />
           </div>
-          <div className="flex flex-col w-[65%] rounded shadow overflow-hidden">
+          <div className="w-1/2 rounded shadow overflow-hidden">
             <ProductSearchCard
               onAddProduct={handleAddProduct}
               onAddDiscount={addDiscount}
@@ -84,32 +83,28 @@ function DesktopTPV() {
             />
           </div>
         </div>
-
-        <div
-          className="flex-none flex overflow-hidden rounded gap-2"
-          style={{ maxHeight: "20%" }}
-        >
-          <div className="flex flex-col w-[35%] shadow rounded overflow-hidden">
-            <SalesCardActions
-              cartItems={cartItems}
-              setCartItems={setCartItems}
-              appliedDiscounts={appliedDiscounts}
-              addDiscount={addDiscount}
-              removeDiscountByIndex={removeDiscountByIndex}
-              clearDiscounts={clearDiscounts}
-              handleAddProduct={handleAddProduct}
-              selectedProductForDiscount={selectedProductForDiscount}
-              setSelectedProductForDiscount={setSelectedProductForDiscount}
-              subtotal={totals.subtotal}
-              total={totals.total}
-              totalDiscounts={totals.totalDiscounts}
-            />
-          </div>
-          <div className="flex flex-col w-[65%] rounded shadow overflow-hidden">
-            <StoreStockPanel product={selectedProductForStock} />
-          </div>
+      </main>
+      <footer className="flex-none flex gap-2">
+        <div className="w-1/2 shadow rounded overflow-hidden">
+          <SalesCardActions
+            cartItems={cartItems}
+            setCartItems={setCartItems}
+            appliedDiscounts={appliedDiscounts}
+            addDiscount={addDiscount}
+            removeDiscountByIndex={removeDiscountByIndex}
+            clearDiscounts={clearDiscounts}
+            handleAddProduct={handleAddProduct}
+            selectedProductForDiscount={selectedProductForDiscount}
+            setSelectedProductForDiscount={setSelectedProductForDiscount}
+            subtotal={totals.subtotal}
+            total={totals.total}
+            totalDiscounts={totals.totalDiscounts}
+          />
         </div>
-      </div>
+        <div className="w-1/2 rounded shadow overflow-hidden">
+          <StoreStockPanel product={selectedProductForStock} />
+        </div>
+      </footer>
     </div>
   );
 }

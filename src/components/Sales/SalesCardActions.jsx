@@ -16,41 +16,6 @@ import { InputNumber } from "primereact/inputnumber";
 import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
 
-// Función auxiliar: simula consumo de importe de un vale
-function simulateDiscountConsumption(cartItems, appliedDiscounts) {
-  const subtotalInclTax = cartItems.reduce(
-    (acc, item) => acc + item.final_price_incl_tax * item.quantity,
-    0
-  );
-  let remaining = subtotalInclTax;
-  const leftoverArray = [];
-  let totalDiscounts = 0;
-
-  appliedDiscounts.forEach((disc) => {
-    const { reduction_amount = 0, reduction_percent = 0 } = disc;
-    let discountValue = 0;
-    let leftoverValue = 0;
-    if (reduction_percent > 0) {
-      discountValue = (remaining * reduction_percent) / 100;
-    } else if (reduction_amount > 0) {
-      if (reduction_amount > remaining) {
-        discountValue = remaining;
-        leftoverValue = reduction_amount - remaining;
-      } else {
-        discountValue = reduction_amount;
-      }
-    }
-    remaining -= discountValue;
-    if (remaining < 0) remaining = 0;
-    totalDiscounts += discountValue;
-    if (leftoverValue > 0) {
-      leftoverArray.push({ code: disc.code, leftover: leftoverValue });
-    }
-  });
-
-  return { leftoverArray, finalTotal: remaining, totalDiscounts };
-}
-
 function SalesCardActions({
   cartItems,
   setCartItems,
@@ -210,10 +175,6 @@ function SalesCardActions({
 
   const handleFinalSale = () => {
     if (cartItems.length === 0) return;
-    const { leftoverArray } = simulateDiscountConsumption(
-      cartItems,
-      appliedDiscounts
-    );
     setFinalSaleModalOpen(true);
   };
 

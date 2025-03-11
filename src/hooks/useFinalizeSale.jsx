@@ -39,14 +39,14 @@ export default function useFinalizeSale() {
           it.id_product !== 0 || it.reference_combination === "rectificacion"
       );
       const factorTax = 1.21;
-      const total_paid_tax_excl = normalItems.reduce(
+      const subtotalInclTax = normalItems.reduce(
         (sum, item) =>
           sum +
           (parseFloat(item.final_price_incl_tax) / factorTax) * item.quantity,
         0
       );
-      const total_products = total_paid_tax_excl;
-      const subtotalInclTax = normalItems.reduce(
+      const total_products = subtotalInclTax;
+      const subtotalInclTaxCalc = normalItems.reduce(
         (sum, item) => sum + item.final_price_incl_tax * item.quantity,
         0
       );
@@ -90,25 +90,19 @@ export default function useFinalizeSale() {
         ? parseFloat(amounts.bizum || 0)
         : 0;
 
-      let remaining = subtotalInclTax;
+      let remaining = subtotalInclTaxCalc;
       let total_discounts = 0;
       const discountsArray = [];
-      const leftoverArray = [];
 
       appliedDiscounts.forEach((disc) => {
         let discountValue = 0;
-        let leftoverValue = 0;
         const { reduction_percent = 0, reduction_amount = 0 } = disc;
 
         if (reduction_percent > 0) {
           discountValue = (remaining * reduction_percent) / 100;
         } else if (reduction_amount > 0) {
-          if (reduction_amount > remaining) {
-            discountValue = remaining;
-            leftoverValue = reduction_amount - remaining;
-          } else {
-            discountValue = reduction_amount;
-          }
+          discountValue =
+            reduction_amount > remaining ? remaining : reduction_amount;
         }
         total_discounts += discountValue;
         discountsArray.push({
@@ -116,12 +110,6 @@ export default function useFinalizeSale() {
           amount: parseFloat(discountValue.toFixed(2)),
         });
         remaining -= discountValue;
-        if (leftoverValue > 0) {
-          leftoverArray.push({
-            code: disc.code,
-            leftover: leftoverValue,
-          });
-        }
       });
 
       // Si remaining es negativo, definir voucherAmount; de lo contrario es 0.
@@ -135,7 +123,7 @@ export default function useFinalizeSale() {
         id_address_delivery,
         payment: selectedMethods.join(", "),
         total_paid: parseFloat(finalTotalInclTax.toFixed(2)),
-        total_paid_tax_excl: parseFloat(total_paid_tax_excl.toFixed(2)),
+        total_paid_tax_excl: parseFloat(subtotalInclTax.toFixed(2)),
         total_products: parseFloat(total_products.toFixed(2)),
         total_cash: parseFloat(total_cash.toFixed(2)),
         total_card: parseFloat(total_card.toFixed(2)),
@@ -204,7 +192,6 @@ export default function useFinalizeSale() {
           print,
           giftTicket,
           changeAmount,
-          leftoverArray,
           newCartRuleCode,
         });
       }
