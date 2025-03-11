@@ -625,10 +625,9 @@ function SalesCard({
         )}
       </div>
 
-      <div
-        className="mt-4 pt-4 border-t"
-        style={{ borderColor: "var(--surface-border)" }}
-      >
+      <Divider style={{ borderColor: "var(--surface-border)" }} />
+
+      <div className="mt-2" style={{ borderColor: "var(--surface-border)" }}>
         <div className="flex justify-between items-center">
           <span className="text-xl font-medium">Subtotal Productos:</span>
           <span className="text-xl font-bold">

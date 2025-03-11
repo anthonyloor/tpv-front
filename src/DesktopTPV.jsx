@@ -55,9 +55,9 @@ function DesktopTPV() {
       <header className="flex-none">
         <NavbarCard />
       </header>
-      <main className="flex-1 flex flex-col gap-2 overflow-auto">
-        <div className="flex flex-grow gap-2">
-          <div className="w-1/2 shadow rounded overflow-hidden">
+      <main className="flex flex-col flex-1 gap-2 overflow-auto">
+        <div className="flex-1 flex overflow-hidden rounded gap-2">
+          <div className="flex-1 flex-col w-[35%] shadow rounded overflow-hidden">
             <SalesCard
               cartItems={cartItems}
               setCartItems={setCartItems}
@@ -75,7 +75,7 @@ function DesktopTPV() {
               onTotalsChange={handleTotalsChange}
             />
           </div>
-          <div className="w-1/2 rounded shadow overflow-hidden">
+          <div className="flex-2 flex-col w-[65%] rounded shadow overflow-hidden">
             <ProductSearchCard
               onAddProduct={handleAddProduct}
               onAddDiscount={addDiscount}
@@ -84,8 +84,8 @@ function DesktopTPV() {
           </div>
         </div>
       </main>
-      <footer className="flex-none flex gap-2">
-        <div className="w-1/2 shadow rounded overflow-hidden">
+      <footer className="flex-none flex gap-2 overflow-auto rounded">
+        <div className="flex-1 flex-col w-[35%] shadow rounded overflow-hidden">
           <SalesCardActions
             cartItems={cartItems}
             setCartItems={setCartItems}
@@ -101,7 +101,7 @@ function DesktopTPV() {
             totalDiscounts={totals.totalDiscounts}
           />
         </div>
-        <div className="w-1/2 rounded shadow overflow-hidden">
+        <div className="flex-2 flex-col w-[65%] rounded shadow overflow-hidden">
           <StoreStockPanel product={selectedProductForStock} />
         </div>
       </footer>

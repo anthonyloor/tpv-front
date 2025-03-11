@@ -54,7 +54,7 @@ function StoreStockPanel({ product }) {
 
   return (
     <div
-      className="flex flex-col h-full p-3"
+      className="h-full flex flex-col p-3 relative"
       style={{
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",

@@ -542,11 +542,11 @@ function SalesCardActions({
 
   // Agregar estado para modo compacto cuando el alto es <=1060px o el ancho es <=1730px
   const [isCompact, setIsCompact] = useState(
-    window.innerHeight <= 1060 || window.innerWidth <= 1730
+    window.innerHeight <= 960 || window.innerWidth <= 1600
   );
   useEffect(() => {
     const handleResize = () => {
-      setIsCompact(window.innerHeight <= 1060 || window.innerWidth <= 1730);
+      setIsCompact(window.innerHeight <= 960 || window.innerWidth <= 1600);
     };
     window.addEventListener("resize", handleResize);
     handleResize();
@@ -565,7 +565,7 @@ function SalesCardActions({
 
   return (
     <div
-      className="flex flex-col h-full p-3"
+      className="h-full flex flex-col p-3 relative"
       style={{
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",
