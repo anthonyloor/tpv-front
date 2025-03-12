@@ -89,7 +89,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const referenceBodyTemplate = (rowData) => rowData.reference_combination;
   const eanBodyTemplate = (rowData) => rowData.ean13_combination;
   const priceBodyTemplate = (rowData) => rowData.price.toFixed(2) + " €";
-  const quantityBodyTemplate = (rowData) => rowData.quantity;
+  const quantityBodyTemplate = (rowData) => {
+    const currentStock = rowData.stocks
+      ? rowData.stocks.find((stock) => stock.id_shop === shopId)
+      : null;
+    return currentStock ? currentStock.quantity : rowData.quantity;
+  };
 
   const groupHeaderTemplate = (groupValue) => (
     <div
@@ -99,9 +104,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         borderBottom: "1px solid var(--surface-border)",
       }}
     >
-      {groupValue}
+      Producto: {groupValue}
     </div>
   );
+
+  // Nueva función para mostrar id_control_stock
+  const idControlStockBodyTemplate = (rowData) => rowData.id_control_stock;
 
   // Aplanamos los grupos para el DataTable
   const flatProducts = groupedProducts.reduce((acc, group) => {
@@ -212,6 +220,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
             field="ean13_combination"
             header="Cod. Barras"
             body={eanBodyTemplate}
+          />
+          {/* Nueva columna para ID Control Stock */}
+          <Column
+            field="id_control_stock"
+            header="ID Control Stock"
+            body={idControlStockBodyTemplate}
           />
           <Column field="price" header="Precio" body={priceBodyTemplate} />
           <Column

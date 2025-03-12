@@ -66,9 +66,7 @@ function SalesCard({
     defaultClientId &&
     selectedClient.id_customer === defaultClientId;
 
-  const clientLabel = isDefaultClient
-    ? "Cliente TPV"
-    : selectedClient.full_name || "Seleccionar Cliente";
+  const clientLabel = selectedClient.full_name || "Seleccionar Cliente";
 
   // Al hacer clic en el label
   const handleClientSplitButtonClick = () => {

@@ -1,6 +1,6 @@
 // src/components/modal/tags/PricesTags.jsx
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { DataTable } from "primereact/datatable";
@@ -8,8 +8,11 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { AuthContext } from "../../../contexts/AuthContext";
 
 export default function PricesTags({ isOpen, onHide }) {
+  const { shopId } = useContext(AuthContext);
+
   // Estados principales
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -333,6 +336,14 @@ export default function PricesTags({ isOpen, onHide }) {
     }
   };
 
+  // Nueva plantilla para mostrar la cantidad filtrada por tienda actual
+  const quantityBodyTemplate = (rowData) => {
+    const currentStock = rowData.stocks
+      ? rowData.stocks.find((stock) => stock.id_shop === shopId)
+      : null;
+    return currentStock ? currentStock.quantity : rowData.quantity;
+  };
+
   // === Render principal ===============================================================
 
   return (
@@ -395,7 +406,7 @@ export default function PricesTags({ isOpen, onHide }) {
               />
               <Column
                 header="Cantidad"
-                body={(rowData) => rowData.quantity}
+                body={quantityBodyTemplate}
                 style={{ textAlign: "right" }}
               />
             </DataTable>
