@@ -4,6 +4,7 @@ import React, { useEffect, useState, useContext, useCallback } from "react";
 import { Dialog } from "primereact/dialog";
 import { useApiFetch } from "../../utils/useApiFetch";
 import { ConfigContext } from "../../../contexts/ConfigContext";
+import generateTicket from "../../../utils/ticket";
 
 const TicketViewModal = ({
   isOpen,
@@ -208,9 +209,7 @@ const TicketViewModal = ({
       setError(null);
       const data = await apiFetch(
         `https://apitpv.anthonyloor.com/get_order?id_order=${orderId}`,
-        {
-          method: "GET",
-        }
+        { method: "GET" }
       );
       setFetchedData(data);
       buildPreviewHtmlForTicket(data, giftTicket);
@@ -225,9 +224,7 @@ const TicketViewModal = ({
       setError(null);
       const data = await apiFetch(
         `https://apitpv.anthonyloor.com/get_cart_rule?code=${cartRuleCode}`,
-        {
-          method: "GET",
-        }
+        { method: "GET" }
       );
       setFetchedData(data);
       buildPreviewHtmlForCartRule(data);
@@ -246,34 +243,17 @@ const TicketViewModal = ({
     }
   }, [isOpen, mode, orderId, cartRuleCode, loadOrder, loadCartRule]);
 
+  // SE MODIFICA para llamar a generateTicket pasando fetchedData y configData
   useEffect(() => {
-    if (printOnOpen && previewHtml) {
-      const fullHtml = `
-        <html>
-          <head>
-            <meta charset="UTF-8"/>
-            <style>
-              body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 20px; }
-              h2, h3, h4 { margin: 0 0 10px; text-align: center; }
-              table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-              td, th { padding: 4px; border-bottom: 1px solid #ccc; }
-              hr { border: none; border-top: 1px solid #000; margin: 10px 0; }
-            </style>
-          </head>
-          <body>
-            ${previewHtml}
-          </body>
-        </html>
-      `;
-      const printWindow = window.open("", "_blank", "width=300,height=600");
-      printWindow.document.open();
-      printWindow.document.write(fullHtml);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
+    if (printOnOpen && fetchedData && configData) {
+      (async () => {
+        const response = await generateTicket("print", fetchedData, configData);
+        if (!response.success) {
+          console.error("Error al imprimir ticket:", response.message);
+        }
+      })();
     }
-  }, [printOnOpen, previewHtml]);
+  }, [printOnOpen, previewHtml, fetchedData, configData]);
 
   if (!isOpen) return null;
 
