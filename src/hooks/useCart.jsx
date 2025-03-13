@@ -49,7 +49,7 @@ export default function useCart(allowOutOfStockSales) {
     }
   }, [cartItems, isDevolution, isDiscount, isInitialLoad, shopId]);
 
-  const saveCurrentCartAsParked = (name = null) => {
+  const saveCurrentCartAsParked = (name = null, extraData = null) => {
     if (!shopId) {
       toast.error("No se ha encontrado la tienda.");
       return;
@@ -63,6 +63,7 @@ export default function useCart(allowOutOfStockSales) {
       name: cartName,
       items: cartItems,
       savedAt: timestamp,
+      extra: extraData,
     };
     parkedCarts.push(newParkedCart);
     localStorage.setItem(

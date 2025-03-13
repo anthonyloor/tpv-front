@@ -33,10 +33,6 @@ export const CartProvider = ({ children }) => {
     );
   }, [originalPaymentAmounts]);
 
-  useEffect(() => {
-    localStorage.setItem("isDiscount", isDiscount.toString());
-  }, [isDiscount]);
-
   return (
     <CartContext.Provider
       value={{

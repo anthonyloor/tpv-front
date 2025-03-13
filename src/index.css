@@ -83,3 +83,11 @@ code {
 .custom-cell-padding td {
   padding: 0.5rem 0.5rem !important;
 }
+
+.p-datatable .p-datatable-thead > tr > th {
+  padding: 0.5rem 0.5rem !important;
+}
+
+.p-datatable .p-datatable-footer {
+  padding: 0rem 0.3rem 0rem 0rem !important;
+}

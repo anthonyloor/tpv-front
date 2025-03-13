@@ -1,15 +1,15 @@
 // src/contexts/AuthContext.jsx
 
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState } from "react";
 
 export const AuthContext = createContext();
 
 function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [shopId, setShopId] = useState(null);
-  const [shopName, setShopName] = useState('');
+  const [shopName, setShopName] = useState("");
   const [employeeId, setEmployeeId] = useState(null);
-  const [employeeName, setEmployeeName] = useState('');
+  const [employeeName, setEmployeeName] = useState("");
   const [idProfile, setIdProfile] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [openCloseCashModal, setOpenCloseCashModal] = useState(false);
@@ -19,17 +19,27 @@ function AuthProvider({ children }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('employee');
-    localStorage.removeItem('shop');
-    localStorage.removeItem('selectedClient');
-    localStorage.removeItem('selectedAddress');
+    localStorage.removeItem("token");
+    localStorage.removeItem("employee");
+    localStorage.removeItem("shop");
+    localStorage.removeItem("selectedClient");
+    localStorage.removeItem("selectedAddress");
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith("cart_shop") || key.startsWith("discounts_shop")) {
+        localStorage.removeItem(key);
+        i--;
+      }
+    }
+    localStorage.removeItem("originalPaymentMethods");
+    localStorage.removeItem("originalPaymentAmounts");
+    localStorage.removeItem("isDiscount");
 
     setIsAuthenticated(false);
     setShopId(null);
-    setShopName('');
+    setShopName("");
     setEmployeeId(null);
-    setEmployeeName('');
+    setEmployeeName("");
     setIdProfile(null);
     setIsSessionExpired(false);
     setOpenCloseCashModal(false);

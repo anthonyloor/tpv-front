@@ -138,7 +138,16 @@ function SalesCard({
       alert("Introduce un nombre para el ticket.");
       return;
     }
-    saveCurrentCartAsParked(ticketName.trim());
+    const extraData = {
+      items: cartItems,
+      discounts: appliedDiscounts,
+      totals: {
+        subtotal: subtotalProducts,
+        totalDiscounts: totalDiscounts,
+        total: total,
+      },
+    };
+    saveCurrentCartAsParked(ticketName.trim(), extraData);
     setTicketName("");
     setIsNameModalOpen(false);
     handleClearCart();
@@ -166,11 +175,7 @@ function SalesCard({
   // === CALCULOS TOTALES
 
   const subtotalProducts = cartItems.reduce((sum, item) => {
-    const subprice =
-      item.discountApplied &&
-      item.reduction_amount_tax_incl < item.final_price_incl_tax
-        ? item.reduction_amount_tax_incl
-        : item.final_price_incl_tax;
+    const subprice = item.final_price_incl_tax;
     return sum + subprice * item.quantity;
   }, 0);
 
@@ -285,7 +290,7 @@ function SalesCard({
   );
 
   const rowExpansionTemplate = (data) => (
-    <div style={{ backgroundColor: "var(--surface-50)" }}>
+    <div style={{ padding: "0rem 0rem 0rem 2rem " }}>
       <div className="flex justify-between items-center">
         <span>
           <strong>Descuento aplicado: </strong>
@@ -628,7 +633,7 @@ function SalesCard({
             {subtotalProducts.toFixed(2)} €
           </span>
         </div>
-        {appliedDiscounts.length > 0 && (
+        {totalDiscounts > 0 && (
           <div className="flex justify-between items-center mt-2">
             <span className="text-xl font-medium">Total Descuentos:</span>
             <span
