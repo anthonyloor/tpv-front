@@ -10,9 +10,62 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Toolbar } from "primereact/toolbar";
+import { InputText } from "primereact/inputtext";
+import { Calendar } from "primereact/calendar";
+import { Dropdown } from "primereact/dropdown";
+import { addLocale } from "primereact/api";
 
 const TransfersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
+
+  // Definir el locale global "es" al montar el componente
+  useEffect(() => {
+    addLocale("es", {
+      firstDayOfWeek: 1,
+      showMonthAfterYear: true,
+      dayNames: [
+        "domingo",
+        "lunes",
+        "martes",
+        "miércoles",
+        "jueves",
+        "viernes",
+        "sábado",
+      ],
+      dayNamesShort: ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"],
+      dayNamesMin: ["D", "L", "M", "X", "J", "V", "S"],
+      monthNames: [
+        "enero",
+        "febrero",
+        "marzo",
+        "abril",
+        "mayo",
+        "junio",
+        "julio",
+        "agosto",
+        "septiembre",
+        "octubre",
+        "noviembre",
+        "diciembre",
+      ],
+      monthNamesShort: [
+        "ene",
+        "feb",
+        "mar",
+        "abr",
+        "may",
+        "jun",
+        "jul",
+        "ago",
+        "sep",
+        "oct",
+        "nov",
+        "dic",
+      ],
+      today: "Hoy",
+      clear: "Borrar",
+    });
+  }, []);
 
   // Vistas => 'list', 'selectType', 'form'
   const [currentView, setCurrentView] = useState("list");
@@ -44,6 +97,22 @@ const TransfersModal = ({ isOpen, onClose }) => {
 
   // DataTable ref
   const dt = useRef(null);
+
+  // Opciones para Dropdown
+  const typeOptions = [
+    { label: "(Todos)", value: "" },
+    { label: "Traspaso", value: "traspaso" },
+    { label: "Entrada", value: "entrada" },
+    { label: "Salida", value: "salida" },
+  ];
+  const statusOptions = [
+    { label: "(Todos)", value: "" },
+    { label: "En creacion", value: "En creacion" },
+    { label: "Enviado", value: "Enviado" },
+    { label: "Recibido", value: "Recibido" },
+    { label: "En revision", value: "En revision" },
+    { label: "Finalizado", value: "Finalizado" },
+  ];
 
   // Reset filtros
   const resetFilters = useCallback(() => {
@@ -269,19 +338,26 @@ const TransfersModal = ({ isOpen, onClose }) => {
     return (
       <div className="flex flex-wrap gap-2">
         <Button
-          label=""
+          tooltip="Crear movimiento"
+          tooltipOptions={{ position: "top" }}
           icon="pi pi-plus"
           severity="success"
           onClick={handleCreateTransfer}
         />
         <Button
-          label=""
+          tooltip="Eliminar selección"
+          tooltipOptions={{ position: "top" }}
           icon="pi pi-trash"
           severity="danger"
           onClick={handleDeleteTransfer}
           disabled={selectedMovements.length === 0}
         />
-        <Button label="" icon="pi pi-refresh" onClick={handleRefresh} />
+        <Button
+          icon="pi pi-refresh"
+          tooltip="Refrescar"
+          tooltipOptions={{ position: "top" }}
+          onClick={handleRefresh}
+        />
       </div>
     );
   };
@@ -291,12 +367,15 @@ const TransfersModal = ({ isOpen, onClose }) => {
     return (
       <div className="flex flex-wrap gap-2">
         <Button
-          label=""
+          tooltip="Exportar PDF"
+          tooltipOptions={{ position: "top" }}
           icon="pi pi-file-pdf"
           className="p-button-help"
           onClick={exportPdf}
         />
         <Button
+          tooltip="Mostrar/ocultar filtros"
+          tooltipOptions={{ position: "top" }}
           icon={showFilters ? "pi pi-filter-slash" : "pi pi-filter"}
           onClick={() => setShowFilters((prev) => !prev)}
         />
@@ -312,21 +391,19 @@ const TransfersModal = ({ isOpen, onClose }) => {
     const renderFilters = () => {
       if (!showFilters) return null;
       return (
-        <div className="bg-white p-3 mb-3 border border-gray-200 rounded">
-          <div className="grid grid-cols-6 gap-4">
-            {/* ID */}
+        <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {/* ID Movimiento */}
             <div className="relative">
               <label className="block text-sm font-semibold mb-1">
                 ID Movimiento
               </label>
-              <input
-                type="text"
-                className="border p-2 rounded w-full pr-7"
+              <InputText
+                className="w-full rounded dark:bg-gray-700 dark:text-white"
                 value={filterId}
                 onChange={(e) => {
                   setFilterId(e.target.value);
                   if (e.target.value.trim()) {
-                    // Se rellena ID => vaciamos otros
                     setFilterDateFrom("");
                     setFilterDateTo("");
                     setFilterTitle("");
@@ -341,14 +418,17 @@ const TransfersModal = ({ isOpen, onClose }) => {
                 }}
                 disabled={disableByDate}
               />
-              {filterId && (
-                <button
-                  className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterId("")}
-                >
-                  x
-                </button>
-              )}
+            </div>
+
+            {/* Título */}
+            <div className="relative">
+              <label className="block text-sm font-semibold mb-1">Título</label>
+              <InputText
+                className="w-full rounded dark:bg-gray-700 dark:text-white"
+                value={filterTitle}
+                onChange={(e) => setFilterTitle(e.target.value)}
+                disabled={disableById}
+              />
             </div>
 
             {/* Fecha Desde */}
@@ -356,26 +436,18 @@ const TransfersModal = ({ isOpen, onClose }) => {
               <label className="block text-sm font-semibold mb-1">
                 Fecha Desde
               </label>
-              <input
-                type="date"
-                className="border p-2 rounded w-full pr-7"
+              <Calendar
+                className="w-full rounded dark:bg-gray-700 dark:text-white"
                 value={filterDateFrom}
                 onChange={(e) => {
-                  setFilterDateFrom(e.target.value);
-                  if (e.target.value) {
-                    setFilterId("");
-                  }
+                  setFilterDateFrom(e.value);
+                  if (e.value) setFilterId("");
                 }}
+                dateFormat="dd-mm-yy"
+                showIcon
                 disabled={disableById}
+                locale="es"
               />
-              {filterDateFrom && (
-                <button
-                  className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterDateFrom("")}
-                >
-                  x
-                </button>
-              )}
             </div>
 
             {/* Fecha Hasta */}
@@ -383,101 +455,62 @@ const TransfersModal = ({ isOpen, onClose }) => {
               <label className="block text-sm font-semibold mb-1">
                 Fecha Hasta
               </label>
-              <input
-                type="date"
-                className="border p-2 rounded w-full pr-7"
+              <Calendar
+                className="w-full rounded dark:bg-gray-700 dark:text-white"
                 value={filterDateTo}
                 onChange={(e) => {
-                  setFilterDateTo(e.target.value);
-                  if (e.target.value) {
-                    setFilterId("");
-                  }
+                  setFilterDateTo(e.value);
+                  if (e.value) setFilterId("");
                 }}
+                dateFormat="dd-mm-yy"
+                showIcon
                 disabled={disableById}
+                locale="es"
               />
-              {filterDateTo && (
-                <button
-                  className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterDateTo("")}
-                >
-                  x
-                </button>
-              )}
-            </div>
-
-            {/* Título */}
-            <div className="relative">
-              <label className="block text-sm font-semibold mb-1">Título</label>
-              <input
-                type="text"
-                className="border p-2 rounded w-full pr-7"
-                value={filterTitle}
-                onChange={(e) => setFilterTitle(e.target.value)}
-                disabled={disableById}
-              />
-              {filterTitle && (
-                <button
-                  className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterTitle("")}
-                >
-                  x
-                </button>
-              )}
             </div>
 
             {/* Tipo */}
             <div className="relative">
               <label className="block text-sm font-semibold mb-1">Tipo</label>
-              <select
-                className="border p-2 rounded w-full pr-7"
+              <Dropdown
+                className="w-full rounded dark:bg-gray-700 dark:text-white"
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
+                style={{ minWidth: "250px" }}
+                options={typeOptions}
+                onChange={(e) => setFilterType(e.value)}
                 disabled={disableById}
-              >
-                <option value="">(Todos)</option>
-                <option value="traspaso">Traspaso</option>
-                <option value="entrada">Entrada</option>
-                <option value="salida">Salida</option>
-              </select>
-              {filterType && (
-                <button
-                  className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterType("")}
-                >
-                  x
-                </button>
-              )}
+              />
             </div>
 
             {/* Estado */}
             <div className="relative">
               <label className="block text-sm font-semibold mb-1">Estado</label>
-              <select
-                className="border p-2 rounded w-full pr-7"
+              <Dropdown
+                className="w-full rounded dark:bg-gray-700 dark:text-white"
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                style={{ minWidth: "250px" }}
+                options={statusOptions}
+                onChange={(e) => setFilterStatus(e.value)}
                 disabled={disableById}
-              >
-                <option value="">(Todos)</option>
-                <option value="En creacion">En creacion</option>
-                <option value="Enviado">Enviado</option>
-                <option value="Recibido">Recibido</option>
-                <option value="En revision">En revision</option>
-                <option value="Finalizado">Finalizado</option>
-              </select>
-              {filterStatus && (
-                <button
-                  className="absolute right-1 top-8 text-gray-500"
-                  onClick={() => setFilterStatus("")}
-                >
-                  x
-                </button>
-              )}
+              />
             </div>
           </div>
 
-          <div className="mt-3 text-right">
-            <Button label="Buscar" icon="pi pi-search" onClick={handleSearch} />
+          <div className="mt-3 text-right flex gap-2 justify-end">
+            <Button
+              label="Filtrar"
+              icon="pi pi-search"
+              onClick={handleSearch}
+            />
+            <Button
+              label="Limpiar filtros"
+              icon="pi pi-times"
+              className="p-button-secondary"
+              onClick={() => {
+                resetFilters();
+                handleSearch();
+              }}
+            />
           </div>
         </div>
       );
