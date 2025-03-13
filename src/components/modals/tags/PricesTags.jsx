@@ -18,7 +18,7 @@ export default function PricesTags({
   widthPercent = "40%",
   heightPercent = "65%",
 }) {
-  const { shopId } = useContext(AuthContext);
+  const { shopId, idProfile } = useContext(AuthContext);
   const apiFetch = useApiFetch();
 
   // Estados locales para el diálogo de cantidad e impresión
@@ -41,12 +41,25 @@ export default function PricesTags({
   const { groupedProducts, isLoading, handleSearch } = useProductSearch({
     apiFetch,
     shopId,
-    // Permitir impresión aun sin stock (según requerimiento, se puede ajustar)
     allowOutOfStockSales: true,
     onAddProduct: (prod) => {
-      setSelectedProduct(prod);
+      const filteredStocks = prod.stocksﬁ
+        ? prod.stocks.filter(
+            (stock) => Number(stock.id_shop) === Number(shopId)
+          )
+        : [];
+ﬁ      const actualShopId =
+        filteredStocks.length > 0 ? filteredStocks[0].id_shop : shopId;
+      const selected = {
+        ...prod,
+        stocks: filteredStocks,
+        id_shop: actualShopId,
+      };
+      console.log("DEBUG: Producto seleccionado para carrito:", selected);
+      setSelectedProduct(selected);
     },
     onAddDiscount: () => {},
+    idProfile,
   });
 
   // Al abrir el diálogo, reiniciar estados y enfocar el input
@@ -67,15 +80,16 @@ export default function PricesTags({
     }
   };
 
-  // Aplanar grupos para alimentar el DataTable (similar a ProductSearchCard)
   const flatProducts = groupedProducts
     .reduce((acc, group) => {
-      const combos = group.combinations.map((combo) => ({
-        ...combo,
-        fullName: `${group.product_name} ${
-          combo.combination_name || ""
-        }`.trim(),
-      }));
+      const combos = group.combinations
+        .filter((combo) => Number(combo.id_shop) === Number(shopId))
+        .map((combo) => ({
+          ...combo,
+          fullName: `${group.product_name} ${
+            combo.combination_name || ""
+          }`.trim(),
+        }));
       return acc.concat(combos);
     }, [])
     .sort((a, b) => a.product_name.localeCompare(b.product_name));
@@ -92,6 +106,8 @@ export default function PricesTags({
   const [showQuantityDialog, setShowQuantityDialog] = useState(false);
   const handleConfirmQuantity = async () => {
     if (!selectedProduct) return;
+
+    console.log("DEBUG: selectedProduct antes de payload:", selectedProduct);
     setIsGenerating(true);
     try {
       let ean13 =
@@ -103,7 +119,6 @@ export default function PricesTags({
       } else if (ean13.length > 13) {
         ean13 = ean13.substring(0, 13);
       }
-      // Llamado a get_product_price_tag
       const payload = {
         quantity_print: quantityPrint,
         id_control_stock: selectedProduct.id_control_stock
@@ -118,6 +133,7 @@ export default function PricesTags({
         id_shop: selectedProduct.id_shop,
         quantity: selectedProduct.quantity,
       };
+      console.log("DEBUG: Payload para get_product_price_tag:", payload);
       let response = await apiFetch(
         "https://apitpv.anthonyloor.com/get_product_price_tag",
         {
@@ -126,6 +142,7 @@ export default function PricesTags({
           body: JSON.stringify(payload),
         }
       );
+      console.log("DEBUG: Respuesta de get_product_price_tag:", response);
       if (!Array.isArray(response)) {
         response = [response];
       }
@@ -147,6 +164,9 @@ export default function PricesTags({
             <div class="content-row" style="display:inline-flex; margin-top:5px;">
               <div class="barcode-column" style="display:flex; flex-direction:column;">
                 <svg id="barcode-${i}"></svg>
+                <div style="margin-top:5px; text-align:center; font-size:18px; color:#999;">
+              <i class="pi pi-link"></i> ${newEan}
+            </div>
               </div>
               <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
                 <span class="combination" style="margin:0; width:70px; text-align:center; font-size: 18px;">
@@ -168,7 +188,6 @@ export default function PricesTags({
                 </div>
               </div>
             </div>
-            <!-- Valor para código de barras: ${newEan} -->
           </div>
         `;
       });
@@ -202,7 +221,7 @@ export default function PricesTags({
             format: "code128",
             width: 2,
             height: 80,
-            displayValue: true,
+            displayValue: false,
             fontSize: 18,
             margin: 4,
             textPosition: "bottom",

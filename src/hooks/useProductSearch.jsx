@@ -7,6 +7,7 @@ const useProductSearch = ({
   allowOutOfStockSales,
   onAddProduct,
   onAddDiscount,
+  idProfile,
 }) => {
   const [groupedProducts, setGroupedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -15,6 +16,7 @@ const useProductSearch = ({
 
   // Función para agrupar productos por nombre
   const groupProductsByProductName = (products) => {
+    console.log("Agrupando productos. Productos recibidos:", products);
     const validProducts = products.filter(
       (product) =>
         product.id_product_attribute !== null ||
@@ -62,6 +64,7 @@ const useProductSearch = ({
 
   // Función para agregar el producto al carrito
   const addProductToCart = (product) => {
+    console.log("Product to add to cart:", product);
     let currentShopStock = null;
     if (Array.isArray(product.stocks)) {
       currentShopStock = product.stocks.find(
@@ -189,22 +192,35 @@ const useProductSearch = ({
     if (ean13Regex.test(searchTerm)) {
       setIsLoading(true);
       try {
-        const results = await apiFetch(
+        let results = await apiFetch(
           `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
             searchTerm
           )}`,
           { method: "GET" }
         );
-        const validResults = results.filter(
+        let validResults = results.filter(
           (product) =>
             product.id_product_attribute !== null ||
             product.ean13_combination !== null ||
             product.ean13_combination_0 !== null
         );
+        validResults = validResults.filter((product) => product.id_shop !== 1);
+        if (idProfile !== 1) {
+          validResults = validResults.filter(
+            (product) => product.id_shop !== 13
+          );
+        }
+        console.log("EAN13 search - valid results filtrados:", validResults);
         const filteredForCurrentShop = validResults.filter(
           (product) => product.id_shop === shopId
         );
-        const groups = groupProductsByProductName(validResults);
+        console.log(
+          "EAN13 search - filtered for current shop (shopId:",
+          shopId,
+          "):",
+          filteredForCurrentShop
+        );
+        const groups = groupProductsByProductName(filteredForCurrentShop);
         setGroupedProducts(groups);
         if (filteredForCurrentShop.length === 1) {
           addProductToCart(filteredForCurrentShop[0]);
@@ -224,23 +240,43 @@ const useProductSearch = ({
       setIsLoading(true);
       try {
         const [, eanCode, controlId] = searchTerm.match(ean13ApostropheRegex);
-        const results = await apiFetch(
+        let results = await apiFetch(
           `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
             eanCode
           )}`,
           { method: "GET" }
         );
-        const validResults = results.filter(
+        console.log("EAN13 apostrophe search - results:", results);
+        let validResults = results.filter(
           (p) =>
             (p.ean13_combination === eanCode ||
               p.ean13_combination_0 === eanCode) &&
             `${p.id_control_stock}` === controlId
         );
-        if (validResults.length === 1) {
-          addProductToCart(validResults[0]);
+        // Filtrar para nunca devolver id_shop = 1 y, si no es admin, tampoco id_shop = 13
+        validResults = validResults.filter((product) => product.id_shop !== 1);
+        if (idProfile !== 1) {
+          validResults = validResults.filter(
+            (product) => product.id_shop !== 13
+          );
+        }
+        console.log(
+          "EAN13 apostrophe search - validResults tras filtrado:",
+          validResults
+        );
+        const filteredForCurrentShop = validResults.filter(
+          (product) => product.id_shop === shopId
+        );
+        console.log(
+          "EAN13 apostrophe - filtered for current shop:",
+          filteredForCurrentShop
+        );
+        if (filteredForCurrentShop.length === 1) {
+          addProductToCart(filteredForCurrentShop[0]);
           setGroupedProducts([]);
         } else {
-          const groups = groupProductsByProductName(validResults);
+          const groups = groupProductsByProductName(filteredForCurrentShop);
+          console.log("EAN13 apostrophe search - grouped products:", groups);
           setGroupedProducts(groups);
         }
       } catch (error) {
@@ -257,19 +293,32 @@ const useProductSearch = ({
     // Búsqueda normal
     setIsLoading(true);
     try {
-      const results = await apiFetch(
+      let results = await apiFetch(
         `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
           searchTerm
         )}`,
         { method: "GET" }
       );
-      const validResults = results.filter(
+      let validResults = results.filter(
         (product) =>
           product.id_product_attribute !== null ||
           product.ean13_combination !== null ||
           product.ean13_combination_0 !== null
       );
-      const groups = groupProductsByProductName(validResults);
+      // Filtrar para nunca devolver id_shop = 1 y, si no es admin, tampoco id_shop = 13
+      validResults = validResults.filter((product) => product.id_shop !== 1);
+      if (idProfile !== 1) {
+        validResults = validResults.filter((product) => product.id_shop !== 13);
+      }
+      console.log("Búsqueda normal - valid results filtrados:", validResults);
+      const filteredForCurrentShop = validResults.filter(
+        (product) => product.id_shop === shopId
+      );
+      console.log(
+        "Búsqueda normal - filtered for current shop:",
+        filteredForCurrentShop
+      );
+      const groups = groupProductsByProductName(filteredForCurrentShop);
       setGroupedProducts(groups);
     } catch (error) {
       console.error("Error en la búsqueda:", error);
