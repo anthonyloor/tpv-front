@@ -343,6 +343,33 @@ const useProductSearch = ({
     }
   };
 
+  const handleConfirmQuantity = async (payload) => {
+    let response = await apiFetch(
+      "https://apitpv.anthonyloor.com/get_product_price_tag",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+    console.log("DEBUG: Respuesta de get_product_price_tag:", response);
+    let tags = [];
+    if (Array.isArray(response)) {
+      if (response[0].tags !== undefined) {
+        tags = response[0].tags;
+      } else {
+        tags = response;
+      }
+    } else {
+      if (response.printed !== undefined) {
+        tags = [response];
+      } else {
+        tags = [];
+      }
+    }
+    // ...existing code to generar etiquetas utilizando tags...
+  };
+
   return {
     groupedProducts,
     isLoading,
@@ -352,6 +379,7 @@ const useProductSearch = ({
     addProductToCart,
     handleCancelAdd,
     handleConfirmAdd,
+    handleConfirmQuantity,
   };
 };
 

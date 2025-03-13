@@ -99,14 +99,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     const ean = rowData.ean13_combination || "";
     if (rowData.id_control_stock) {
       return (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>
+        <div className="flex items-center">
+          <span className="mr-2">
             {ean}-{rowData.id_control_stock}
           </span>
           <i className="pi pi-link"></i>

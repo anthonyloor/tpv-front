@@ -48,7 +48,7 @@ export default function PricesTags({
             (stock) => Number(stock.id_shop) === Number(shopId)
           )
         : [];
-ﬁ      const actualShopId =
+      const actualShopId =
         filteredStocks.length > 0 ? filteredStocks[0].id_shop : shopId;
       const selected = {
         ...prod,
@@ -121,9 +121,7 @@ export default function PricesTags({
       }
       const payload = {
         quantity_print: quantityPrint,
-        id_control_stock: selectedProduct.id_control_stock
-          ? selectedProduct.id_control_stock
-          : null,
+        id_control_stock: null,
         ean13:
           selectedProduct.ean13_combination ||
           selectedProduct.ean13_combination_0 ||
