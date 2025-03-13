@@ -15,7 +15,12 @@ import { Calendar } from "primereact/calendar";
 import { Dropdown } from "primereact/dropdown";
 import { addLocale } from "primereact/api";
 
-const TransfersModal = ({ isOpen, onClose }) => {
+const TransfersModal = ({
+  isOpen,
+  onClose,
+  widthPercent = "45%",
+  heightPercent = "70%",
+}) => {
   const apiFetch = useApiFetch();
 
   // Definir el locale global "es" al montar el componente
@@ -685,8 +690,13 @@ const TransfersModal = ({ isOpen, onClose }) => {
         <span className="font-bold text-xl flex-1 text-center">
           {modalTitle}
         </span>
-        <div className="w-[100px]"></div>{" "}
-        {/* Espacio fijo para mantener el título centrado */}
+        <div className="w-[100px] flex justify-end">
+          <Button
+            icon="pi pi-times"
+            className="p-button-text"
+            onClick={onClose}
+          />
+        </div>
       </div>
     );
   };
@@ -707,9 +717,14 @@ const TransfersModal = ({ isOpen, onClose }) => {
       header={dialogHeader}
       draggable={false}
       resizable={false}
-      closable={true}
+      closable={false}
       modal
-      style={{ width: "85vw", maxWidth: "1200px" }}
+      style={{
+        width: widthPercent,
+        height: heightPercent,
+        minWidth: "850px",
+        minHeight: "750px",
+      }}
     >
       {content}
     </Dialog>

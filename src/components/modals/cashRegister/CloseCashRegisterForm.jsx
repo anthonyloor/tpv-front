@@ -9,6 +9,7 @@ import { InputNumber } from "primereact/inputnumber";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import ActionResultDialog from "../../common/ActionResultDialog";
+import { Divider } from "primereact/divider";
 
 function formatNumber(value) {
   return isNaN(Number(value)) || value === "" ? "-" : value;
@@ -187,57 +188,70 @@ const CloseCashRegisterForm = ({ onClose }) => {
 
   return (
     <>
-      {/* Contenedor principal con fondo blanco en light y gris oscuro en dark */}
-      <div className="space-y-4 rounded">
-        <div className="flex gap-2">
-          <div className="p-inputgroup flex-1">
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-money-bill" />
-            </span>
-            <InputText
-              value={`${formatNumber(fetchedTotalCash.toFixed(2))} €`}
-              disabled
-              className="text-right"
-            />
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-euro" />
-            </span>
-          </div>
-
-          <div className="p-inputgroup flex-1">
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-credit-card" />
-            </span>
-            <InputText
-              value={`${formatNumber(fetchedTotalCard.toFixed(2))} €`}
-              disabled
-              className="text-right"
-            />
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-euro" />
-            </span>
-          </div>
-
-          <div className="p-inputgroup flex-1">
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-phone" />
-            </span>
-            <InputText
-              value={`${formatNumber(fetchedTotalBizum.toFixed(2))} €`}
-              disabled
-              className="text-right"
-            />
-            <span className="p-inputgroup-addon">
-              <i className="pi pi-euro" />
-            </span>
-          </div>
-        </div>
-
-        {/* Reemplazar los bloques de resumen de ventas actuales por una fila con ambos inputs */}
-        <div className="flex gap-2">
+      {/* Grupo 1: Totales, ventas y devoluciones */}
+      <div className="mb-4">
+        <div className="flex gap-4 mb-4">
           <div className="flex-1">
             <label className="block text-sm font-medium dark:text-gray-300 mb-1">
-              Ventas (sin rectificaciones)
+              Total Efectivo
+            </label>
+            <div className="p-inputgroup flex-1">
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-money-bill" />
+              </span>
+              <InputText
+                value={`${formatNumber(fetchedTotalCash.toFixed(2))} €`}
+                disabled
+                className="text-right"
+              />
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-euro" />
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1">
+            <label className="block text-sm font-medium dark:text-gray-300 mb-1">
+              Total Tarjeta
+            </label>
+            <div className="p-inputgroup flex-1">
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-credit-card" />
+              </span>
+              <InputText
+                value={`${formatNumber(fetchedTotalCard.toFixed(2))} €`}
+                disabled
+                className="text-right"
+              />
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-euro" />
+              </span>
+            </div>
+          </div>
+
+          <div className="flex-1">
+            <label className="block text-sm font-medium dark:text-gray-300 mb-1">
+              Total Bizum
+            </label>
+            <div className="p-inputgroup flex-1">
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-phone" />
+              </span>
+              <InputText
+                value={`${formatNumber(fetchedTotalBizum.toFixed(2))} €`}
+                disabled
+                className="text-right"
+              />
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-euro" />
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium dark:text-gray-300 mb-1">
+              Num. Ventas
             </label>
             <div className="p-inputgroup">
               <span className="p-inputgroup-addon">
@@ -252,7 +266,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
           </div>
           <div className="flex-1">
             <label className="block text-sm font-medium dark:text-gray-300 mb-1">
-              Devoluciones (con rectificaciones)
+              Num. Devoluciones
             </label>
             <div className="p-inputgroup">
               <span className="p-inputgroup-addon">
@@ -266,8 +280,13 @@ const CloseCashRegisterForm = ({ onClose }) => {
             </div>
           </div>
         </div>
+      </div>
 
-        <div>
+      <Divider style={{ borderColor: "var(--surface-border)" }} />
+
+      {/* Grupo 2: Inputs totales en una misma fila */}
+      <div className="flex gap-4 mb-4">
+        <div className="flex-1">
           <label
             htmlFor="inputTotalCash"
             className="block text-sm font-medium dark:text-gray-300 mb-1"
@@ -281,6 +300,8 @@ const CloseCashRegisterForm = ({ onClose }) => {
             mode="decimal"
             className="mt-1 block w-full border border-gray-300 rounded-md p-2"
           />
+        </div>
+        <div className="flex-1">
           <label
             htmlFor="inputTotalCard"
             className="block text-sm font-medium dark:text-gray-300 mb-1"
@@ -294,6 +315,8 @@ const CloseCashRegisterForm = ({ onClose }) => {
             mode="decimal"
             className="mt-1 block w-full border border-gray-300 rounded-md p-2"
           />
+        </div>
+        <div className="flex-1">
           <label
             htmlFor="inputTotalBizum"
             className="block text-sm font-medium dark:text-gray-300 mb-1"
@@ -308,20 +331,20 @@ const CloseCashRegisterForm = ({ onClose }) => {
             className="mt-1 block w-full border border-gray-300 rounded-md p-2 mb-4"
           />
         </div>
+      </div>
 
-        <div className="flex justify-between items-center">
-          <Button
-            label="Reporte de Ventas"
-            className="p-button-secondary"
-            onClick={handleOpenSalesReport}
-          />
-          <Button
-            label="Cerrar Caja"
-            className="p-button-danger"
-            disabled={isCloseButtonDisabled}
-            onClick={handleCloseCashRegister}
-          />
-        </div>
+      <div className="flex justify-between items-center">
+        <Button
+          label="Reporte de Ventas"
+          className="p-button-secondary"
+          onClick={handleOpenSalesReport}
+        />
+        <Button
+          label="Cerrar Caja"
+          className="p-button-danger"
+          disabled={isCloseButtonDisabled}
+          onClick={handleCloseCashRegister}
+        />
       </div>
 
       {isSalesReportOpen && (

@@ -354,7 +354,8 @@ export default function PricesTags({ isOpen, onHide }) {
         visible={isOpen}
         onHide={onHide}
         modal
-        style={{ width: "60vw", maxWidth: "800px" }}
+        draggable={false}
+        resizable={false}
       >
         <div className="p-4">
           {/* Búsqueda */}
@@ -429,7 +430,8 @@ export default function PricesTags({ isOpen, onHide }) {
         visible={showQuantityDialog}
         onHide={() => !isGenerating && setShowQuantityDialog(false)}
         modal
-        style={{ width: "30vw", maxWidth: "400px" }}
+        draggable={false}
+        resizable={false}
         closable={!isGenerating}
       >
         <div className="p-4">

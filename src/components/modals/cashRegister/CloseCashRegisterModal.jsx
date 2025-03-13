@@ -8,8 +8,8 @@ const CloseCashRegisterModal = ({
   isOpen,
   onClose,
   inlineMode = false,
-  widthPercent = "35%",
-  heightPercent = "50%",
+  widthPercent = "40%",
+  heightPercent = "40%",
 }) => {
   return (
     <Dialog
@@ -22,8 +22,8 @@ const CloseCashRegisterModal = ({
       style={{
         width: widthPercent,
         height: heightPercent,
-        minWidth: "700px",
-        minHeight: "600px",
+        minWidth: "800px",
+        minHeight: "500px",
       }}
     >
       <CloseCashRegisterForm onClose={onClose} />

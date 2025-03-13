@@ -8,7 +8,7 @@ const SalesReportModal = ({
   inlineMode = false,
   initialDateFrom,
   initialDateTo,
-  widthPercent = "50%",
+  widthPercent = "60%",
   heightPercent = "70%",
 }) => {
   const getAppendTarget = () => {
@@ -29,8 +29,8 @@ const SalesReportModal = ({
       style={{
         width: widthPercent,
         height: heightPercent,
-        minWidth: "700px",
-        minHeight: "600px",
+        minWidth: "1000px",
+        minHeight: "700px",
       }}
       draggable={false}
       resizable={false}
