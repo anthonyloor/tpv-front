@@ -67,15 +67,7 @@ function StoreStockPanel({ product }) {
             const displayName = shop.id_shop === 1 ? "Online" : shop.name;
             const qty = stocksByShop[shop.id_shop] ?? 0;
             return (
-              <Card
-                key={shop.id_shop}
-                className="shadow-2 border-round"
-                style={{
-                  backgroundColor: "var(--surface-card)",
-                  color: "var(--text-color)",
-                  width: "18%",
-                }}
-              >
+              <Card key={shop.id_shop} className="shadow-2 border-round">
                 <div className="text-center">
                   <div className="text-lg font-semibold">
                     {displayName}: <span className="text-2xl">{qty}</span>

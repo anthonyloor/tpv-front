@@ -17,6 +17,7 @@ import CustomerStepperModal from "../modals/customer/CustomerStepperModal";
 import CreateCustomerModal from "../modals/customer/CreateCustomerModal";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
+import { useIsCompact } from "../../utils/responsive";
 
 function SalesCard({
   cartItems,
@@ -68,6 +69,8 @@ function SalesCard({
     selectedClient.id_customer === defaultClientId;
 
   const clientLabel = selectedClient.full_name || "Seleccionar Cliente";
+
+  const isCompact = useIsCompact();
 
   // Al hacer clic en el label
   const handleClientSplitButtonClick = () => {
@@ -269,6 +272,7 @@ function SalesCard({
     return (
       <Button
         tooltip="Eliminar"
+        tooltipOptions={{ position: "right" }}
         icon="pi pi-times"
         className="p-button p-button-text"
         onClick={() => onRemoveProduct(rowData.id_stock_available)}
@@ -291,6 +295,7 @@ function SalesCard({
           icon="pi pi-times"
           className="p-button-rounded p-button-danger p-button-text"
           tooltip="Quitar descuento"
+          tooltipOptions={{ position: "right" }}
           onClick={() => removeProductDiscount(data.id_stock_available)}
         />
       </div>
@@ -343,20 +348,19 @@ function SalesCard({
     >
       <div className="flex justify-between items-center gap-4">
         <div className="flex space-x-2 flex-1">
+          <Button icon="pi pi-search" onClick={handleSearchClient} />
           <Button
-            icon="pi pi-search"
-            tooltip="Buscar cliente"
-            onClick={handleSearchClient}
-          />
-          <Button
-            label={clientLabel}
+            label={isCompact ? "" : clientLabel}
             icon="pi pi-users"
-            className="w-full"
+            tooltip={isCompact ? clientLabel : ""}
+            tooltipOptions={isCompact ? { position: "top" } : {}}
+            className={isCompact ? "" : "w-1/2"}
             onClick={handleClientSplitButtonClick}
           />
           <Button
             icon="pi pi-refresh"
             tooltip="Cliente por defecto"
+            tooltipOptions={{ position: "top" }}
             onClick={resetToDefaultClientAndAddress}
           />
         </div>
@@ -365,11 +369,14 @@ function SalesCard({
             <Button
               icon="pi pi-file-plus"
               tooltip="Guardar Ticket"
+              tooltipOptions={{ position: "top" }}
               severity="warning"
               onClick={handleParkCart}
             />
             <Button
-              label="Tickets"
+              label={isCompact ? "" : "Tickets"}
+              tooltip={isCompact ? "Tickets" : ""}
+              tooltipOptions={isCompact ? { position: "top" } : {}}
               icon="pi pi-list"
               severity="warning"
               onClick={() => setIsParkedCartsModalOpen(true)}
@@ -377,6 +384,7 @@ function SalesCard({
             <Button
               icon="pi pi-trash"
               tooltip="Borrar Ticket"
+              tooltipOptions={{ position: "top" }}
               severity="warning"
               onClick={handleClearCart}
             />

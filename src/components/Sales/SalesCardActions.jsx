@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { InputNumber } from "primereact/inputnumber";
 import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
+import { useIsCompact } from "../../utils/responsive";
 
 function SalesCardActions({
   cartItems,
@@ -540,18 +541,7 @@ function SalesCardActions({
     ? ["efectivo", "tarjeta", "bizum", "vale"]
     : ["efectivo", "tarjeta", "bizum"];
 
-  // Agregar estado para modo compacto cuando el alto es <=1060px o el ancho es <=1730px
-  const [isCompact, setIsCompact] = useState(
-    window.innerHeight <= 960 || window.innerWidth <= 1600
-  );
-  useEffect(() => {
-    const handleResize = () => {
-      setIsCompact(window.innerHeight <= 960 || window.innerWidth <= 1600);
-    };
-    window.addEventListener("resize", handleResize);
-    handleResize();
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const isCompact = useIsCompact();
 
   // Definir los labels originales
   const labels = {
