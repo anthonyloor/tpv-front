@@ -103,24 +103,34 @@ export default function PricesTags({
       let labelsHtml = "";
       for (let i = 0; i < quantityPrint; i++) {
         labelsHtml += `
-          <div class="label" style="margin:0; padding:0; border:1px solid #ccc; margin-bottom:10px;">
-            <div class="product-name" style="margin:0; padding:0; font-weight:bold;">${
-              selectedProduct.fullName
-            }</div>
-            <div class="content-row" style="display:flex; margin-top:5px;">
-              <div class="barcode-column" style="display:flex; flex-direction:column; align-items:center;">
-                <svg id="barcode-${i}" style="margin:0; padding:0;"></svg>
-                <span style="font-size:10px;">${ean13}</span>
+          <div class="label" style=" margin-bottom:15px;">
+            <div class="product-name" style="margin:0; padding:0; font-weight:bold;">
+            <span class="product-name" style="margin:0; font-size: 18px;">${
+              selectedProduct.product_name
+            }</span>
+            </div>
+            <div class="content-row" style="display:inline-flex; margin-top:5px;">
+              <div class="barcode-column" style="display:flex; flex-direction:column;">
+          <svg id="barcode-${i}"></svg>
               </div>
-              <div class="info-column" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
-                <div class="combination" style="margin:0; padding:0;">${
-                  selectedProduct.combination_name || ""
-                }</div>
-                <div class="price" style="margin:0; padding:0;">${
-                  selectedProduct.price
-                    ? selectedProduct.price.toFixed(2) + " €"
-                    : ""
-                }</div>
+              <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
+          <span class="combination" style="margin:0; width:70px; text-align:center; font-size: 18px;">
+            ${
+              selectedProduct.combination_name
+                ? selectedProduct.combination_name.replace(
+                    /-/,
+                    "<br />-----<br />"
+                  )
+                : ""
+            }
+          </span>
+          <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-size: 18px;">
+            ${
+              selectedProduct.price
+                ? selectedProduct.price.toFixed(2) + " €"
+                : ""
+            }
+          </div>
               </div>
             </div>
           </div>
@@ -156,16 +166,22 @@ export default function PricesTags({
           JsBarcode(elem, ean13, {
             format: "code128",
             width: 2,
-            height: 50,
+            height: 80,
             displayValue: true,
-            fontSize: 12,
-            margin: 0,
+            fontSize: 18,
+            margin: 4,
+            textPosition: "bottom",
+            textAlign: "center",
+            rotation: 0,
           });
+          // Se ajusta el ancho del SVG a 220px y se deja el alto de forma automática
+          elem.style.width = "235px";
+          elem.style.height = "auto";
         } catch (error) {
           console.error("Error generando código de barras:", error);
           elem.insertAdjacentHTML(
             "afterend",
-            '<div style="color: red; font-size: 10px;">Error al generar código de barras</div>'
+            '<div style="color: red; font-size: 12px;">Error al generar código de barras</div>'
           );
         }
       } else {
@@ -190,6 +206,27 @@ export default function PricesTags({
       tryGenerate();
     }
   }, [showPreviewDialog, previewHtml]);
+
+  // Nueva función para imprimir únicamente la parte de la etiqueta en tamaño 62mm x 29mm
+  const handlePrint = () => {
+    const printContents = previewContainerRef.current.innerHTML;
+    const printWindow = window.open("", "_blank", "width=600,height=400");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <style>
+            @page { size: 62mm 29mm; margin: 2; }
+            body { margin: 0; }
+          </style>
+        </head>
+        <body>${printContents}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
 
   return (
     <>
@@ -331,9 +368,9 @@ export default function PricesTags({
         resizable={false}
       >
         <div
-          ref={previewContainerRef} // siempre renderizado
+          ref={previewContainerRef}
           className="labels-preview"
-          style={{ maxHeight: "70vh", overflowY: "auto" }}
+          style={{ border: "1px solid" }}
           dangerouslySetInnerHTML={{ __html: previewHtml }}
         />
         {(!previewHtml || previewHtml.trim() === "") && (
@@ -361,11 +398,7 @@ export default function PricesTags({
             gap: "10px",
           }}
         >
-          <Button
-            label="Imprimir"
-            icon="pi pi-print"
-            onClick={() => window.print()}
-          />
+          <Button label="Imprimir" icon="pi pi-print" onClick={handlePrint} />
           <Button label="Cerrar" onClick={() => setShowPreviewDialog(false)} />
         </div>
       </Dialog>
