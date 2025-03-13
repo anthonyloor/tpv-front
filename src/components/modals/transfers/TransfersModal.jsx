@@ -391,128 +391,131 @@ const TransfersModal = ({ isOpen, onClose }) => {
     const renderFilters = () => {
       if (!showFilters) return null;
       return (
-        <div className="p-2 border-t border-gray-200 dark:border-gray-700">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {/* ID Movimiento */}
-            <div className="relative">
-              <label className="block text-sm font-semibold mb-1">
-                ID Movimiento
-              </label>
-              <InputText
-                className="w-full rounded dark:bg-gray-700 dark:text-white"
-                value={filterId}
-                onChange={(e) => {
-                  setFilterId(e.target.value);
-                  if (e.target.value.trim()) {
-                    setFilterDateFrom("");
-                    setFilterDateTo("");
-                    setFilterTitle("");
-                    setFilterType("");
-                    setFilterStatus("");
-                  }
+        <Toolbar
+          className="mb-4"
+          left={
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* ID Movimiento */}
+              <div className="relative">
+                <label className="block text-sm font-semibold mb-1">
+                  ID Movimiento
+                </label>
+                <InputText
+                  className="w-full rounded dark:bg-gray-700 dark:text-white"
+                  value={filterId}
+                  onChange={(e) => {
+                    setFilterId(e.target.value);
+                    if (e.target.value.trim()) {
+                      setFilterDateFrom("");
+                      setFilterDateTo("");
+                      setFilterTitle("");
+                      setFilterType("");
+                      setFilterStatus("");
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch();
+                    }
+                  }}
+                  disabled={disableByDate}
+                />
+              </div>
+              {/* Título */}
+              <div className="relative">
+                <label className="block text-sm font-semibold mb-1">
+                  Título
+                </label>
+                <InputText
+                  className="w-full rounded dark:bg-gray-700 dark:text-white"
+                  value={filterTitle}
+                  onChange={(e) => setFilterTitle(e.target.value)}
+                  disabled={disableById}
+                />
+              </div>
+              {/* Fecha Desde */}
+              <div className="relative">
+                <label className="block text-sm font-semibold mb-1">
+                  Fecha Desde
+                </label>
+                <Calendar
+                  className="w-full rounded dark:bg-gray-700 dark:text-white"
+                  value={filterDateFrom}
+                  onChange={(e) => {
+                    setFilterDateFrom(e.value);
+                    if (e.value) setFilterId("");
+                  }}
+                  dateFormat="dd-mm-yy"
+                  showIcon
+                  disabled={disableById}
+                  locale="es"
+                />
+              </div>
+              {/* Fecha Hasta */}
+              <div className="relative">
+                <label className="block text-sm font-semibold mb-1">
+                  Fecha Hasta
+                </label>
+                <Calendar
+                  className="w-full rounded dark:bg-gray-700 dark:text-white"
+                  value={filterDateTo}
+                  onChange={(e) => {
+                    setFilterDateTo(e.value);
+                    if (e.value) setFilterId("");
+                  }}
+                  dateFormat="dd-mm-yy"
+                  showIcon
+                  disabled={disableById}
+                  locale="es"
+                />
+              </div>
+              {/* Tipo */}
+              <div className="relative">
+                <label className="block text-sm font-semibold mb-1">Tipo</label>
+                <Dropdown
+                  className="w-full rounded dark:bg-gray-700 dark:text-white"
+                  value={filterType}
+                  style={{ minWidth: "250px" }}
+                  options={typeOptions}
+                  onChange={(e) => setFilterType(e.value)}
+                  disabled={disableById}
+                />
+              </div>
+              {/* Estado */}
+              <div className="relative">
+                <label className="block text-sm font-semibold mb-1">
+                  Estado
+                </label>
+                <Dropdown
+                  className="w-full rounded dark:bg-gray-700 dark:text-white"
+                  value={filterStatus}
+                  style={{ minWidth: "250px" }}
+                  options={statusOptions}
+                  onChange={(e) => setFilterStatus(e.value)}
+                  disabled={disableById}
+                />
+              </div>
+            </div>
+          }
+          right={
+            <div className="flex gap-2">
+              <Button
+                label="Filtrar"
+                icon="pi pi-search"
+                onClick={handleSearch}
+              />
+              <Button
+                label="Limpiar filtros"
+                icon="pi pi-times"
+                className="p-button-secondary"
+                onClick={() => {
+                  resetFilters();
+                  handleSearch();
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSearch();
-                  }
-                }}
-                disabled={disableByDate}
               />
             </div>
-
-            {/* Título */}
-            <div className="relative">
-              <label className="block text-sm font-semibold mb-1">Título</label>
-              <InputText
-                className="w-full rounded dark:bg-gray-700 dark:text-white"
-                value={filterTitle}
-                onChange={(e) => setFilterTitle(e.target.value)}
-                disabled={disableById}
-              />
-            </div>
-
-            {/* Fecha Desde */}
-            <div className="relative">
-              <label className="block text-sm font-semibold mb-1">
-                Fecha Desde
-              </label>
-              <Calendar
-                className="w-full rounded dark:bg-gray-700 dark:text-white"
-                value={filterDateFrom}
-                onChange={(e) => {
-                  setFilterDateFrom(e.value);
-                  if (e.value) setFilterId("");
-                }}
-                dateFormat="dd-mm-yy"
-                showIcon
-                disabled={disableById}
-                locale="es"
-              />
-            </div>
-
-            {/* Fecha Hasta */}
-            <div className="relative">
-              <label className="block text-sm font-semibold mb-1">
-                Fecha Hasta
-              </label>
-              <Calendar
-                className="w-full rounded dark:bg-gray-700 dark:text-white"
-                value={filterDateTo}
-                onChange={(e) => {
-                  setFilterDateTo(e.value);
-                  if (e.value) setFilterId("");
-                }}
-                dateFormat="dd-mm-yy"
-                showIcon
-                disabled={disableById}
-                locale="es"
-              />
-            </div>
-
-            {/* Tipo */}
-            <div className="relative">
-              <label className="block text-sm font-semibold mb-1">Tipo</label>
-              <Dropdown
-                className="w-full rounded dark:bg-gray-700 dark:text-white"
-                value={filterType}
-                style={{ minWidth: "250px" }}
-                options={typeOptions}
-                onChange={(e) => setFilterType(e.value)}
-                disabled={disableById}
-              />
-            </div>
-
-            {/* Estado */}
-            <div className="relative">
-              <label className="block text-sm font-semibold mb-1">Estado</label>
-              <Dropdown
-                className="w-full rounded dark:bg-gray-700 dark:text-white"
-                value={filterStatus}
-                style={{ minWidth: "250px" }}
-                options={statusOptions}
-                onChange={(e) => setFilterStatus(e.value)}
-                disabled={disableById}
-              />
-            </div>
-          </div>
-
-          <div className="mt-3 text-right flex gap-2 justify-end">
-            <Button
-              label="Filtrar"
-              icon="pi pi-search"
-              onClick={handleSearch}
-            />
-            <Button
-              label="Limpiar filtros"
-              icon="pi pi-times"
-              className="p-button-secondary"
-              onClick={() => {
-                resetFilters();
-                handleSearch();
-              }}
-            />
-          </div>
-        </div>
+          }
+        />
       );
     };
 
