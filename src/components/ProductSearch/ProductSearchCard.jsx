@@ -87,7 +87,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   // Plantillas para las columnas del DataTable
   const combinationBodyTemplate = (rowData) => rowData.combination_name;
   const referenceBodyTemplate = (rowData) => rowData.reference_combination;
-  const eanBodyTemplate = (rowData) => rowData.ean13_combination;
   const priceBodyTemplate = (rowData) => rowData.price.toFixed(2) + " €";
   const quantityBodyTemplate = (rowData) => {
     const currentStock = rowData.stocks
@@ -96,29 +95,37 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     return currentStock ? currentStock.quantity : rowData.quantity;
   };
 
-  const groupHeaderTemplate = (groupValue) => (
-    <div
-      className="p-2 font-bold"
-      style={{
-        backgroundColor: "var(--surface-100)",
-        borderBottom: "1px solid var(--surface-border)",
-      }}
-    >
-      Producto: {groupValue}
-    </div>
-  );
+  const customEanBodyTemplate = (rowData) => {
+    const ean = rowData.ean13_combination || "";
+    if (rowData.id_control_stock) {
+      return (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>
+            {ean}-{rowData.id_control_stock}
+          </span>
+          <i className="pi pi-link"></i>
+        </div>
+      );
+    }
+    return ean;
+  };
 
-  // Nueva función para mostrar id_control_stock
-  const idControlStockBodyTemplate = (rowData) => rowData.id_control_stock;
-
-  // Aplanamos los grupos para el DataTable
-  const flatProducts = groupedProducts.reduce((acc, group) => {
-    const combos = group.combinations.map((combo) => ({
-      ...combo,
-      product_name: group.product_name,
-    }));
-    return acc.concat(combos);
-  }, []);
+  // Aplanamos y ordenamos los grupos para el DataTable
+  const flatProducts = groupedProducts
+    .reduce((acc, group) => {
+      const combos = group.combinations.map((combo) => ({
+        ...combo,
+        product_name: group.product_name,
+      }));
+      return acc.concat(combos);
+    }, [])
+    .sort((a, b) => a.product_name.localeCompare(b.product_name));
 
   const handleKeyDown = async (event) => {
     if (event.key !== "Enter") return;
@@ -189,8 +196,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         <DataTable
           value={flatProducts}
           groupField="product_name"
-          rowGroupMode="subheader"
-          groupRowTemplate={groupHeaderTemplate}
           selectionMode="single"
           onSelectionChange={(e) => {
             setSelectedProduct(e.value);
@@ -205,32 +210,25 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
             body={selectionBodyTemplate}
             style={{ width: "2rem", textAlign: "center" }}
           />
-
-          <Column
-            field="combination_name"
-            header="Combinación"
-            body={combinationBodyTemplate}
-          />
           <Column
             field="reference_combination"
             header="Referencia"
             body={referenceBodyTemplate}
           />
           <Column
-            field="ean13_combination"
-            header="Cod. Barras"
-            body={eanBodyTemplate}
+            field="combination_name"
+            header="Combinación"
+            body={combinationBodyTemplate}
           />
-          {/* Nueva columna para ID Control Stock */}
           <Column
-            field="id_control_stock"
-            header="ID Control Stock"
-            body={idControlStockBodyTemplate}
+            field="ean13_combination"
+            header="EAN13"
+            body={customEanBodyTemplate}
           />
           <Column field="price" header="Precio" body={priceBodyTemplate} />
           <Column
             field="quantity"
-            header="Cantidad"
+            header="Und. en tienda"
             body={quantityBodyTemplate}
           />
         </DataTable>
