@@ -3,6 +3,7 @@
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { CartContext } from "../contexts/CartContext";
+import { toast } from "sonner";
 
 export default function useCart(allowOutOfStockSales) {
   const [cartItems, setCartItems] = useState([]);
@@ -50,7 +51,7 @@ export default function useCart(allowOutOfStockSales) {
 
   const saveCurrentCartAsParked = (name = null) => {
     if (!shopId) {
-      alert("No se ha encontrado la tienda.");
+      toast.error("No se ha encontrado la tienda.");
       return;
     }
     const parkedCarts =
@@ -68,7 +69,7 @@ export default function useCart(allowOutOfStockSales) {
       getParkedCartsKey(shopId),
       JSON.stringify(parkedCarts)
     );
-    alert("Carrito aparcado exitosamente.");
+    toast.success("Carrito guardado.");
   };
 
   const getParkedCarts = () => {
@@ -78,7 +79,7 @@ export default function useCart(allowOutOfStockSales) {
 
   const loadParkedCart = (cartId) => {
     if (!shopId) {
-      alert("No se ha encontrado la tienda.");
+      toast.error("No se ha encontrado la tienda.");
       return;
     }
     const parkedCarts =
@@ -86,15 +87,15 @@ export default function useCart(allowOutOfStockSales) {
     const cartToLoad = parkedCarts.find((cart) => cart.id === cartId);
     if (cartToLoad) {
       setCartItems(cartToLoad.items);
-      alert(`Carrito "${cartToLoad.name}" cargado.`);
+      toast.success(`Carrito "${cartToLoad.name}" cargado.`);
     } else {
-      alert("Carrito no encontrado.");
+      toast.error("No se ha encontrado el carrito.");
     }
   };
 
   const deleteParkedCart = (cartId) => {
     if (!shopId) {
-      alert("No se ha encontrado la tienda.");
+      toast.error("No se ha encontrado la tienda.");
       return;
     }
     let parkedCarts =
@@ -104,7 +105,7 @@ export default function useCart(allowOutOfStockSales) {
       getParkedCartsKey(shopId),
       JSON.stringify(parkedCarts)
     );
-    alert("Carrito aparcado eliminado.");
+    toast.success("Ticket guardado eliminado.");
   };
 
   const handleAddProduct = (
@@ -124,7 +125,7 @@ export default function useCart(allowOutOfStockSales) {
 
     if (newQuantity > maxQuantity && !forceAdd) {
       if (!allowOutOfStockSales) {
-        alert("No puedes añadir más de la cantidad disponible");
+        toast.error("No puedes añadir más de la cantidad disponible");
         return;
       } else {
         if (exceedsStockCallback) exceedsStockCallback(true);

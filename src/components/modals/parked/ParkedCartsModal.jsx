@@ -1,7 +1,8 @@
 // src/components/modals/parked/ParkedCartsModal.jsx
 
-import React from 'react';
-import Modal from '../Modal';
+import React from "react";
+import { Dialog } from "primereact/dialog";
+import { Button } from "primereact/button";
 
 const ParkedCartsModal = ({
   isOpen,
@@ -11,10 +12,18 @@ const ParkedCartsModal = ({
   onDeleteCart,
 }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Tickets Aparcados" size="md" height="md">
+    <Dialog
+      visible={isOpen}
+      onHide={onClose}
+      header="Tickets Aparcados"
+      modal
+      draggable={false}
+      resizable={false}
+      style={{ minWidth: "25%", minHeight: "20%" }}
+    >
       <div className="p-4">
         {parkedCarts.length === 0 ? (
-          <p>No hay carritos aparcados.</p>
+          <p>No hay tickets aparcados.</p>
         ) : (
           <ul>
             {parkedCarts.map((cart) => (
@@ -27,18 +36,18 @@ const ParkedCartsModal = ({
                     </p>
                   </div>
                   <div className="flex space-x-2">
-                    <button
-                      className="bg-blue-500 text-white px-3 py-1 rounded"
+                    <Button
+                      label="Cargar Ticket"
+                      icon="pi pi-check"
+                      className="p-button-info"
                       onClick={() => onLoadCart(cart.id)}
-                    >
-                      Cargar Ticket
-                    </button>
-                    <button
-                      className="bg-red-500 text-white px-3 py-1 rounded"
+                    />
+                    <Button
+                      label="Eliminar"
+                      icon="pi pi-trash"
+                      className="p-button-danger"
                       onClick={() => onDeleteCart(cart.id)}
-                    >
-                      Eliminar
-                    </button>
+                    />
                   </div>
                 </div>
               </li>
@@ -46,7 +55,7 @@ const ParkedCartsModal = ({
           </ul>
         )}
       </div>
-    </Modal>
+    </Dialog>
   );
 };
 

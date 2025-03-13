@@ -4,6 +4,7 @@ import React, { useState, useContext, useEffect, useCallback } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { Divider } from "primereact/divider";
+import { InputText } from "primereact/inputtext";
 
 import { ClientContext } from "../../contexts/ClientContext";
 import { ConfigContext } from "../../contexts/ConfigContext";
@@ -58,7 +59,7 @@ function SalesCard({
   const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
   const [isParkedCartsModalOpen, setIsParkedCartsModalOpen] = useState(false);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
-  const [ticketName, setTicketName] = useState("");
+  const [ticketName, setTicketName] = useState(null);
   const defaultClientId = configData?.id_customer_default;
 
   const isDefaultClient =
@@ -649,19 +650,23 @@ function SalesCard({
 
       {/* =========== NOMBRE TICKET APARCADO =========== */}
       <Dialog
-        header="Guardar Ticket Aparcado"
+        header="Guardar Ticket"
         visible={isNameModalOpen}
         onHide={() => setIsNameModalOpen(false)}
         modal
-        style={{ width: "30vw", backgroundColor: "var(--surface-0)" }}
+        draggable={false}
+        resizable={false}
+        style={{
+          minWidth: "20%",
+          minHeight: "20%",
+        }}
       >
         <div className="p-4" style={{ color: "var(--text-color)" }}>
           <label className="block font-semibold mb-2">Nombre del Ticket:</label>
-          <input
-            type="text"
+          <InputText
             value={ticketName}
             onChange={(e) => setTicketName(e.target.value)}
-            className="w-full p-2 border rounded mb-4"
+            className="w-full p-2 mb-4"
             style={{
               borderColor: "var(--surface-border)",
               backgroundColor: "var(--surface-50)",
