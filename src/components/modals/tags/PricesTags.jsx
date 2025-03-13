@@ -34,6 +34,9 @@ export default function PricesTags({
   const [barcodesReady, setBarcodesReady] = useState(false);
   const previewContainerRef = useRef(null); // nuevo
 
+  // Agregar estado para almacenar los datos de las etiquetas
+  const [tagsData, setTagsData] = useState([]);
+
   // Usar el hook de búsqueda (se usa onAddProduct para actualizar el producto seleccionado)
   const { groupedProducts, isLoading, handleSearch } = useProductSearch({
     apiFetch,
@@ -100,42 +103,75 @@ export default function PricesTags({
       } else if (ean13.length > 13) {
         ean13 = ean13.substring(0, 13);
       }
+      // Llamado a get_product_price_tag
+      const payload = {
+        quantity_print: quantityPrint,
+        id_control_stock: selectedProduct.id_control_stock
+          ? selectedProduct.id_control_stock
+          : null,
+        ean13:
+          selectedProduct.ean13_combination ||
+          selectedProduct.ean13_combination_0 ||
+          "",
+        id_product: selectedProduct.id_product,
+        id_product_attribute: selectedProduct.id_product_attribute,
+        id_shop: selectedProduct.id_shop,
+        quantity: selectedProduct.quantity,
+      };
+      let response = await apiFetch(
+        "https://apitpv.anthonyloor.com/get_product_price_tag",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!Array.isArray(response)) {
+        response = [response];
+      }
+      // Se espera que la respuesta tenga una propiedad "tags"
+      const tags = response[0].tags || [];
+      setTagsData(tags);
       let labelsHtml = "";
-      for (let i = 0; i < quantityPrint; i++) {
+      // Se generan tantas etiquetas como elementos tenga tags
+      tags.forEach((tag, i) => {
+        // Concatenar ean13 e id_control_stock para construir el valor único
+        const newEan = tag.ean13 + "'" + tag.id_control_stock;
         labelsHtml += `
           <div class="label" style=" margin-bottom:15px;">
             <div class="product-name" style="margin:0; padding:0; font-weight:bold;">
-            <span class="product-name" style="margin:0; font-size: 18px;">${
-              selectedProduct.product_name
-            }</span>
+              <span class="product-name" style="margin:0; font-size: 18px;">${
+                selectedProduct.product_name
+              }</span>
             </div>
             <div class="content-row" style="display:inline-flex; margin-top:5px;">
               <div class="barcode-column" style="display:flex; flex-direction:column;">
-          <svg id="barcode-${i}"></svg>
+                <svg id="barcode-${i}"></svg>
               </div>
               <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
-          <span class="combination" style="margin:0; width:70px; text-align:center; font-size: 18px;">
-            ${
-              selectedProduct.combination_name
-                ? selectedProduct.combination_name.replace(
-                    /-/,
-                    "<br />-----<br />"
-                  )
-                : ""
-            }
-          </span>
-          <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-size: 18px;">
-            ${
-              selectedProduct.price
-                ? selectedProduct.price.toFixed(2) + " €"
-                : ""
-            }
-          </div>
+                <span class="combination" style="margin:0; width:70px; text-align:center; font-size: 18px;">
+                  ${
+                    selectedProduct.combination_name
+                      ? selectedProduct.combination_name.replace(
+                          /-/,
+                          "<br />-----<br />"
+                        )
+                      : ""
+                  }
+                </span>
+                <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-size: 18px;">
+                  ${
+                    selectedProduct.price
+                      ? selectedProduct.price.toFixed(2) + " €"
+                      : ""
+                  }
+                </div>
               </div>
             </div>
+            <!-- Valor para código de barras: ${newEan} -->
           </div>
         `;
-      }
+      });
       setPreviewHtml(labelsHtml);
       setBarcodesReady(false);
       setShowPreviewDialog(true);
@@ -150,20 +186,19 @@ export default function PricesTags({
 
   const handleGenerateBarcodes = () => {
     console.log("Iniciando generación de códigos de barras");
-    let ean13 =
-      selectedProduct.ean13_combination ||
-      selectedProduct.ean13_combination_0 ||
-      "0000000000000";
-    if (ean13.length < 13) ean13 = ean13.padStart(13, "0");
-    else if (ean13.length > 13) ean13 = ean13.substring(0, 13);
-    for (let i = 0; i < quantityPrint; i++) {
+    // Se genera un código de barras por cada etiqueta en tagsData
+    tagsData.forEach((tag, i) => {
       const elem = previewContainerRef.current
         ? previewContainerRef.current.querySelector(`#barcode-${i}`)
         : null;
       if (elem) {
-        console.log(`Generando código de barras para elemento barcode-${i}`);
+        // Concatenar ean13 e id_control_stock para formar el valor a codificar
+        const newEan = tag.ean13 + "'" + tag.id_control_stock;
+        console.log(
+          `Generando código de barras para elemento barcode-${i} con valor ${newEan}`
+        );
         try {
-          JsBarcode(elem, ean13, {
+          JsBarcode(elem, newEan, {
             format: "code128",
             width: 2,
             height: 80,
@@ -187,7 +222,7 @@ export default function PricesTags({
       } else {
         console.error(`Elemento barcode-${i} no encontrado`);
       }
-    }
+    });
     console.log("Finalizada generación de códigos de barras");
     setBarcodesReady(true);
   };
