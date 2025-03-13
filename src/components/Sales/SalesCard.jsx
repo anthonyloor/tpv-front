@@ -439,7 +439,7 @@ function SalesCard({
                     }
                   />
                 )}
-                style={{ width: "3%", textAlign: "center" }}
+                style={{ width: "1%", textAlign: "center" }}
               />
               <Column
                 field="product_name"
@@ -516,7 +516,7 @@ function SalesCard({
                     }
                   }
                 }}
-                style={{ width: "20%", textAlign: "center" }}
+                style={{ width: "15%", textAlign: "center" }}
               />
               <Column
                 header="Total"
@@ -596,7 +596,7 @@ function SalesCard({
                     }
                   }
                 }}
-                style={{ width: "13%", textAlign: "center" }}
+                style={{ width: "15%", textAlign: "center" }}
               />
               <Column
                 field="quantity"
@@ -606,11 +606,11 @@ function SalesCard({
                     ? "-"
                     : rowData.quantity
                 }
-                style={{ textAlign: "center" }}
+                style={{ width: "1%", textAlign: "center" }}
               />
               <Column
                 body={actionBodyTemplate}
-                style={{ textAlign: "center" }}
+                style={{ width: "1%", textAlign: "center" }}
               />
             </DataTable>
           </>

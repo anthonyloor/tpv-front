@@ -14,15 +14,12 @@ function StoreStockPanel({ product }) {
   // Cargar todas las tiendas; filtrar si no admin
   useEffect(() => {
     apiFetch("https://apitpv.anthonyloor.com/shops", { method: "GET" })
-      .then((data) => {
+      .then((res) => {
+        const data = res.filter((s) => s.id_shop !== 1);
         if (idProfile === 1) {
-          // Admin => ve todas
           setShops(data);
         } else {
-          // Filtra id_shop=1 y 2
-          const filtered = data.filter(
-            (s) => s.id_shop !== 1 && s.id_shop !== 2
-          );
+          const filtered = data.filter((s) => s.id_shop !== 13);
           setShops(filtered);
         }
       })
@@ -64,13 +61,13 @@ function StoreStockPanel({ product }) {
       <div className="space-y-2">
         <div className="flex flex-wrap gap-3">
           {shops.map((shop) => {
-            const displayName = shop.id_shop === 1 ? "Online" : shop.name;
+            const displayName = shop.name;
             const qty = stocksByShop[shop.id_shop] ?? 0;
             return (
               <Card key={shop.id_shop} className="shadow-2 border-round">
-                <div className="text-center">
+                <div className="flex flex-col gap-1">
                   <div className="text-lg font-semibold">
-                    {displayName}: <span className="text-2xl">{qty}</span>
+                    {displayName}: {qty}
                   </div>
                 </div>
               </Card>
