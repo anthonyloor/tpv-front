@@ -10,6 +10,7 @@ import { ProgressSpinner } from "primereact/progressspinner";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import { AuthContext } from "../../../contexts/AuthContext";
 import useProductSearch from "../../../hooks/useProductSearch"; // nuevo
+import JsBarcode from "jsbarcode";
 
 export default function PricesTags({
   isOpen,
@@ -27,26 +28,19 @@ export default function PricesTags({
   const [isGenerating, setIsGenerating] = useState(false);
   const inputRef = useRef(null);
 
+  // Nuevos estados para previsualización de etiquetas
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [barcodesReady, setBarcodesReady] = useState(false);
+  const previewContainerRef = useRef(null); // nuevo
+
   // Usar el hook de búsqueda (se usa onAddProduct para actualizar el producto seleccionado)
-  const {
-    groupedProducts,
-    isLoading,
-    handleSearch,
-    addProductToCart, // en este caso no se usará para agregar, sino para actualizar selección si se quiere
-    handleCancelAdd,
-    handleConfirmAdd,
-  } = useProductSearch({
+  const { groupedProducts, isLoading, handleSearch } = useProductSearch({
     apiFetch,
     shopId,
     // Permitir impresión aun sin stock (según requerimiento, se puede ajustar)
     allowOutOfStockSales: true,
-    onAddProduct: (
-      prod,
-      stockQuantity,
-      exceedsStockCallback,
-      forceAdd,
-      qty
-    ) => {
+    onAddProduct: (prod) => {
       setSelectedProduct(prod);
     },
     onAddDiscount: () => {},
@@ -97,87 +91,44 @@ export default function PricesTags({
     if (!selectedProduct) return;
     setIsGenerating(true);
     try {
-      const ean13 =
+      let ean13 =
         selectedProduct.ean13_combination ||
         selectedProduct.ean13_combination_0 ||
         "0000000000000";
-      let htmlContent = `
-        <!DOCTYPE html>
-        <html lang="es">
-          <head>
-            <meta charset="UTF-8" />
-            <title>Etiquetas de Producto</title>
-            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-            <style>
-              /* ...existing styles... */
-            </style>
-          </head>
-          <body>
-            <div class="print-button">
-              <button onclick="window.print()">Imprimir</button>
-              <button class="close" onclick="window.close()">Cerrar</button>
-            </div>`;
+      if (ean13.length < 13) {
+        ean13 = ean13.padStart(13, "0");
+      } else if (ean13.length > 13) {
+        ean13 = ean13.substring(0, 13);
+      }
+      let labelsHtml = "";
       for (let i = 0; i < quantityPrint; i++) {
-        htmlContent += `
-          <div class="label">
-            <div class="product-name">${selectedProduct.fullName}</div>
-            <div class="barcode-row">
-              <div class="barcode-container">
-                <svg class="barcode" id="barcode-${i}"></svg>
+        labelsHtml += `
+          <div class="label" style="margin:0; padding:0; border:1px solid #ccc; margin-bottom:10px;">
+            <div class="product-name" style="margin:0; padding:0; font-weight:bold;">${
+              selectedProduct.fullName
+            }</div>
+            <div class="content-row" style="display:flex; margin-top:5px;">
+              <div class="barcode-column" style="display:flex; flex-direction:column; align-items:center;">
+                <svg id="barcode-${i}" style="margin:0; padding:0;"></svg>
+                <span style="font-size:10px;">${ean13}</span>
               </div>
-              <div class="combination">${
-                selectedProduct.combination_name || ""
-              }</div>
-            </div>
-            <div class="footer-row">
-              <span>${ean13}</span>
-              <span>${
-                selectedProduct.price
-                  ? selectedProduct.price.toFixed(2) + " €"
-                  : ""
-              }</span>
+              <div class="info-column" style="display:flex; flex-direction:column; justify-content:center; margin-left:10px;">
+                <div class="combination" style="margin:0; padding:0;">${
+                  selectedProduct.combination_name || ""
+                }</div>
+                <div class="price" style="margin:0; padding:0;">${
+                  selectedProduct.price
+                    ? selectedProduct.price.toFixed(2) + " €"
+                    : ""
+                }</div>
+              </div>
             </div>
           </div>
         `;
       }
-      htmlContent += `
-            <script>
-              document.addEventListener('DOMContentLoaded', function() {
-                let ean13 = "${ean13}";
-                if (ean13.length < 13) {
-                  ean13 = ean13.padStart(13, '0');
-                } else if (ean13.length > 13) {
-                  ean13 = ean13.substring(0, 13);
-                }
-                for (let i = 0; i < ${quantityPrint}; i++) {
-                  try {
-                    JsBarcode("#barcode-" + i, ean13, {
-                      format: "EAN13",
-                      width: 2,
-                      height: 50,
-                      displayValue: true,
-                      fontSize: 12,
-                      margin: 0
-                    });
-                  } catch (error) {
-                    console.error("Error generando código de barras:", error);
-                    document.getElementById("barcode-" + i).insertAdjacentHTML('afterend', 
-                      '<div style="color: red; font-size: 10px;">Error al generar código de barras</div>');
-                  }
-                }
-              });
-            </script>
-          </body>
-        </html>`;
-      const printWindow = window.open("", "_blank", "width=800,height=600");
-      if (printWindow) {
-        printWindow.document.open();
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        printWindow.focus();
-      } else {
-        alert("Por favor, permite las ventanas emergentes para esta página.");
-      }
+      setPreviewHtml(labelsHtml);
+      setBarcodesReady(false);
+      setShowPreviewDialog(true);
     } catch (error) {
       console.error("Error al generar etiquetas:", error);
       alert("Error al generar las etiquetas. Inténtalo de nuevo.");
@@ -187,9 +138,61 @@ export default function PricesTags({
     }
   };
 
+  const handleGenerateBarcodes = () => {
+    console.log("Iniciando generación de códigos de barras");
+    let ean13 =
+      selectedProduct.ean13_combination ||
+      selectedProduct.ean13_combination_0 ||
+      "0000000000000";
+    if (ean13.length < 13) ean13 = ean13.padStart(13, "0");
+    else if (ean13.length > 13) ean13 = ean13.substring(0, 13);
+    for (let i = 0; i < quantityPrint; i++) {
+      const elem = previewContainerRef.current
+        ? previewContainerRef.current.querySelector(`#barcode-${i}`)
+        : null;
+      if (elem) {
+        console.log(`Generando código de barras para elemento barcode-${i}`);
+        try {
+          JsBarcode(elem, ean13, {
+            format: "code128",
+            width: 2,
+            height: 50,
+            displayValue: true,
+            fontSize: 12,
+            margin: 0,
+          });
+        } catch (error) {
+          console.error("Error generando código de barras:", error);
+          elem.insertAdjacentHTML(
+            "afterend",
+            '<div style="color: red; font-size: 10px;">Error al generar código de barras</div>'
+          );
+        }
+      } else {
+        console.error(`Elemento barcode-${i} no encontrado`);
+      }
+    }
+    console.log("Finalizada generación de códigos de barras");
+    setBarcodesReady(true);
+  };
+
+  useEffect(() => {
+    if (showPreviewDialog && previewHtml) {
+      const tryGenerate = () => {
+        if (previewContainerRef.current) {
+          console.log("previewContainerRef disponible, generando códigos");
+          handleGenerateBarcodes();
+        } else {
+          console.log("previewContainerRef no disponible, reintentando...");
+          setTimeout(tryGenerate, 300);
+        }
+      };
+      tryGenerate();
+    }
+  }, [showPreviewDialog, previewHtml]);
+
   return (
     <>
-      {/* ...existing code... */}
       <Dialog
         header="Etiquetas de Producto"
         visible={isOpen}
@@ -316,6 +319,54 @@ export default function PricesTags({
               loadingIcon="pi pi-spinner pi-spin"
             />
           </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        header="Previsualización de Etiquetas"
+        visible={showPreviewDialog}
+        onHide={() => setShowPreviewDialog(false)}
+        modal
+        draggable={false}
+        resizable={false}
+      >
+        <div
+          ref={previewContainerRef} // siempre renderizado
+          className="labels-preview"
+          style={{ maxHeight: "70vh", overflowY: "auto" }}
+          dangerouslySetInnerHTML={{ __html: previewHtml }}
+        />
+        {(!previewHtml || previewHtml.trim() === "") && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "rgba(255, 255, 255, 0.7)",
+            }}
+          >
+            <ProgressSpinner />
+          </div>
+        )}
+        <div
+          style={{
+            marginTop: "10px",
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: "10px",
+          }}
+        >
+          <Button
+            label="Imprimir"
+            icon="pi pi-print"
+            onClick={() => window.print()}
+          />
+          <Button label="Cerrar" onClick={() => setShowPreviewDialog(false)} />
         </div>
       </Dialog>
     </>
