@@ -405,7 +405,17 @@ export default function PricesTags({
                         />
                         <Column
                           header="Cantidad"
-                          body={(rowData) => rowData.quantity}
+                          body={(rowData) => (
+                            <>
+                              {rowData.quantity}
+                              {rowData.trackingCount
+                                ? ` | ${rowData.trackingCount} `
+                                : ""}
+                              {rowData.trackingCount && (
+                                <i className="pi pi-link"></i>
+                              )}
+                            </>
+                          )}
                         />
                       </DataTable>
                     ) : (
@@ -454,10 +464,6 @@ export default function PricesTags({
                                 rowData.id_control_stock}
                             </>
                           )}
-                        />
-                        <Column
-                          header="Cantidad"
-                          body={(rowData) => rowData.quantity}
                         />
                       </DataTable>
                     ) : (
