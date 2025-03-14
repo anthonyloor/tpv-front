@@ -11,6 +11,7 @@ import { useApiFetch } from "../../../components/utils/useApiFetch";
 import { AuthContext } from "../../../contexts/AuthContext";
 import useProductSearch from "../../../hooks/useProductSearch"; // nuevo
 import JsBarcode from "jsbarcode";
+import { TabView, TabPanel } from "primereact/tabview";
 
 export default function PricesTags({
   isOpen,
@@ -93,6 +94,51 @@ export default function PricesTags({
       return acc.concat(combos);
     }, [])
     .sort((a, b) => a.product_name.localeCompare(b.product_name));
+
+  const productsWithGroup = flatProducts
+    .map((product) => ({
+      ...product,
+      group: product.id_control_stock
+        ? "Productos con seguimiento"
+        : "Productos sin seguimiento",
+    }))
+    .sort((a, b) => a.group.localeCompare(b.group));
+
+  // Nueva lógica para agrupar por (id_product, id_product_attribute, id_shop)_control_stock === null)
+  const groupedByProduct = {};
+  productsWithGroup.forEach((product) => {
+    const key = `${product.id_product}-${
+      product.id_product_attribute || "null"
+    }-${product.id_shop}`;
+    if (!groupedByProduct[key]) {
+      // Siempre asignamos el producto base tal cual nos llega
+      groupedByProduct[key] = { base: product, tracking: [] };
+    }
+    if (product.id_control_stock !== null) {
+      groupedByProduct[key].tracking.push(product);
+    }
+  });
+
+  const finalNoTracking = [];
+  const finalTracking = [];
+  for (const key in groupedByProduct) {
+    const group = groupedByProduct[key];
+    if (group.base) {
+      // Si la cantidad del base es EXACTAMENTE igual al número de registros tracking, no se muestra el base
+      if (Number(group.base.quantity) !== group.tracking.length) {
+        finalNoTracking.push({
+          ...group.base,
+          trackingCount: group.tracking.length,
+        });
+      }
+    }
+    group.tracking.forEach((rec) => finalTracking.push(rec));
+  }
+
+  // Logs de depuración
+  console.log("groupedByProduct:", groupedByProduct);
+  console.log("finalNoTracking:", finalNoTracking);
+  console.log("finalTracking:", finalTracking);
 
   // Función para abrir el diálogo de cantidad de impresión
   const openQuantityDialog = () => {
@@ -317,49 +363,110 @@ export default function PricesTags({
               <ProgressSpinner />
             </div>
           ) : (
-            <DataTable
-              value={flatProducts}
-              groupField="product_name"
-              selectionMode="single"
-              selection={selectedProduct}
-              onSelectionChange={(e) => setSelectedProduct(e.value)}
-              dataKey="id_product_attribute"
-              scrollable
-              emptyMessage="No hay resultados"
-            >
-              <Column selectionMode="single" headerStyle={{ width: "3em" }} />
-              <Column
-                header="Nombre"
-                body={(rowData) => rowData.product_name}
-              />
-              <Column
-                header="Combinación"
-                body={(rowData) => rowData.combination_name || ""}
-              />
-              <Column
-                header="Precio"
-                body={(rowData) =>
-                  rowData.price ? rowData.price.toFixed(2) + " €" : ""
-                }
-              />
-              <Column
-                header="EAN13"
-                body={(rowData) =>
-                  rowData.ean13_combination || rowData.ean13_combination_0 || ""
-                }
-              />
-              <Column
-                header="Cantidad"
-                body={(rowData) => {
-                  const current = rowData.stocks
-                    ? rowData.stocks.find(
-                        (stock) => Number(stock.id_shop) === Number(shopId)
-                      )
-                    : null;
-                  return current ? current.quantity : rowData.quantity;
-                }}
-              />
-            </DataTable>
+            <>
+              <TabView>
+                {finalNoTracking.length > 0 && (
+                  <TabPanel header="Productos sin seguimiento">
+                    {finalNoTracking.length > 0 ? (
+                      <DataTable
+                        value={finalNoTracking}
+                        selectionMode="single"
+                        selection={selectedProduct}
+                        onSelectionChange={(e) => setSelectedProduct(e.value)}
+                        dataKey="id_product_attribute"
+                        scrollable
+                        emptyMessage="No hay resultados"
+                      >
+                        <Column
+                          selectionMode="single"
+                          headerStyle={{ width: "3em" }}
+                        />
+                        <Column
+                          header="Nombre"
+                          body={(rowData) => rowData.product_name}
+                        />
+                        <Column
+                          header="Combinación"
+                          body={(rowData) => rowData.combination_name || ""}
+                        />
+                        <Column
+                          header="Precio"
+                          body={(rowData) =>
+                            rowData.price ? rowData.price.toFixed(2) + " €" : ""
+                          }
+                        />
+                        <Column
+                          header="EAN13"
+                          body={(rowData) =>
+                            rowData.ean13_combination ||
+                            rowData.ean13_combination_0 ||
+                            ""
+                          }
+                        />
+                        <Column
+                          header="Cantidad"
+                          body={(rowData) => rowData.quantity}
+                        />
+                      </DataTable>
+                    ) : (
+                      <p>No hay registros</p>
+                    )}
+                  </TabPanel>
+                )}
+                {finalTracking.length > 0 && (
+                  <TabPanel header="Productos con seguimiento">
+                    {finalTracking.length > 0 ? (
+                      <DataTable
+                        value={finalTracking}
+                        selectionMode="single"
+                        selection={selectedProduct}
+                        onSelectionChange={(e) => setSelectedProduct(e.value)}
+                        dataKey="id_product_attribute"
+                        scrollable
+                        emptyMessage="No hay resultados"
+                      >
+                        <Column
+                          selectionMode="single"
+                          headerStyle={{ width: "3em" }}
+                        />
+                        <Column
+                          header="Nombre"
+                          body={(rowData) => rowData.product_name}
+                        />
+                        <Column
+                          header="Combinación"
+                          body={(rowData) => rowData.combination_name || ""}
+                        />
+                        <Column
+                          header="Precio"
+                          body={(rowData) =>
+                            rowData.price ? rowData.price.toFixed(2) + " €" : ""
+                          }
+                        />
+                        <Column
+                          header="EAN13"
+                          body={(rowData) => (
+                            <>
+                              <i className="pi pi-link"></i>{" "}
+                              {(rowData.ean13_combination ||
+                                rowData.ean13_combination_0) +
+                                "'" +
+                                rowData.id_control_stock}
+                            </>
+                          )}
+                        />
+                        <Column
+                          header="Cantidad"
+                          body={(rowData) => rowData.quantity}
+                        />
+                      </DataTable>
+                    ) : (
+                      <p>No hay registros</p>
+                    )}
+                  </TabPanel>
+                )}
+              </TabView>
+            </>
           )}
           <div className="mt-4 flex justify-end">
             <Button
@@ -410,7 +517,6 @@ export default function PricesTags({
           </div>
         </div>
       </Dialog>
-
       <Dialog
         header="Previsualización de Etiquetas"
         visible={showPreviewDialog}
