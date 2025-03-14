@@ -447,7 +447,9 @@ function SalesCard({
                 style={{ width: "1%", textAlign: "center" }}
               />
               <Column
-                field="product_name"
+                body={(rowData) =>
+                  rowData.product_name + " " + rowData.combination_name
+                }
                 header="Producto"
                 style={{ width: "50%" }}
               />

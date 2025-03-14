@@ -56,7 +56,7 @@ export default function useFinalizeSale() {
         product_attribute_id: item.id_product_attribute,
         stock_available_id: item.id_stock_available,
         id_control_stock: item.id_control_stock,
-        product_name: item.product_name,
+        product_name: `${item.product_name} - ${item.combination_name}`,
         product_quantity: item.quantity,
         product_price: parseFloat(
           (item.final_price_incl_tax / factorTax).toFixed(2)

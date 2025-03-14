@@ -13,15 +13,22 @@ const useProductSearch = ({
   const [isLoading, setIsLoading] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [foreignConfirmDialogOpen, setForeignConfirmDialogOpen] =
+    useState(false);
+  const [foreignProductCandidate, setForeignProductCandidate] = useState(null);
+  const [soldLabelConfirmDialogOpen, setSoldLabelConfirmDialogOpen] =
+    useState(false);
+  const [soldLabelProductCandidate, setSoldLabelProductCandidate] =
+    useState(null);
 
   // Función para agrupar productos por nombre
   const groupProductsByProductName = (products) => {
     console.log("Agrupando productos. Productos recibidos:", products);
     const validProducts = products.filter(
       (product) =>
-        product.id_product_attribute !== null ||
-        product.ean13_combination !== null ||
-        product.ean13_combination_0 !== null
+        (product.ean13_combination !== null ||
+          product.ean13_combination_0 !== null) &&
+        product.id_product_attribute !== null
     );
     return validProducts.reduce((acc, product) => {
       const existingGroup = acc.find(
@@ -87,7 +94,7 @@ const useProductSearch = ({
       id_product: product.id_product,
       id_product_attribute: product.id_product_attribute,
       id_stock_available: currentShopStock.id_stock_available,
-      product_name: `${product.product_name} ${product.combination_name}`,
+      product_name: product.product_name,
       combination_name: product.combination_name,
       reference_combination: product.reference_combination,
       ean13_combination: product.id_product_attribute
@@ -200,16 +207,19 @@ const useProductSearch = ({
         );
         let validResults = results.filter(
           (product) =>
-            product.id_product_attribute !== null ||
-            product.ean13_combination !== null ||
-            product.ean13_combination_0 !== null
+            (product.ean13_combination !== null ||
+              product.ean13_combination_0 !== null) &&
+            product.id_product_attribute !== null
         );
-        validResults = validResults.filter((product) => product.id_shop !== 1);
         if (idProfile !== 1) {
           validResults = validResults.filter(
-            (product) => product.id_shop !== 13
+            (product) => product.id_shop !== 1
           );
         }
+        validResults = validResults.map((product) => {
+          const { id_control_stock, ...rest } = product;
+          return rest;
+        });
         console.log("EAN13 search - valid results filtrados:", validResults);
         const filteredForCurrentShop = validResults.filter(
           (product) => product.id_shop === shopId
@@ -221,6 +231,7 @@ const useProductSearch = ({
           filteredForCurrentShop
         );
         const groups = groupProductsByProductName(filteredForCurrentShop);
+        console.log("EAN13 search - grouped products:", groups);
         setGroupedProducts(groups);
         if (filteredForCurrentShop.length === 1) {
           addProductToCart(filteredForCurrentShop[0]);
@@ -253,11 +264,13 @@ const useProductSearch = ({
               p.ean13_combination_0 === eanCode) &&
             `${p.id_control_stock}` === controlId
         );
-        // Filtrar para nunca devolver id_shop = 1 y, si no es admin, tampoco id_shop = 13
-        validResults = validResults.filter((product) => product.id_shop !== 1);
+        if (validResults.length === 0) {
+          toast.error("Este producto no existe.");
+          return;
+        }
         if (idProfile !== 1) {
           validResults = validResults.filter(
-            (product) => product.id_shop !== 13
+            (product) => product.id_shop !== 1
           );
         }
         console.log(
@@ -271,9 +284,25 @@ const useProductSearch = ({
           "EAN13 apostrophe - filtered for current shop:",
           filteredForCurrentShop
         );
-        if (filteredForCurrentShop.length === 1) {
+        if (
+          filteredForCurrentShop.length === 1 &&
+          filteredForCurrentShop[0].active_control_stock
+        ) {
           addProductToCart(filteredForCurrentShop[0]);
           setGroupedProducts([]);
+        } else if (validResults.length > 0) {
+          if (validResults[0].active_control_stock) {
+            // Mostrar modal/dialog de venta de producto en tienda distinta (control stock activo)
+            setForeignProductCandidate(validResults[0]);
+            setForeignConfirmDialogOpen(true);
+            setGroupedProducts([]);
+          } else {
+            // Mostrar dialog de confirmación: "Producto con etiqueta ya vendida. ¿deseas venderlo?"
+            console.log(validResults[0]);
+            setSoldLabelProductCandidate(validResults[0]);
+            setSoldLabelConfirmDialogOpen(true);
+            setGroupedProducts([]);
+          }
         } else {
           const groups = groupProductsByProductName(filteredForCurrentShop);
           console.log("EAN13 apostrophe search - grouped products:", groups);
@@ -301,24 +330,26 @@ const useProductSearch = ({
       );
       let validResults = results.filter(
         (product) =>
-          product.id_product_attribute !== null ||
-          product.ean13_combination !== null ||
-          product.ean13_combination_0 !== null
+          (product.ean13_combination !== null ||
+            product.ean13_combination_0 !== null) &&
+          product.id_product_attribute !== null
       );
-      // Filtrar para nunca devolver id_shop = 1 y, si no es admin, tampoco id_shop = 13
-      validResults = validResults.filter((product) => product.id_shop !== 1);
+      console.log("Búsqueda normal - valid results:", validResults);
       if (idProfile !== 1) {
-        validResults = validResults.filter((product) => product.id_shop !== 13);
+        validResults = validResults.filter((product) => product.id_shop !== 1);
       }
       console.log("Búsqueda normal - valid results filtrados:", validResults);
       const filteredForCurrentShop = validResults.filter(
         (product) => product.id_shop === shopId
       );
       console.log(
-        "Búsqueda normal - filtered for current shop:",
+        "Búsqueda normal - filtered for current shop (shopId:",
+        shopId,
+        "):",
         filteredForCurrentShop
       );
       const groups = groupProductsByProductName(filteredForCurrentShop);
+      console.log("Búsqueda normal - grouped products:", groups);
       setGroupedProducts(groups);
     } catch (error) {
       console.error("Error en la búsqueda:", error);
@@ -341,6 +372,37 @@ const useProductSearch = ({
       setConfirmModalOpen(false);
       setProductToConfirm(null);
     }
+  };
+
+  // NUEVAS funciones para el diálogo de confirmación de productos de otra tienda
+  const handleForeignConfirmAdd = () => {
+    if (foreignProductCandidate) {
+      addProductToCart(foreignProductCandidate);
+      toast.success("Producto añadido al ticket");
+      setForeignConfirmDialogOpen(false);
+      setForeignProductCandidate(null);
+    }
+  };
+
+  const handleForeignCancelAdd = () => {
+    setForeignConfirmDialogOpen(false);
+    setForeignProductCandidate(null);
+  };
+
+  // Nuevas funciones para el diálogo de "Producto con etiqueta ya vendida. ¿deseas venderlo?"
+  const handleSoldLabelConfirmAdd = () => {
+    if (soldLabelProductCandidate) {
+      // Usar addProductToCart para que se construya el producto correctamente
+      addProductToCart(soldLabelProductCandidate);
+      toast.success("Producto con etiqueta ya vendida añadido al ticket");
+      setSoldLabelConfirmDialogOpen(false);
+      setSoldLabelProductCandidate(null);
+    }
+  };
+
+  const handleSoldLabelCancelAdd = () => {
+    setSoldLabelConfirmDialogOpen(false);
+    setSoldLabelProductCandidate(null);
   };
 
   const handleConfirmQuantity = async (payload) => {
@@ -367,7 +429,6 @@ const useProductSearch = ({
         tags = [];
       }
     }
-    // ...existing code to generar etiquetas utilizando tags...
   };
 
   return {
@@ -380,6 +441,14 @@ const useProductSearch = ({
     handleCancelAdd,
     handleConfirmAdd,
     handleConfirmQuantity,
+    foreignConfirmDialogOpen,
+    foreignProductCandidate,
+    handleForeignConfirmAdd,
+    handleForeignCancelAdd,
+    soldLabelConfirmDialogOpen,
+    soldLabelProductCandidate,
+    handleSoldLabelConfirmAdd,
+    handleSoldLabelCancelAdd,
   };
 };
 

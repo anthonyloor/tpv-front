@@ -20,7 +20,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const { configData } = useContext(ConfigContext);
-  const { shopId, shopName } = useContext(AuthContext);
+  const { shopId, idProfile } = useContext(AuthContext);
   const allowOutOfStockSales = configData?.allow_out_of_stock_sales || false;
   const apiFetch = useApiFetch();
 
@@ -50,12 +50,20 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     addProductToCart,
     handleCancelAdd,
     handleConfirmAdd,
+    foreignConfirmDialogOpen,
+    foreignProductCandidate,
+    handleForeignConfirmAdd,
+    handleForeignCancelAdd,
+    soldLabelConfirmDialogOpen,
+    handleSoldLabelConfirmAdd,
+    handleSoldLabelCancelAdd,
   } = useProductSearch({
     apiFetch,
     shopId,
     allowOutOfStockSales,
     onAddProduct: handleAddProductWrapper,
     onAddDiscount,
+    idProfile,  
   });
 
   useEffect(() => {
@@ -251,6 +259,65 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
               label="Sí"
               className="p-button-success"
               onClick={handleConfirmAdd}
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Nuevo Dialog para confirmar venta de producto de otra tienda */}
+      <Dialog
+        header="Confirmar venta en otra tienda"
+        visible={foreignConfirmDialogOpen}
+        onHide={handleForeignCancelAdd}
+        modal
+        closable={false}
+        draggable={false}
+        resizable={false}
+        style={{ width: "20vw", backgroundColor: "var(--surface-0)" }}
+      >
+        <div className="p-2" style={{ color: "var(--text-color)" }}>
+          <p>
+            El producto pertenece a la tienda {foreignProductCandidate?.id_shop}
+            . ¿Deseas venderlo?
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              label="No"
+              className="p-button-danger"
+              onClick={handleForeignCancelAdd}
+            />
+            <Button
+              label="Sí"
+              className="p-button-success"
+              onClick={handleForeignConfirmAdd}
+            />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Nuevo Dialog para confirmar venta de producto con etiqueta ya vendida */}
+      <Dialog
+        header="Producto con etiqueta ya vendida"
+        visible={soldLabelConfirmDialogOpen}
+        onHide={handleSoldLabelCancelAdd}
+        modal
+        closable={false}
+        draggable={false}
+        resizable={false}
+        style={{ width: "20vw", backgroundColor: "var(--surface-0)" }}
+      >
+        <div className="p-2" style={{ color: "var(--text-color)" }}>
+          <p>Producto con etiqueta ya vendida. ¿Deseas venderlo?</p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              label="No"
+              className="p-button-danger"
+              onClick={handleSoldLabelCancelAdd}
+            />
+            <Button
+              label="Sí"
+              className="p-button-success"
+              onClick={handleSoldLabelConfirmAdd}
             />
           </div>
         </div>

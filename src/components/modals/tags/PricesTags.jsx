@@ -9,7 +9,7 @@ import { Button } from "primereact/button";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import { AuthContext } from "../../../contexts/AuthContext";
-import useProductSearch from "../../../hooks/useProductSearch"; // nuevo
+import useProductSearch from "../../../hooks/useProductSearch";
 import JsBarcode from "jsbarcode";
 import { TabView, TabPanel } from "primereact/tabview";
 
@@ -135,10 +135,21 @@ export default function PricesTags({
     group.tracking.forEach((rec) => finalTracking.push(rec));
   }
 
+  // Agrupar los registros de tracking por id_control_stock
+  const finalTrackingGrouped = Object.values(
+    finalTracking.reduce((acc, rec) => {
+      if (!acc[rec.id_control_stock]) {
+        acc[rec.id_control_stock] = rec;
+      }
+      return acc;
+    }, {})
+  );
+
   // Logs de depuración
   console.log("groupedByProduct:", groupedByProduct);
   console.log("finalNoTracking:", finalNoTracking);
   console.log("finalTracking:", finalTracking);
+  console.log("finalTrackingGrouped:", finalTrackingGrouped);
 
   // Función para abrir el diálogo de cantidad de impresión
   const openQuantityDialog = () => {
@@ -425,9 +436,9 @@ export default function PricesTags({
                 )}
                 {finalTracking.length > 0 && (
                   <TabPanel header="Productos con seguimiento">
-                    {finalTracking.length > 0 ? (
+                    {finalTrackingGrouped.length > 0 ? (
                       <DataTable
-                        value={finalTracking}
+                        value={finalTrackingGrouped}
                         selectionMode="single"
                         selection={selectedProduct}
                         onSelectionChange={(e) => setSelectedProduct(e.value)}
@@ -464,6 +475,10 @@ export default function PricesTags({
                                 rowData.id_control_stock}
                             </>
                           )}
+                        />
+                        <Column
+                          header="Cantidad"
+                          body={(rowData) => rowData.quantity}
                         />
                       </DataTable>
                     ) : (
