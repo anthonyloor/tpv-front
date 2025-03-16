@@ -16,6 +16,8 @@ import { Toast } from "primereact/toast";
 import { useApiFetch } from "../../../components/utils/useApiFetch";
 import TicketViewModal from "../ticket/TicketViewModal";
 import { AuthContext } from "../../../contexts/AuthContext";
+import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
 const ReprintModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
@@ -29,6 +31,16 @@ const ReprintModal = ({ isOpen, onClose }) => {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [expandedRows, setExpandedRows] = useState(null);
   const toast = useRef(null);
+  // Obtención una sola vez de los diccionarios
+  const shopsDict = useShopsDictionary();
+  const employeesDict = useEmployeesDictionary();
+
+  const ShopNameCell = ({ id_shop }) => (
+    <span>{shopsDict[id_shop] || id_shop}</span>
+  );
+  const EmployeeNameCell = ({ id_employee }) => (
+    <span>{employeesDict[id_employee] || id_employee}</span>
+  );
 
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketGift, setTicketGift] = useState(false);
@@ -283,8 +295,8 @@ const ReprintModal = ({ isOpen, onClose }) => {
                 : "No se encontró esa venta."
             }
           >
-            <Column selectionMode="single" headerStyle={{ width: "3rem" }} />
-            <Column expander style={{ width: "3rem" }} />
+            <Column selectionMode="single" headerStyle={{ width: "1px" }} />
+            <Column expander style={{ width: "1px" }} />
             <Column field="id_order" header="# Ticket" />
             <Column
               field="date_add"
@@ -298,6 +310,10 @@ const ReprintModal = ({ isOpen, onClose }) => {
                 const mm = String(date.getMinutes()).padStart(2, "0");
                 return `${y}-${m}-${d} ${hh}:${mm}`;
               }}
+            />
+            <Column
+              header="Tienda"
+              body={(row) => <ShopNameCell id_shop={row.id_shop} />}
             />
             <Column field="id_customer" header="Cliente" />
             <Column field="payment" header="Pago" />

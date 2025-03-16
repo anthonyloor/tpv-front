@@ -16,6 +16,7 @@ import { InputNumber } from "primereact/inputnumber";
 import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
 import { useIsCompact } from "../../utils/responsive";
+import OnlineOrdersModal from "../modals/online/OnlineOrdersModal";
 
 function SalesCardActions({
   cartItems,
@@ -59,6 +60,7 @@ function SalesCardActions({
   const [giftTicketTM, setGiftTicketTM] = useState(false);
   const [cartRuleModalOpen, setCartRuleModalOpen] = useState(false);
   const [newCartRuleCode, setNewCartRuleCode] = useState(null);
+  const [isOnlineOrdersModalOpen, setIsOnlineOrdersModalOpen] = useState(false);
 
   // Métodos de pago
   const [selectedMethods, setSelectedMethods] = useState([]);
@@ -567,9 +569,7 @@ function SalesCardActions({
           label={isCompact ? "" : labels.pedidos}
           icon="pi pi-shopping-cart"
           className={isCompact ? "p-button-icon-only w-full" : "w-full"}
-          onClick={() => {
-            /* ...existing code... */
-          }}
+          onClick={() => setIsOnlineOrdersModalOpen(true)}
         />
         <Button
           label={isCompact ? "" : labels.devoluciones}
@@ -808,6 +808,13 @@ function SalesCardActions({
         targetProduct={selectedProductForDiscount}
         cartTotal={total}
       />
+      {/* Modal de Pedidos Online */}
+      {isOnlineOrdersModalOpen && (
+        <OnlineOrdersModal
+          isOpen={isOnlineOrdersModalOpen}
+          onClose={() => setIsOnlineOrdersModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

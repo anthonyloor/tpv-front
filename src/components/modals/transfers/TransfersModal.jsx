@@ -14,14 +14,25 @@ import { InputText } from "primereact/inputtext";
 import { Calendar } from "primereact/calendar";
 import { Dropdown } from "primereact/dropdown";
 import { addLocale } from "primereact/api";
+import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
 const TransfersModal = ({
   isOpen,
   onClose,
   widthPercent = "45%",
-  heightPercent = "70%",
+  heightPercent = "65%",
 }) => {
   const apiFetch = useApiFetch();
+  const shopsDict = useShopsDictionary();
+  const employeesDict = useEmployeesDictionary();
+
+  const ShopNameCell = ({ id_shop }) => (
+    <span>{shopsDict[id_shop] || id_shop}</span>
+  );
+  const EmployeeNameCell = ({ id_employee }) => (
+    <span>{employeesDict[id_employee] || id_employee}</span>
+  );
 
   // Definir el locale global "es" al montar el componente
   useEffect(() => {
@@ -553,7 +564,7 @@ const TransfersModal = ({
           onRowClick={(e) => handleRowClick(e.data)}
           onRowDoubleClick={(e) => handleRowDoubleClick(e.data)}
         >
-          <Column selectionMode="multiple" headerStyle={{ width: "3em" }} />
+          <Column selectionMode="multiple" headerStyle={{ width: "1px" }} />
           <Column
             field="id_warehouse_movement"
             header="ID"
@@ -572,7 +583,7 @@ const TransfersModal = ({
           <Column
             field="type"
             header="Tipo"
-            style={{ width: "140px" }}
+            style={{ width: "100px" }}
             body={(rowData) => {
               let iconClass = "";
               if (rowData.type === "traspaso") {
@@ -593,7 +604,62 @@ const TransfersModal = ({
               );
             }}
           />
-          <Column field="status" header="Estado" style={{ width: "120px" }} />
+          <Column
+            header="Tiendas"
+            style={{ width: "125px" }}
+            body={(rowData) => {
+              return (
+                <div className="flex flex-col">
+                  <span>
+                    <ShopNameCell id_shop={rowData.id_shop_origin} />
+                  </span>
+                  <span>
+                    <ShopNameCell id_shop={rowData.id_shop_destiny} />
+                  </span>
+                </div>
+              );
+            }}
+          />
+          <Column
+            header="Empleado"
+            style={{ width: "125px" }}
+            body={(rowData) => (
+              <EmployeeNameCell id_employee={rowData.employee} />
+            )}
+          />
+          <Column
+            field="status"
+            header="Estado"
+            style={{ width: "125px" }}
+            body={(rowData) => {
+              let statusColor = "surface-500"; // Default color
+              switch (rowData.status) {
+                case "En creacion":
+                  statusColor = "surface-300";
+                  break;
+                case "Enviado":
+                  statusColor = "blue-300";
+                  break;
+                case "Recibido":
+                  statusColor = "green-300";
+                  break;
+                case "En revision":
+                  statusColor = "yellow-300";
+                  break;
+                case "Finalizado":
+                  statusColor = "green-500";
+                  break;
+                default:
+                  break;
+              }
+
+              return (
+                <span className={`p-tag p-tag-rounded ${statusColor}`}>
+                  {rowData.status}
+                </span>
+              );
+            }}
+          />
         </DataTable>
       </div>
     );
