@@ -10,12 +10,7 @@ import { toast } from "sonner";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
-const OnlineOrdersModal = ({
-  isOpen,
-  onClose,
-  widthPercent = "50%",
-  heightPercent = "60%",
-}) => {
+const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
   const [searchOrderId, setSearchOrderId] = useState("");
   const [searchedOrder, setSearchedOrder] = useState(null);
@@ -33,6 +28,22 @@ const OnlineOrdersModal = ({
   const EmployeeNameCell = ({ id_employee }) => (
     <span>{employeesDict[id_employee] || id_employee}</span>
   );
+
+  // Función para formatear fecha => dd-mm-yyyy hh:mm
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj)) return dateString; // Si no es fecha válida, devuelves la cadena original
+
+    const dd = String(dateObj.getDate()).padStart(2, "0");
+    const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const yyyy = dateObj.getFullYear();
+
+    const hh = String(dateObj.getHours()).padStart(2, "0");
+    const min = String(dateObj.getMinutes()).padStart(2, "0");
+
+    return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -94,10 +105,10 @@ const OnlineOrdersModal = ({
       draggable={false}
       resizable={false}
       style={{
-        width: widthPercent,
-        height: heightPercent,
-        minWidth: "800px",
-        minHeight: "500px",
+        width: "50vw",
+        height: "65vh",
+        minWidth: "850px",
+        minHeight: "650px",
       }}
     >
       <div className="p-3">
@@ -122,25 +133,60 @@ const OnlineOrdersModal = ({
         <DataTable
           value={ordersToDisplay}
           loading={isLoading}
-          emptyMessage="No hay órdenes para mostrar."
+          emptyMessage="No hay pedidos para mostrar."
           paginator
           rows={10}
         >
-          <Column field="id_order" header="# Ticket" />
-          <Column field="date_add" header="Fecha" />
-          <Column field="id_shop" header="Tienda" body={() => "Online"} />
           <Column
-            header="Empleado"
-            body={(row) => <EmployeeNameCell id_employee={row.id_employee} />}
+            field="id_order"
+            header="# Pedido"
+            style={{ width: "5px", textAlign: "center" }}
           />
-          <Column field="payment" header="Forma de pago" />
+          <Column
+            header="Fecha"
+            body={(row) => formatDate(row.date_add)}
+            style={{ width: "130px", textAlign: "center" }}
+          />
+          <Column
+            header="ID Cliente"
+            field="id_customer"
+            style={{ width: "5px", textAlign: "center" }}
+          />
+          <Column
+            header="ID Dirección"
+            field="id_address_delivery"
+            style={{ width: "5px", textAlign: "center" }}
+          />
+          <Column
+            field="payment"
+            header="Forma de pago"
+            style={{ width: "100px", textAlign: "center" }}
+          />
           <Column
             field="total_paid"
             header="Total (€)"
             body={(data) => Number(data.total_paid)?.toFixed(2)}
-            style={{ textAlign: "right" }}
+            style={{ width: "50px", textAlign: "center" }}
           />
-          <Column field="origin" header="Origen" />
+          <Column
+            field="current_state"
+            header="Estado"
+            style={{ width: "5px", textAlign: "center" }}
+          />
+          <Column
+            field="origin"
+            header="Origen"
+            body={(row) => {
+              const color =
+                row.origin === "mayret" ? "bg-blue-500" : "bg-green-500";
+              return (
+                <span className={`text-white py-1 px-2 rounded ${color}`}>
+                  {row.origin}
+                </span>
+              );
+            }}
+            style={{ width: "5px", textAlign: "center" }}
+          />
         </DataTable>
       </div>
     </Dialog>
