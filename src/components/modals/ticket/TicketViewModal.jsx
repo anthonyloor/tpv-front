@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import { Dialog } from "primereact/dialog";
-import { useApiFetch } from "../../utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import generateTicket from "../../../utils/ticket";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const TicketViewModal = ({
   isOpen,
@@ -23,6 +24,7 @@ const TicketViewModal = ({
   const [error, setError] = useState(null);
   const [previewHtml, setPreviewHtml] = useState("");
   const apiFetch = useApiFetch();
+  const API_BASE_URL = getApiBaseUrl();
 
   const buildPreviewHtmlForTicket = useCallback(
     (orderData, isGiftTicket) => {
@@ -208,7 +210,7 @@ const TicketViewModal = ({
     try {
       setError(null);
       const data = await apiFetch(
-        `https://apitpv.anthonyloor.com/get_order?id_order=${orderId}`,
+        `${API_BASE_URL}/get_order?id_order=${orderId}`,
         { method: "GET" }
       );
       setFetchedData(data);
@@ -217,13 +219,13 @@ const TicketViewModal = ({
       setError("No se pudo cargar el ticket de la venta.");
       console.error("[TicketViewModal] Error loadOrder:", err);
     }
-  }, [apiFetch, orderId, giftTicket, buildPreviewHtmlForTicket]);
+  }, [apiFetch, orderId, giftTicket, buildPreviewHtmlForTicket, API_BASE_URL]);
 
   const loadCartRule = useCallback(async () => {
     try {
       setError(null);
       const data = await apiFetch(
-        `https://apitpv.anthonyloor.com/get_cart_rule?code=${cartRuleCode}`,
+        `${API_BASE_URL}/get_cart_rule?code=${cartRuleCode}`,
         { method: "GET" }
       );
       setFetchedData(data);
@@ -232,7 +234,7 @@ const TicketViewModal = ({
       setError("No se pudo cargar la información del vale descuento.");
       console.error("[TicketViewModal] Error loadCartRule:", err);
     }
-  }, [apiFetch, cartRuleCode, buildPreviewHtmlForCartRule]);
+  }, [apiFetch, cartRuleCode, buildPreviewHtmlForCartRule, API_BASE_URL]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -241,7 +243,15 @@ const TicketViewModal = ({
     } else if (mode === "cart_rule" && cartRuleCode) {
       loadCartRule();
     }
-  }, [isOpen, mode, orderId, cartRuleCode, loadOrder, loadCartRule]);
+  }, [
+    isOpen,
+    mode,
+    orderId,
+    cartRuleCode,
+    loadOrder,
+    loadCartRule,
+    API_BASE_URL,
+  ]);
 
   // SE MODIFICA para llamar a generateTicket pasando fetchedData y configData
   useEffect(() => {

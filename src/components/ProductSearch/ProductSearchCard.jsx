@@ -4,7 +4,7 @@ import React, { useState, useContext, useRef, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { AuthContext } from "../../contexts/AuthContext";
-import { useApiFetch } from "../utils/useApiFetch";
+import { useApiFetch } from "../../utils/useApiFetch";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";

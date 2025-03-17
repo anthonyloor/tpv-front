@@ -7,17 +7,11 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import TicketViewModal from "../ticket/TicketViewModal";
-import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import { toast } from "sonner";
 import { CartContext } from "../../../contexts/CartContext";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
-/**
- * Modal para gestionar devoluciones/cambios.
- *
- * @param {boolean} isOpen           - Indica si se muestra el diálogo.
- * @param {function} onClose         - Función para cerrar el modal.
- * @param {function} onAddProduct    - Para añadir productos negativos (rectificación) al ticket.
- */
 const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   const [orderId, setOrderId] = useState("");
   const [orderData, setOrderData] = useState(null);
@@ -37,6 +31,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   const [viewTicketId, setViewTicketId] = useState(null);
 
   const apiFetch = useApiFetch();
+  const API_BASE_URL = getApiBaseUrl();
 
   const {
     setIsDevolution,
@@ -76,7 +71,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       setIsLoading(true);
       setReturnedProductMap({});
       const data = await apiFetch(
-        `https://apitpv.anthonyloor.com/get_order?id_order=${encodeURIComponent(
+        `${API_BASE_URL}/get_order?id_order=${encodeURIComponent(
           orderId.trim()
         )}`,
         {
@@ -348,10 +343,10 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         draggable={false}
         resizable={false}
         style={{
-          width: "80vw",
-          maxWidth: "800px",
-          backgroundColor: "var(--surface-0)",
-          color: "var(--text-color)",
+          width: "60vw",
+          height: "65vh",
+          minWidth: "900px",
+          minHeight: "650px",
         }}
       >
         <div className="p-2">

@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import { Steps } from "primereact/steps";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 export default function CreateAddressModal({
   isOpen,
@@ -33,6 +34,7 @@ export default function CreateAddressModal({
     isCompanyInvoice: false,
   });
   const [errorMessage, setErrorMessage] = useState("");
+  const API_BASE_URL = getApiBaseUrl();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -53,13 +55,10 @@ export default function CreateAddressModal({
         ...addressData,
         id_customer: clientId,
       };
-      const result = await apiFetch(
-        "https://apitpv.anthonyloor.com/create_address",
-        {
-          method: "POST",
-          body: JSON.stringify(addressPayload),
-        }
-      );
+      const result = await apiFetch(`${API_BASE_URL}/create_address`, {
+        method: "POST",
+        body: JSON.stringify(addressPayload),
+      });
       // Si result es ok, notifica
       if (onAddressCreated) {
         onAddressCreated(result);

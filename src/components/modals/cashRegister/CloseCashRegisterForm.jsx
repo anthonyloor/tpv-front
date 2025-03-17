@@ -4,12 +4,13 @@ import React, { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import SalesReportModal from "../../reports/SalesReportModal";
-import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import { InputNumber } from "primereact/inputnumber";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import ActionResultDialog from "../../common/ActionResultDialog";
 import { Divider } from "primereact/divider";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 function formatNumber(value) {
   return isNaN(Number(value)) || value === "" ? "-" : value;
@@ -36,6 +37,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
   const shop = JSON.parse(localStorage.getItem("shop"));
   const licenseData = JSON.parse(localStorage.getItem("licenseData")) || {};
   const license = licenseData.licenseKey;
+  const API_BASE_URL = getApiBaseUrl();
 
   const showAlert = (message, success = false) => {
     setClosingModalSuccess(success);
@@ -47,7 +49,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
     const fetchReportAmounts = async () => {
       try {
         const data = await apiFetch(
-          `https://apitpv.anthonyloor.com/get_report_amounts?license=${license}`,
+          `${API_BASE_URL}/get_report_amounts?license=${license}`,
           {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -71,7 +73,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
     if (license) {
       fetchReportAmounts();
     }
-  }, [license, apiFetch]);
+  }, [license, apiFetch, API_BASE_URL]);
 
   useEffect(() => {
     const cashMatches = parseFloat(inputTotalCash) === fetchedTotalCash;
@@ -96,18 +98,15 @@ const CloseCashRegisterForm = ({ onClose }) => {
       try {
         const today = new Date();
         const dateToStr = today.toISOString().split("T")[0] + " 23:59:59";
-        const data = await apiFetch(
-          "https://apitpv.anthonyloor.com/get_sale_report_orders",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              license,
-              date1: null,
-              date2: dateToStr,
-            }),
-          }
-        );
+        const data = await apiFetch(`${API_BASE_URL}/get_sale_report_orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            license,
+            date1: null,
+            date2: dateToStr,
+          }),
+        });
         if (Array.isArray(data)) {
           const salesSet = new Set();
           const returnsSet = new Set();
@@ -142,7 +141,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
     if (license) {
       fetchSalesSummary();
     }
-  }, [license, apiFetch]);
+  }, [license, apiFetch, API_BASE_URL]);
 
   const handleCloseSalesReport = () => {
     setIsSalesReportOpen(false);
@@ -154,17 +153,14 @@ const CloseCashRegisterForm = ({ onClose }) => {
 
   const handleCloseCashRegister = async () => {
     try {
-      const data = await apiFetch(
-        "https://apitpv.anthonyloor.com/close_pos_session",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            license,
-            id_employee: employeeId,
-          }),
-        }
-      );
+      const data = await apiFetch(`${API_BASE_URL}/close_pos_session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          license,
+          id_employee: employeeId,
+        }),
+      });
       if (data.status === "OK") {
         showAlert("Cierre de caja realizado correctamente.", true);
       } else {

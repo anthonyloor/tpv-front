@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog } from "primereact/dialog";
 import TransferForm from "./TransferForm";
-import { useApiFetch } from "../../utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 // PrimeReact
 import { DataTable } from "primereact/datatable";
@@ -26,6 +27,7 @@ const TransfersModal = ({
   const apiFetch = useApiFetch();
   const shopsDict = useShopsDictionary();
   const employeesDict = useEmployeesDictionary();
+  const API_BASE_URL = getApiBaseUrl();
 
   const ShopNameCell = ({ id_shop }) => (
     <span>{shopsDict[id_shop] || id_shop}</span>
@@ -156,13 +158,10 @@ const TransfersModal = ({
     };
 
     try {
-      const data = await apiFetch(
-        "https://apitpv.anthonyloor.com/get_warehouse_movements",
-        {
-          method: "POST",
-          body: JSON.stringify({}), // últimas 50
-        }
-      );
+      const data = await apiFetch(`${API_BASE_URL}/get_warehouse_movements`, {
+        method: "POST",
+        body: JSON.stringify({}), // últimas 50
+      });
       if (Array.isArray(data)) {
         // Formateamos campos de fecha
         const formattedData = data.map((mov) => ({
@@ -185,7 +184,7 @@ const TransfersModal = ({
     } finally {
       setLoading(false);
     }
-  }, [apiFetch, resetFilters]);
+  }, [apiFetch, resetFilters, API_BASE_URL]);
 
   useEffect(() => {
     if (isOpen) {
@@ -201,7 +200,7 @@ const TransfersModal = ({
     try {
       if (filterId.trim() !== "") {
         // buscar 1 movement
-        const url = `https://apitpv.anthonyloor.com/get_warehouse_movement?id_warehouse_movement=${encodeURIComponent(
+        const url = `${API_BASE_URL}/get_warehouse_movement?id_warehouse_movement=${encodeURIComponent(
           filterId.trim()
         )}`;
         const data = await apiFetch(url, { method: "GET" });
@@ -220,13 +219,10 @@ const TransfersModal = ({
         if (filterDateFrom) body.data1 = filterDateFrom;
         if (filterDateTo) body.data2 = filterDateTo;
 
-        const data = await apiFetch(
-          "https://apitpv.anthonyloor.com/get_warehouse_movements",
-          {
-            method: "POST",
-            body: JSON.stringify(body),
-          }
-        );
+        const data = await apiFetch(`${API_BASE_URL}/get_warehouse_movements`, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
         if (Array.isArray(data)) {
           setUnfilteredMovements(data);
           const localFiltered = localFilterData(
@@ -275,7 +271,7 @@ const TransfersModal = ({
     try {
       setLoading(true);
       const data = await apiFetch(
-        `https://apitpv.anthonyloor.com/get_warehouse_movement?id_warehouse_movement=${movement.id_warehouse_movement}`,
+        `${API_BASE_URL}/get_warehouse_movement?id_warehouse_movement=${movement.id_warehouse_movement}`,
         { method: "GET" }
       );
       setSelectedMovement(data);

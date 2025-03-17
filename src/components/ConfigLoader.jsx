@@ -1,11 +1,12 @@
 // src/components/ConfigLoader.jsx
 
 import React, { useEffect, useState, useContext } from "react";
-import { useApiFetch } from "./utils/useApiFetch";
+import { useApiFetch } from "../utils/useApiFetch";
 import { ConfigContext } from "../contexts/ConfigContext";
 import ConfigNotFoundDialog from "./modals/config/ConfigNotFoundDialog";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
+import getApiBaseUrl from "../utils/getApiBaseUrl";
 
 function ConfigLoader() {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
@@ -13,14 +14,13 @@ function ConfigLoader() {
   const [configError, setConfigError] = useState("");
   const { configData, setConfigData } = useContext(ConfigContext);
   const apiFetch = useApiFetch();
+  const API_BASE_URL = getApiBaseUrl();
 
   useEffect(() => {
     if (configData) return;
     const licenseData = JSON.parse(localStorage.getItem("licenseData"));
     if (!licenseData || !licenseData.licenseKey) return;
-    apiFetch(
-      `https://apitpv.anthonyloor.com/get_config_tpv?license=${licenseData.licenseKey}`
-    )
+    apiFetch(`${API_BASE_URL}/get_config_tpv?license=${licenseData.licenseKey}`)
       .then((data) => {
         if (data.error === "Configuration not found") {
           // Mostrar confirmación para crear la configuración
@@ -33,7 +33,7 @@ function ConfigLoader() {
       .catch((error) => {
         console.error("Error al obtener la configuración:", error);
       });
-  }, [apiFetch, configData, setConfigData]);
+  }, [apiFetch, configData, setConfigData, API_BASE_URL]);
 
   const handleConfigSubmit = (newConfig) => {
     const licenseData = JSON.parse(localStorage.getItem("licenseData"));
@@ -41,7 +41,7 @@ function ConfigLoader() {
       ...newConfig,
       license: licenseData.licenseKey,
     };
-    apiFetch("https://apitpv.anthonyloor.com/create_config_tpv", {
+    apiFetch(`${API_BASE_URL}/create_config_tpv`, {
       method: "POST",
       body: JSON.stringify(configToSend),
     })

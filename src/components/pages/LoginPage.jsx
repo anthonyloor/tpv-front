@@ -9,6 +9,7 @@ import PosSessionOpenModal from "../modals/pos/PosSessionOpenModal";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { Card } from "primereact/card";
+import getApiBaseUrl from "../../utils/getApiBaseUrl";
 
 // Mapeo de ruta a tienda
 const routeToShopInfo = {
@@ -32,6 +33,7 @@ function LoginPage({ shopRoute }) {
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [pendingToken, setPendingToken] = useState(null);
+  const API_BASE_URL = getApiBaseUrl();
 
   // Contexto de autenticación
   const {
@@ -85,7 +87,7 @@ function LoginPage({ shopRoute }) {
     setShopId(shopData.id_shop);
     setShopName(shopData.name);
 
-    fetch("https://apitpv.anthonyloor.com/employees")
+    fetch(`${API_BASE_URL}/employees`)
       .then((response) => response.json())
       .then((data) => {
         setEmployees(data);
@@ -94,7 +96,7 @@ function LoginPage({ shopRoute }) {
       .finally(() => {
         setIsLoadingShopInfo(false);
       });
-  }, [shopRoute, setShopId, setShopName]);
+  }, [shopRoute, setShopId, setShopName, API_BASE_URL]);
 
   // Validar licencia
   const validateLicense = useCallback(
@@ -114,7 +116,7 @@ function LoginPage({ shopRoute }) {
         id_shop: idShop || shopData.id_shop,
       };
 
-      fetch("https://apitpv.anthonyloor.com/license_check", {
+      fetch(`${API_BASE_URL}/license_check`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -199,7 +201,7 @@ function LoginPage({ shopRoute }) {
           setIsValidatingLicense(false);
         });
     },
-    [shopRoute, proceedToLoadShopAndEmployees]
+    [shopRoute, proceedToLoadShopAndEmployees, API_BASE_URL]
   );
 
   // +++ El usuario pulsa “Continuar”
@@ -271,7 +273,7 @@ function LoginPage({ shopRoute }) {
     }
 
     fetch(
-      `https://apitpv.anthonyloor.com/check_pos_session?license=${licenseData.licenseKey}`,
+      `${API_BASE_URL}/check_pos_session?license=${licenseData.licenseKey}`,
       {
         method: "POST",
         headers: {
@@ -308,7 +310,7 @@ function LoginPage({ shopRoute }) {
       return;
     }
 
-    fetch("https://apitpv.anthonyloor.com/open_pos_session", {
+    fetch(`${API_BASE_URL}/open_pos_session`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -352,7 +354,7 @@ function LoginPage({ shopRoute }) {
   const handleLogin = () => {
     setLoginLoading(true); // Activar spinner
 
-    fetch("https://apitpv.anthonyloor.com/login", {
+    fetch(`${API_BASE_URL}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -417,7 +419,7 @@ function LoginPage({ shopRoute }) {
   }
   if (isValidatingLicense || isLoadingShopInfo || !shopInfo) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-800">
         <div className="text-center">
           <svg
             className="animate-spin h-10 w-10 text-gray-600 mx-auto mb-4"
@@ -448,7 +450,7 @@ function LoginPage({ shopRoute }) {
   }
   if (shopInfo === null) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-800">
         <div className="text-center">
           <h1 className="text-2xl font-semibold mb-6">Tienda no encontrada</h1>
           <p>La tienda que estás buscando no existe.</p>
@@ -458,7 +460,7 @@ function LoginPage({ shopRoute }) {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-800">
       <Card
         className="w-full max-w-3xl"
         style={{
@@ -472,16 +474,12 @@ function LoginPage({ shopRoute }) {
 
         <div className="mb-4">
           <h2 className="text-lg font-medium mb-2">Selecciona un Empleado</h2>
-          <div className="flex flex-wrap justify-center">
+          <div className="grid grid-cols-3 justify-center">
             {employees.map((employee) => (
               <Button
                 key={employee.id_employee}
                 label={employee.employee_name}
-                className={`
-                  m-2
-                  px-4
-                  py-3
-                  text-xl
+                className={` m-2 w-3 py-3 text-l
                   ${
                     selectedEmployee?.id_employee === employee.id_employee
                       ? "p-button-primary"

@@ -1,15 +1,17 @@
 // src/components/reports/SalesReportSearch.jsx
 import React, { useState, useEffect, useContext } from "react";
 import { ConfigContext } from "../../contexts/ConfigContext";
-import { useApiFetch } from "../../components/utils/useApiFetch";
+import { useApiFetch } from "../../utils/useApiFetch";
 import { Button } from "primereact/button";
 import { Calendar } from "primereact/calendar";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
+import getApiBaseUrl from "../../utils/getApiBaseUrl";
 
 const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
   const apiFetch = useApiFetch();
   const { configData } = useContext(ConfigContext);
+  const API_BASE_URL = getApiBaseUrl();
 
   const licenseData = localStorage.getItem("licenseData")
     ? JSON.parse(localStorage.getItem("licenseData"))
@@ -130,18 +132,15 @@ const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
     const dateToWithTime = `${dateToStr} 23:59:59`;
 
     try {
-      const data = await apiFetch(
-        "https://apitpv.anthonyloor.com/get_sale_report_orders",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            license,
-            date1: dateFromWithTime,
-            date2: dateToWithTime,
-          }),
-        }
-      );
+      const data = await apiFetch(`${API_BASE_URL}/get_sale_report_orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          license,
+          date1: dateFromWithTime,
+          date2: dateToWithTime,
+        }),
+      });
 
       if (Array.isArray(data)) {
         setOrders(data);

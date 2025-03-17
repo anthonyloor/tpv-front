@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { useApiFetch } from "../components/utils/useApiFetch";
+import { useApiFetch } from "../utils/useApiFetch";
+import getApiBaseUrl from "../utils/getApiBaseUrl";
 
 export const useShopsDictionary = () => {
   const apiFetch = useApiFetch();
   const [shopsDict, setShopsDict] = useState({});
+  const API_BASE_URL = getApiBaseUrl();
 
   useEffect(() => {
     const fetchShops = async () => {
       try {
-        const data = await apiFetch("https://apitpv.anthonyloor.com/shops", { method: "GET" });
+        const data = await apiFetch(`${API_BASE_URL}/shops`, { method: "GET" });
         if (Array.isArray(data)) {
           const dict = {};
           data.forEach((shop) => {
@@ -21,7 +23,7 @@ export const useShopsDictionary = () => {
       }
     };
     fetchShops();
-  }, [apiFetch]);
+  }, [apiFetch, API_BASE_URL]);
 
   return shopsDict;
 };

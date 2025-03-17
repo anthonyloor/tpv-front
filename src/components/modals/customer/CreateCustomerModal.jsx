@@ -3,11 +3,12 @@
 import React, { useState, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { AuthContext } from "../../../contexts/AuthContext";
-import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { Steps } from "primereact/steps";
 import { Checkbox } from "primereact/checkbox";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   const [step, setStep] = useState(1);
@@ -43,6 +44,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [newCustomerId, setNewCustomerId] = useState(null);
   const [isNoWeb, setIsNoWeb] = useState(false);
+  const API_BASE_URL = getApiBaseUrl();
 
   const generateRandomString = (length) => {
     const chars =
@@ -87,13 +89,10 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   const handleCreateCustomer = async (e) => {
     e.preventDefault();
     try {
-      const data = await apiFetch(
-        "https://apitpv.anthonyloor.com/create_customer",
-        {
-          method: "POST",
-          body: JSON.stringify(customerData),
-        }
-      );
+      const data = await apiFetch(`${API_BASE_URL}/create_customer`, {
+        method: "POST",
+        body: JSON.stringify(customerData),
+      });
       if (data && data.id_customer) {
         setNewCustomerId(data.id_customer);
         // Se asume que los nombres y apellidos de la dirección deben coincidir con los del cliente
@@ -118,13 +117,10 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
     e.preventDefault();
     try {
       const addressPayload = { ...addressData, id_customer: newCustomerId };
-      const createdAddress = await apiFetch(
-        "https://apitpv.anthonyloor.com/create_address",
-        {
-          method: "POST",
-          body: JSON.stringify(addressPayload),
-        }
-      );
+      const createdAddress = await apiFetch(`${API_BASE_URL}/create_address`, {
+        method: "POST",
+        body: JSON.stringify(addressPayload),
+      });
       if (onComplete) {
         const createdClient = { ...customerData, id_customer: newCustomerId };
         onComplete(createdClient, createdAddress);

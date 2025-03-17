@@ -4,7 +4,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { toast } from "sonner";
 import ProductSearchCardForTransfer from "./ProductSearchCardForTransfer";
-import { useApiFetch } from "../../utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import { Steps } from "primereact/steps";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
@@ -12,6 +12,7 @@ import { InputNumber } from "primereact/inputnumber";
 import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const TransferForm = ({ type, onSave, movementData }) => {
   const [productsToTransfer, setProductsToTransfer] = useState([]);
@@ -29,6 +30,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
   const [createDate, setCreateDate] = useState("");
   const [movementStatus, setMovementStatus] = useState("En creacion");
   const [employeeIdV, setEmployeeId] = useState(null);
+  const API_BASE_URL = getApiBaseUrl();
 
   const apiFetch = useApiFetch();
   const { idProfile } = useContext(AuthContext);
@@ -59,7 +61,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
     const loadShops = async () => {
       try {
         setIsLoadingShops(true);
-        const data = await apiFetch("https://apitpv.anthonyloor.com/shops", {
+        const data = await apiFetch(`${API_BASE_URL}/shops`, {
           method: "GET",
         });
         const filteredData = data.filter((shop) => shop.id_shop !== 1);
@@ -72,7 +74,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
       }
     };
     loadShops();
-  }, [apiFetch]);
+  }, [apiFetch, API_BASE_URL]);
 
   useEffect(() => {
     if (shops.length > 0 && selectedOriginStore) {
@@ -290,13 +292,10 @@ const TransferForm = ({ type, onSave, movementData }) => {
       }
       payload.movements_details = buildMovementsDetails();
 
-      await apiFetch(
-        "https://apitpv.anthonyloor.com/create_warehouse_movement",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        }
-      );
+      await apiFetch(`${API_BASE_URL}/create_warehouse_movement`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       toast.success("Movimiento creado con éxito");
       if (onSave) onSave();
     } catch (error) {
@@ -323,13 +322,10 @@ const TransferForm = ({ type, onSave, movementData }) => {
     };
 
     try {
-      await apiFetch(
-        "https://apitpv.anthonyloor.com/update_warehouse_movement",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        }
-      );
+      await apiFetch(`${API_BASE_URL}/update_warehouse_movement`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       toast.success("Movimiento actualizado (En creacion).");
       if (onSave) onSave();
     } catch (error) {
@@ -345,13 +341,10 @@ const TransferForm = ({ type, onSave, movementData }) => {
       const payload = {
         id_warehouse_movement: movementData.id_warehouse_movement,
       };
-      await apiFetch(
-        "https://apitpv.anthonyloor.com/execute_warehouse_movement",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        }
-      );
+      await apiFetch(`${API_BASE_URL}/execute_warehouse_movement`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       toast.success("Movimiento ejecutado con éxito.");
       if (onSave) onSave();
     } catch (error) {
@@ -377,13 +370,10 @@ const TransferForm = ({ type, onSave, movementData }) => {
     };
 
     try {
-      await apiFetch(
-        "https://apitpv.anthonyloor.com/update_warehouse_movement",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        }
-      );
+      await apiFetch(`${API_BASE_URL}/update_warehouse_movement`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       toast.success(`Movimiento actualizado (estado = ${newStatus}).`);
       if (onSave) onSave();
     } catch (error) {

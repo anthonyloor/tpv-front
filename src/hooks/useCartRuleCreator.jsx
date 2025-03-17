@@ -1,10 +1,12 @@
 import { useContext } from "react";
-import { useApiFetch } from "../components/utils/useApiFetch";
+import { useApiFetch } from "../utils/useApiFetch";
 import { AuthContext } from "../contexts/AuthContext";
+import getApiBaseUrl from "../utils/getApiBaseUrl";
 
 export function useCartRuleCreator() {
   const apiFetch = useApiFetch();
   const { employeeName, shopName } = useContext(AuthContext);
+  const API_BASE_URL = getApiBaseUrl();
 
   // Ahora se agrega el parámetro targetFullProductName (string vacío si no aplica)
   const createCartRuleWithResponse = async (
@@ -46,14 +48,11 @@ export function useCartRuleCreator() {
     };
 
     try {
-      const result = await apiFetch(
-        "https://apitpv.anthonyloor.com/create_cart_rule",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(discountData),
-        }
-      );
+      const result = await apiFetch(`${API_BASE_URL}/create_cart_rule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(discountData),
+      });
 
       if (result) {
         const discObj = {

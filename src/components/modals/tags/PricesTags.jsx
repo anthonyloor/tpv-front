@@ -7,11 +7,12 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { ProgressSpinner } from "primereact/progressspinner";
-import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import { AuthContext } from "../../../contexts/AuthContext";
 import useProductSearch from "../../../hooks/useProductSearch";
 import JsBarcode from "jsbarcode";
 import { TabView, TabPanel } from "primereact/tabview";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 export default function PricesTags({
   isOpen,
@@ -21,6 +22,7 @@ export default function PricesTags({
 }) {
   const { shopId, idProfile } = useContext(AuthContext);
   const apiFetch = useApiFetch();
+  const API_BASE_URL = getApiBaseUrl();
 
   // Estados locales para el diálogo de cantidad e impresión
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -189,14 +191,11 @@ export default function PricesTags({
         quantity: selectedProduct.quantity,
       };
       console.log("DEBUG: Payload para get_product_price_tag:", payload);
-      let response = await apiFetch(
-        "https://apitpv.anthonyloor.com/get_product_price_tag",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      let response = await apiFetch(`${API_BASE_URL}/get_product_price_tag`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       console.log("DEBUG: Respuesta de get_product_price_tag:", response);
       if (!Array.isArray(response)) {
         response = [response];

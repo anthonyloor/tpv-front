@@ -1,10 +1,11 @@
 import React, { useState, useRef } from "react";
-import { useApiFetch } from "../../utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 import ProductSelectionDialog from "./ProductSelectionDialog";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const ProductSearchCardForTransfer = ({
   onAddProduct,
@@ -21,6 +22,7 @@ const ProductSearchCardForTransfer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const API_BASE_URL = getApiBaseUrl();
 
   // Modo “Agregar Automático”
   const [autoAdd, setAutoAdd] = useState(false);
@@ -69,34 +71,33 @@ const ProductSearchCardForTransfer = ({
       const eanApostropheRegex = /^(\d{13})'(\d+)$/;
       let code = "";
       let results = [];
-      
+
       if (eanApostropheRegex.test(term)) {
         // Caso: EAN13 con id control stock
         const [, eanCode, control] = term.match(eanApostropheRegex);
         code = eanCode;
         const resp = await apiFetch(
-          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(code)}`,
+          `${API_BASE_URL}/product_search?b=${encodeURIComponent(code)}`,
           { method: "GET" }
         );
         const valid = resp.filter(isProductValid);
         results = valid.filter(
           (prod) =>
             (prod.ean13_combination === code ||
-             prod.ean13_combination_0 === code) &&
+              prod.ean13_combination_0 === code) &&
             String(prod.id_control_stock) === control
         );
       } else if (plainEanRegex.test(term)) {
         // Caso: EAN13 sin id control stock
         code = term;
         const resp = await apiFetch(
-          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(code)}`,
+          `${API_BASE_URL}/product_search?b=${encodeURIComponent(code)}`,
           { method: "GET" }
         );
         const valid = resp.filter(isProductValid);
         results = valid.filter(
           (prod) =>
-            prod.ean13_combination === code ||
-            prod.ean13_combination_0 === code
+            prod.ean13_combination === code || prod.ean13_combination_0 === code
         );
       } else {
         alert("Formato de búsqueda incorrecto. Ingresa un EAN13 o EAN13'id.");

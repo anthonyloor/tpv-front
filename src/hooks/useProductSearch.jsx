@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import getApiBaseUrl from "../utils/getApiBaseUrl";
 
 const useProductSearch = ({
   apiFetch,
@@ -20,6 +21,7 @@ const useProductSearch = ({
     useState(false);
   const [soldLabelProductCandidate, setSoldLabelProductCandidate] =
     useState(null);
+  const API_BASE_URL = getApiBaseUrl();
 
   // Función para agrupar productos por nombre
   const groupProductsByProductName = (products) => {
@@ -132,9 +134,7 @@ const useProductSearch = ({
       try {
         const code = searchTerm.slice(1);
         const data = await apiFetch(
-          `https://apitpv.anthonyloor.com/get_cart_rule?code=${encodeURIComponent(
-            code
-          )}`,
+          `${API_BASE_URL}/get_cart_rule?code=${encodeURIComponent(code)}`,
           { method: "GET" }
         );
         if (!data.active) {
@@ -200,9 +200,7 @@ const useProductSearch = ({
       setIsLoading(true);
       try {
         let results = await apiFetch(
-          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
-            searchTerm
-          )}`,
+          `${API_BASE_URL}/product_search?b=${encodeURIComponent(searchTerm)}`,
           { method: "GET" }
         );
         let validResults = results.filter(
@@ -252,9 +250,7 @@ const useProductSearch = ({
       try {
         const [, eanCode, controlId] = searchTerm.match(ean13ApostropheRegex);
         let results = await apiFetch(
-          `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
-            eanCode
-          )}`,
+          `${API_BASE_URL}/product_search?b=${encodeURIComponent(eanCode)}`,
           { method: "GET" }
         );
         console.log("EAN13 apostrophe search - results:", results);
@@ -323,9 +319,7 @@ const useProductSearch = ({
     setIsLoading(true);
     try {
       let results = await apiFetch(
-        `https://apitpv.anthonyloor.com/product_search?b=${encodeURIComponent(
-          searchTerm
-        )}`,
+        `${API_BASE_URL}/product_search?b=${encodeURIComponent(searchTerm)}`,
         { method: "GET" }
       );
       let validResults = results.filter(
@@ -406,14 +400,11 @@ const useProductSearch = ({
   };
 
   const handleConfirmQuantity = async (payload) => {
-    let response = await apiFetch(
-      "https://apitpv.anthonyloor.com/get_product_price_tag",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }
-    );
+    let response = await apiFetch(`${API_BASE_URL}/get_product_price_tag`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     console.log("DEBUG: Respuesta de get_product_price_tag:", response);
     let tags = [];
     if (Array.isArray(response)) {

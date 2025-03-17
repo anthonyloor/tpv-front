@@ -5,6 +5,7 @@ import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { Card } from "primereact/card";
 import CreateAddressModal from "./CreateAddressModal";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const AddressModal = ({
   isOpen,
@@ -17,6 +18,7 @@ const AddressModal = ({
   const [storeAddress, setStoreAddress] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isCreateAddressOpen, setIsCreateAddressOpen] = useState(false);
+  const API_BASE_URL = getApiBaseUrl();
 
   // Al abrir, cargamos direcciones
   useEffect(() => {
@@ -27,7 +29,7 @@ const AddressModal = ({
 
   const fetchClientAddresses = (id_customer) => {
     const token = localStorage.getItem("token");
-    fetch("https://apitpv.anthonyloor.com/get_addresses", {
+    fetch(`${API_BASE_URL}/get_addresses`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -2,13 +2,15 @@
 
 import { useState, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
-import { useApiFetch } from "../components/utils/useApiFetch";
+import { useApiFetch } from "../utils/useApiFetch";
+import getApiBaseUrl from "../utils/getApiBaseUrl";
 
 export default function useFinalizeSale() {
   const { employeeId, shopId, defaultClient, defaultAddress } =
     useContext(AuthContext);
   const [isLoading, setIsLoading] = useState(false);
   const apiFetch = useApiFetch();
+  const API_BASE_URL = getApiBaseUrl();
 
   const finalizeSale = async (
     {
@@ -157,7 +159,7 @@ export default function useFinalizeSale() {
               .split("T")[0] + " 23:59:59",
         };
         const cartRuleResponse = await apiFetch(
-          "https://apitpv.anthonyloor.com/create_cart_rule",
+          `${API_BASE_URL}/create_cart_rule`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -172,13 +174,10 @@ export default function useFinalizeSale() {
       }
       // Si se selecciona al menos un método de pago, no se crea vale descuento.
 
-      const response = await apiFetch(
-        "https://apitpv.anthonyloor.com/create_order",
-        {
-          method: "POST",
-          body: JSON.stringify(saleData),
-        }
-      );
+      const response = await apiFetch(`${API_BASE_URL}/create_order`, {
+        method: "POST",
+        body: JSON.stringify(saleData),
+      });
 
       const message = response.message || "";
       const orderIdMatch = message.match(/id (\d+)/);
@@ -200,7 +199,7 @@ export default function useFinalizeSale() {
       if (response.new_cart_rule_code) {
         try {
           const leftoverResp = await apiFetch(
-            `https://apitpv.anthonyloor.com/get_cart_rule?code=${response.new_cart_rule_code}`,
+            `${API_BASE_URL}/get_cart_rule?code=${response.new_cart_rule_code}`,
             { method: "GET" }
           );
           console.log("Respuesta get_cart_rule:", leftoverResp);

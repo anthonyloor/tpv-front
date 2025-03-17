@@ -8,8 +8,9 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import CreateCustomerModal from "./CreateCustomerModal";
 import CreateAddressModal from "./CreateAddressModal";
-import { useApiFetch } from "../../utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import { Toast } from "primereact/toast";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 export default function CustomerStepperModal({
   isOpen,
@@ -44,6 +45,8 @@ export default function CustomerStepperModal({
   const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
   const [showCreateAddressModal, setShowCreateAddressModal] = useState(false);
 
+  const API_BASE_URL = getApiBaseUrl();
+
   // Al abrir este wizard
   useEffect(() => {
     if (isOpen) {
@@ -64,7 +67,7 @@ export default function CustomerStepperModal({
   // ================== FECTHS ==================
   const fetchAllClients = () => {
     const token = localStorage.getItem("token");
-    fetch("https://apitpv.anthonyloor.com/get_all_customers", {
+    fetch(`${API_BASE_URL}/get_all_customers`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -87,13 +90,10 @@ export default function CustomerStepperModal({
 
   const fetchFilteredClients = async (filter) => {
     try {
-      const data = await apiFetch(
-        "https://apitpv.anthonyloor.com/get_customers_filtered",
-        {
-          method: "POST",
-          body: JSON.stringify({ filter, origin: "mayret" }),
-        }
-      );
+      const data = await apiFetch(`${API_BASE_URL}/get_customers_filtered`, {
+        method: "POST",
+        body: JSON.stringify({ filter, origin: "mayret" }),
+      });
       setClients(data);
       setErrorMessage("");
     } catch (error) {
@@ -114,7 +114,7 @@ export default function CustomerStepperModal({
 
   const fetchAddressesForClient = (client) => {
     const token = localStorage.getItem("token");
-    fetch("https://apitpv.anthonyloor.com/get_addresses", {
+    fetch(`${API_BASE_URL}/get_addresses`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -361,9 +361,9 @@ export default function CustomerStepperModal({
         modal
         style={{
           width: widthPercent,
-        height: heightPercent,
-        minWidth: "1000px",
-        minHeight: "750px",
+          height: heightPercent,
+          minWidth: "1000px",
+          minHeight: "750px",
         }}
       >
         <Steps

@@ -6,7 +6,8 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
-import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
   const apiFetch = useApiFetch();
@@ -18,12 +19,13 @@ const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
   const [step, setStep] = useState(1); // 1: Buscar Cliente, 2: Seleccionar Dirección
   const dt = useRef(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const API_BASE_URL = getApiBaseUrl();
 
   // Fetch Clientes
   const fetchCustomers = async (filter) => {
     try {
       const response = await apiFetch(
-        `https://apitpv.anthonyloor.com/get_customers_filtered?filter=${encodeURIComponent(
+        `${API_BASE_URL}/get_customers_filtered?filter=${encodeURIComponent(
           filter
         )}`,
         { method: "POST", body: JSON.stringify({}) }
@@ -59,7 +61,7 @@ const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
   const fetchAddresses = async (customerId) => {
     try {
       const data = await apiFetch(
-        `https://apitpv.anthonyloor.com/get_addresses?customer=${customerId}`,
+        `${API_BASE_URL}/get_addresses?customer=${customerId}`,
         { method: "POST", body: JSON.stringify({}) }
       );
       setAddresses(data);
@@ -79,7 +81,7 @@ const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
       setSelectedAddress(null);
       setStep(1);
     }
-  }, [isOpen, searchTerm, apiFetch]);
+  }, [isOpen, searchTerm, apiFetch, API_BASE_URL]);
 
   const handleCustomerSelect = (customer) => {
     setSelectedCustomer(customer);

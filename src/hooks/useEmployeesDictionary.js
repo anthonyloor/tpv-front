@@ -1,17 +1,18 @@
 import { useState, useEffect } from "react";
-import { useApiFetch } from "../components/utils/useApiFetch";
+import { useApiFetch } from "../utils/useApiFetch";
+import getApiBaseUrl from "../utils/getApiBaseUrl";
 
 export const useEmployeesDictionary = () => {
   const apiFetch = useApiFetch();
   const [employeesDict, setEmployeesDict] = useState({});
+  const API_BASE_URL = getApiBaseUrl();
 
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const data = await apiFetch(
-          "https://apitpv.anthonyloor.com/employees",
-          { method: "GET" }
-        );
+        const data = await apiFetch(`${API_BASE_URL}/employees`, {
+          method: "GET",
+        });
         if (Array.isArray(data)) {
           const dict = {};
           data.forEach((emp) => {
@@ -24,7 +25,7 @@ export const useEmployeesDictionary = () => {
       }
     };
     fetchEmployees();
-  }, [apiFetch]);
+  }, [apiFetch, API_BASE_URL]);
 
   return employeesDict;
 };

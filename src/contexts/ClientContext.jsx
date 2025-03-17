@@ -7,8 +7,9 @@ import React, {
   useCallback,
   useContext,
 } from "react";
-import { useApiFetch } from "../components/utils/useApiFetch";
+import { useApiFetch } from "../utils/useApiFetch";
 import { ConfigContext } from "./ConfigContext";
+import getApiBaseUrl from "../utils/getApiBaseUrl";
 
 export const ClientContext = createContext();
 
@@ -22,6 +23,7 @@ export const ClientProvider = ({ children }) => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const { configData } = useContext(ConfigContext);
   const apiFetch = useApiFetch();
+  const API_BASE_URL = getApiBaseUrl();
 
   const fetchDefaultClientAndAddress = useCallback(async () => {
     try {
@@ -29,7 +31,7 @@ export const ClientProvider = ({ children }) => {
       const idAddressDefault = configData.id_address_delivery_default;
 
       const clientsResponse = await apiFetch(
-        "https://apitpv.anthonyloor.com/get_customers_filtered",
+        `${API_BASE_URL}/get_customers_filtered`,
         {
           method: "POST",
           body: JSON.stringify({
@@ -52,7 +54,7 @@ export const ClientProvider = ({ children }) => {
       };
 
       const addressesResponse = await apiFetch(
-        `https://apitpv.anthonyloor.com/get_addresses?customer=${idCustomerDefault}`,
+        `${API_BASE_URL}/get_addresses?customer=${idCustomerDefault}`,
         {
           method: "POST",
           body: JSON.stringify({
@@ -86,7 +88,7 @@ export const ClientProvider = ({ children }) => {
         error
       );
     }
-  }, [apiFetch, configData]);
+  }, [apiFetch, configData, API_BASE_URL]);
 
   useEffect(() => {
     const storedClient = JSON.parse(localStorage.getItem("selectedClient"));

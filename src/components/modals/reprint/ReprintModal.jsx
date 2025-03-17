@@ -13,11 +13,12 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { Toast } from "primereact/toast";
-import { useApiFetch } from "../../../components/utils/useApiFetch";
+import { useApiFetch } from "../../../utils/useApiFetch";
 import TicketViewModal from "../ticket/TicketViewModal";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const ReprintModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
@@ -34,6 +35,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
   // Obtención una sola vez de los diccionarios
   const shopsDict = useShopsDictionary();
   const employeesDict = useEmployeesDictionary();
+  const API_BASE_URL = getApiBaseUrl();
 
   const ShopNameCell = ({ id_shop }) => (
     <span>{shopsDict[id_shop] || id_shop}</span>
@@ -53,16 +55,13 @@ const ReprintModal = ({ isOpen, onClose }) => {
       setError(null);
       setIsLoading(true);
       setMode("recent");
-      const data = await apiFetch(
-        "https://apitpv.anthonyloor.com/get_shop_orders",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            id_shop: shopId,
-            origin: "mayret",
-          }),
-        }
-      );
+      const data = await apiFetch(`${API_BASE_URL}/get_shop_orders`, {
+        method: "POST",
+        body: JSON.stringify({
+          id_shop: shopId,
+          origin: "mayret",
+        }),
+      });
       setAllOrders(
         Array.isArray(data)
           ? data.map((order) => ({
@@ -78,7 +77,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [apiFetch, shopId]);
+  }, [apiFetch, shopId, API_BASE_URL]);
 
   const handleSearchOrder = async () => {
     if (!orderId.trim()) return;
@@ -87,9 +86,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
       setIsLoading(true);
       setMode("search");
       const data = await apiFetch(
-        `https://apitpv.anthonyloor.com/get_order?id_order=${encodeURIComponent(
-          orderId
-        )}`,
+        `${API_BASE_URL}/get_order?id_order=${encodeURIComponent(orderId)}`,
         { method: "GET" }
       );
       setSearchedOrder(data);
@@ -157,7 +154,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
       (async () => {
         try {
           const data = await apiFetch(
-            `https://apitpv.anthonyloor.com/get_order?id_order=${encodeURIComponent(
+            `${API_BASE_URL}/get_order?id_order=${encodeURIComponent(
               order.id_order
             )}`,
             { method: "GET" }

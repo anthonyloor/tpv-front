@@ -1,7 +1,7 @@
 // src/components/utils/useApiFetch.jsx
 
 import { useCallback, useContext } from 'react';
-import { AuthContext } from '../../contexts/AuthContext';
+import { AuthContext } from '../contexts/AuthContext';
 
 export const useApiFetch = () => {
   const { handleSessionExpired } = useContext(AuthContext);

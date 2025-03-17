@@ -1,19 +1,21 @@
 // src/components/Stock/StoreStockPanel.jsx
 
 import React, { useEffect, useState, useContext } from "react";
-import { useApiFetch } from "../../components/utils/useApiFetch";
+import { useApiFetch } from "../../utils/useApiFetch";
 import { AuthContext } from "../../contexts/AuthContext";
 import { Card } from "primereact/card";
+import getApiBaseUrl from "../../utils/getApiBaseUrl";
 
 function StoreStockPanel({ product }) {
   const apiFetch = useApiFetch();
   const [shops, setShops] = useState([]);
   const [stocksByShop, setStocksByShop] = useState({});
   const { idProfile } = useContext(AuthContext);
+  const API_BASE_URL = getApiBaseUrl();
 
   // Cargar todas las tiendas; filtrar si no admin
   useEffect(() => {
-    apiFetch("https://apitpv.anthonyloor.com/shops", { method: "GET" })
+    apiFetch(`${API_BASE_URL}/shops`, { method: "GET" })
       .then((res) => {
         const data = res.filter((s) => s.id_shop !== 1);
         if (idProfile === 1) {
@@ -24,7 +26,7 @@ function StoreStockPanel({ product }) {
         }
       })
       .catch((err) => console.error("Error al cargar tiendas:", err));
-  }, [apiFetch, idProfile]);
+  }, [apiFetch, idProfile, API_BASE_URL]);
 
   // Calcular stocksByShop en base al product.stocks
   useEffect(() => {
