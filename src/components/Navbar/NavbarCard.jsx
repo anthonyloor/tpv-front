@@ -14,6 +14,8 @@ import { useTheme } from "../ThemeSwitcher";
 import { SplitButton } from "primereact/splitbutton";
 import { InputSwitch } from "primereact/inputswitch";
 import PriceTags from "../modals/tags/PricesTags";
+import PinPage from "../pages/PinPage";
+import { Dialog } from "primereact/dialog";
 
 const NavbarCard = () => {
   const navigate = useNavigate();
@@ -34,6 +36,7 @@ const NavbarCard = () => {
   const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
 
   const [showPricesTags, setShowPricesTags] = useState(false);
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
 
   const [configModalView] = useState("config");
 
@@ -42,6 +45,7 @@ const NavbarCard = () => {
     setConfigurationModalOpen(false);
     setIsSalesReportModalOpen(false);
     setIsCashRegisterModalOpen(false);
+    setIsPinDialogOpen(false);
   };
 
   const openTransfers = () => {
@@ -88,6 +92,12 @@ const NavbarCard = () => {
       label: shopName,
       icon: "pi pi-home",
       command: () => navigate(`/${shop.route}/app`),
+    },
+    // Agregar opción de PIN
+    {
+      label: "PIN",
+      icon: "pi pi-key",
+      command: () => setIsPinDialogOpen(true),
     },
     ...(idProfile === 1
       ? [
@@ -144,9 +154,12 @@ const NavbarCard = () => {
   const { theme, setTheme } = useTheme();
   const isDarkTheme = theme === "lara-dark-indigo";
 
-  const toggleTheme = useCallback((e) => {
-    setTheme(e.value ? "lara-dark-indigo" : "lara-light-indigo");
-  }, [setTheme]);
+  const toggleTheme = useCallback(
+    (e) => {
+      setTheme(e.value ? "lara-dark-indigo" : "lara-light-indigo");
+    },
+    [setTheme]
+  );
 
   // Opciones del SplitButton
   const menuItems = [
@@ -243,6 +256,24 @@ const NavbarCard = () => {
           onHide={() => setShowPricesTags(false)}
         />
       )}
+
+      {/* Nuevo Dialog para PinPage */}
+      <Dialog
+        visible={isPinDialogOpen}
+        onHide={() => setIsPinDialogOpen(false)}
+        modal
+        draggable={false}
+        resizable={false}
+        style={{
+          width: "20vw",
+          height: "30vh",
+          minWidth: "200px",
+          minHeight: "200px",
+        }}
+      >
+        {/* Se renderiza PinPage dentro del dialog */}
+        <PinPage />
+      </Dialog>
     </>
   );
 };

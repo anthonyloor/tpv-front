@@ -1,20 +1,30 @@
 // src/contexts/PinContext.jsx
 
-import React, { createContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 
 export const PinContext = createContext();
-const PIN_VALIDITY_DURATION = 60 * 60 * 1000;
+const PIN_VALIDITY_DURATION = 15 * 60 * 1000;
 
 const PinProvider = ({ children }) => {
-  const [dailyPin, setDailyPin] = useState('');
+  const [dailyPin, setDailyPin] = useState("");
   const timerRef = useRef(null);
 
   const generatePin = useCallback(() => {
-    const pin = Math.floor(1000 + Math.random() * 9000).toString();
-    setDailyPin(pin);
-    const expiration = Date.now() + PIN_VALIDITY_DURATION;
-    localStorage.setItem('dailyPin', pin);
-    localStorage.setItem('pinExpiration', expiration.toString());
+    const now = new Date();
+    const day = now.getDate();
+    const month = now.getMonth() + 1;
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const rawPin = 3041 * day * month * (hour + minute + 1);
+    const computedPin = (rawPin % 10000).toString().padStart(4, "0");
+
+    setDailyPin(computedPin);
 
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
@@ -31,20 +41,6 @@ const PinProvider = ({ children }) => {
   }, [generatePin]);
 
   useEffect(() => {
-    const storedPin = localStorage.getItem('dailyPin');
-    const storedExpiration = localStorage.getItem('pinExpiration');
-
-    if (storedPin && storedExpiration) {
-      const expiration = parseInt(storedExpiration, 10);
-      if (Date.now() < expiration) {
-        setDailyPin(storedPin);
-        const timeLeft = expiration - Date.now();
-        timerRef.current = setTimeout(() => {
-          generatePin();
-        }, timeLeft);
-        return () => clearTimeout(timerRef.current);
-      }
-    }
     generatePin();
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);

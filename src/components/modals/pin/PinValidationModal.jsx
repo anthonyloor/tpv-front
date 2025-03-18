@@ -1,61 +1,78 @@
-// src/components/modals/pin/PinValidationModal.jsx
-
-import React, { useState, useContext } from 'react';
-import Modal from '../Modal';
-import { PinContext } from '../../../contexts/PinContext';
+import React, { useState, useContext } from "react";
+import { Dialog } from "primereact/dialog";
+import { InputText } from "primereact/inputtext";
+import { Button } from "primereact/button";
+import { PinContext } from "../../../contexts/PinContext";
 
 const PinValidationModal = ({ isOpen, onClose, onSuccess }) => {
   const { dailyPin, regeneratePin } = useContext(PinContext);
-  const [enteredPin, setEnteredPin] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [enteredPin, setEnteredPin] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleVerifyPin = () => {
     if (enteredPin === dailyPin) {
-      setErrorMessage('');
+      setErrorMessage("");
       regeneratePin();
-      setEnteredPin('');
+      setEnteredPin("");
       onSuccess();
       onClose();
     } else {
-      setErrorMessage('PIN incorrecto. Intenta nuevamente.');
+      setErrorMessage("PIN incorrecto. Intenta nuevamente.");
     }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleVerifyPin();
+    if (e.key === "Enter") handleVerifyPin();
   };
 
   const handleClose = () => {
-    setEnteredPin('');
-    setErrorMessage('');
+    setEnteredPin("");
+    setErrorMessage("");
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="xs" height="medium" title="Verificación de PIN">
+    <Dialog
+      visible={isOpen}
+      onHide={handleClose}
+      header="PIN de autorización"
+      modal
+      draggable={false}
+      resizable={false}
+      style={{
+        width: "20vw",
+        height: "25vh",
+        minWidth: "200px",
+        minHeight: "200px",
+      }}
+    >
       <div>
         <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">Introduce el PIN:</label>
-          <input
+          <label className="block font-medium mb-3">
+            Solicita e ingresa el PIN de autorización:
+          </label>
+          <InputText
             type="password"
             value={enteredPin}
             onChange={(e) => setEnteredPin(e.target.value)}
-            className="w-full py-2 px-3 border rounded-md"
             onKeyDown={handleKeyDown}
             placeholder="4 dígitos"
+            maxLength={4}
+            className="w-full py-3 px-3 border rounded-md"
           />
         </div>
-        {errorMessage && <p className="text-red-500 text-sm mb-4">{errorMessage}</p>}
+        {errorMessage && (
+          <p className="text-red-500 text-sm mb-4">{errorMessage}</p>
+        )}
         <div className="flex justify-end">
-          <button
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          <Button
+            label="Verificar"
+            className="p-button-success"
             onClick={handleVerifyPin}
-          >
-            Verificar
-          </button>
+          />
         </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 };
 

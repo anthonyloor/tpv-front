@@ -168,7 +168,11 @@ function SalesCardActions({
         return;
       }
     }
-    setIsDiscountModalOpen(true);
+    if (idProfile === 1) {
+      setIsDiscountModalOpen(true);
+    } else {
+      setIsPinModalOpen(true);
+    }
   };
 
   const handlePinSuccess = () => {

@@ -13,15 +13,15 @@ function StoreStockPanel({ product }) {
   const { idProfile } = useContext(AuthContext);
   const API_BASE_URL = getApiBaseUrl();
 
-  // Cargar todas las tiendas; filtrar si no admin
   useEffect(() => {
     apiFetch(`${API_BASE_URL}/shops`, { method: "GET" })
       .then((res) => {
         const data = res.filter((s) => s.id_shop !== 1);
         if (idProfile === 1) {
-          setShops(data);
+          const filtered = data.filter((s) => s.id_shop !== 1);
+          setShops(filtered);
         } else {
-          const filtered = data.filter((s) => s.id_shop !== 13);
+          const filtered = data.filter((s) => s.id_shop !== 13 && s.id_shop !== 1);
           setShops(filtered);
         }
       })

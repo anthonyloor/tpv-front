@@ -475,20 +475,28 @@ function LoginPage({ shopRoute }) {
         <div className="mb-4">
           <h2 className="text-lg font-medium mb-2">Selecciona un Empleado</h2>
           <div className="grid grid-cols-3 justify-center">
-            {employees.map((employee) => (
-              <Button
-                key={employee.id_employee}
-                label={employee.employee_name}
-                className={` m-2 w-3 py-3 text-l
+            {employees
+              .filter(
+                (employee) =>
+                  !(
+                    [1, 13].includes(shopInfo.id_shop) &&
+                    employee.id_profile !== 1
+                  )
+              )
+              .map((employee) => (
+                <Button
+                  key={employee.id_employee}
+                  label={employee.employee_name}
+                  className={` m-2 w-3 py-3 text-l
                   ${
                     selectedEmployee?.id_employee === employee.id_employee
                       ? "p-button-primary"
                       : "p-button-secondary"
                   }
                 `}
-                onClick={() => setSelectedEmployee(employee)}
-              />
-            ))}
+                  onClick={() => setSelectedEmployee(employee)}
+                />
+              ))}
           </div>
         </div>
 

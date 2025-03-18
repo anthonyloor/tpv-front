@@ -20,8 +20,6 @@ const SessionExpiredDialog = () => {
     localStorage.removeItem("selectedClient");
     localStorage.removeItem("selectedAddress");
     localStorage.removeItem("configData");
-    localStorage.removeItem("dailyPin");
-    localStorage.removeItem("pinExpiration");
 
     setIsAuthenticated(false);
     setIsSessionExpired(false);

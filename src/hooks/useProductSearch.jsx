@@ -209,11 +209,6 @@ const useProductSearch = ({
               product.ean13_combination_0 !== null) &&
             product.id_product_attribute !== null
         );
-        if (idProfile !== 1) {
-          validResults = validResults.filter(
-            (product) => product.id_shop !== 1
-          );
-        }
         validResults = validResults.map((product) => {
           const { id_control_stock, ...rest } = product;
           return rest;
@@ -263,11 +258,6 @@ const useProductSearch = ({
         if (validResults.length === 0) {
           toast.error("Este producto no existe.");
           return;
-        }
-        if (idProfile !== 1) {
-          validResults = validResults.filter(
-            (product) => product.id_shop !== 1
-          );
         }
         console.log(
           "EAN13 apostrophe search - validResults tras filtrado:",
@@ -328,10 +318,6 @@ const useProductSearch = ({
             product.ean13_combination_0 !== null) &&
           product.id_product_attribute !== null
       );
-      console.log("Búsqueda normal - valid results:", validResults);
-      if (idProfile !== 1) {
-        validResults = validResults.filter((product) => product.id_shop !== 1);
-      }
       console.log("Búsqueda normal - valid results filtrados:", validResults);
       const filteredForCurrentShop = validResults.filter(
         (product) => product.id_shop === shopId
