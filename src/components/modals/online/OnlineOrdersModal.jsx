@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { useApiFetch } from "../../../utils/useApiFetch";
-import { AuthContext } from "../../../contexts/AuthContext";
 import { toast } from "sonner";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
@@ -18,52 +17,12 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const [searchedOrder, setSearchedOrder] = useState(null);
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { shopId } = useContext(AuthContext);
 
   // Obtención una sola vez de los diccionarios
   const shopsDict = useShopsDictionary();
   const employeesDict = useEmployeesDictionary();
 
   const API_BASE_URL = getApiBaseUrl();
-
-  // Nuevo diccionario de estados de órdenes
-  const orderStateDict = {
-    1: "Bizum",
-    2: "Pago aceptado",
-    3: "Preparación en curso",
-    4: "Enviado",
-    5: "Entregado",
-    6: "Cancelado",
-    7: "Reembolsado",
-    8: "Error en pago",
-    9: "Pedido pendiente por falta de stock (pagado)",
-    10: "En espera de pago por transferencia bancaria",
-    11: "Pago remoto aceptado",
-    12: "Pedido pendiente por falta de stock (no pagado)",
-    13: "En espera de validación por contra reembolso.",
-    14: "Awaiting for PayPal payment",
-    15: "Listo para recoger",
-    18: "Parcialmente enviado",
-    19: "Venta en TPV",
-    20: "Presupuesto",
-    21: "Facturación externa",
-    22: "Modificación de pedido",
-    23: "Awaiting for PayPal payment",
-    26: "En espera de pago de vencimientos",
-    27: "Bizum",
-    28: "Redsys - Esperando pago",
-    29: "Redsys - Pago por adelantado",
-    30: "Redsys - Esperando confirmación",
-    31: "En espera de la aplicación móvil de pago de PayPal",
-    32: "Mobile App PayPal Payment Accepted",
-    34: "Redsys - Revisar pago",
-    35: "SEUR: Envío con Incidencia",
-    36: "SEUR: Envío en tránsito",
-    37: "SEUR: Devolución en progreso",
-    38: "SEUR: Disponible en tienda",
-    39: "SEUR: Intervención requerida",
-    40: "SEUR Pago reembolso",
-  };
 
   const ShopNameCell = ({ id_shop }) => (
     <span>{shopsDict[id_shop] || id_shop}</span>
@@ -262,9 +221,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
               />
               <Column
                 header="Estado"
-                body={(row) =>
-                  orderStateDict[row.current_state] || row.current_state
-                }
+                field="current_state_name"
                 style={{ width: "5px", textAlign: "center" }}
               />
               <Column
@@ -328,9 +285,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
               />
               <Column
                 header="Estado"
-                body={(row) =>
-                  orderStateDict[row.current_state] || row.current_state
-                }
+                field="current_state_name"
                 style={{ width: "5px", textAlign: "left" }}
               />
               <Column
