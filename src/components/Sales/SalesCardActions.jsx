@@ -569,12 +569,14 @@ function SalesCardActions({
     >
       {/* Primera fila de botones */}
       <div className="flex gap-2">
-        <Button
-          label={isCompact ? "" : labels.pedidos}
-          icon="pi pi-shopping-cart"
-          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
-          onClick={() => setIsOnlineOrdersModalOpen(true)}
-        />
+        {idProfile === 1 && (
+          <Button
+            label={isCompact ? "" : labels.pedidos}
+            icon="pi pi-shopping-cart"
+            className={isCompact ? "p-button-icon-only w-full" : "w-full"}
+            onClick={() => setIsOnlineOrdersModalOpen(true)}
+          />
+        )}
         <Button
           label={isCompact ? "" : labels.devoluciones}
           icon="pi pi-undo"

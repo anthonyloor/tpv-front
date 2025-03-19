@@ -441,6 +441,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
         <Button
           label="Marcar como Recibido"
           className="w-full p-button-warning"
+          disabled={String(shopId) !== String(selectedDestinationStore)}
           onClick={() => handleUpdateMovementStatus("Recibido")}
         />
       );

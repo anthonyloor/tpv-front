@@ -93,21 +93,12 @@ const NavbarCard = () => {
       icon: "pi pi-home",
       command: () => navigate(`/${shop.route}/app`),
     },
-    // Agregar opción de PIN
+
     {
-      label: "PIN",
-      icon: "pi pi-key",
-      command: () => setIsPinDialogOpen(true),
+      label: "Gestion stock",
+      icon: "pi pi-warehouse",
+      command: openTransfers,
     },
-    ...(idProfile === 1
-      ? [
-          {
-            label: "Gestion stock",
-            icon: "pi pi-warehouse",
-            command: openTransfers,
-          },
-        ]
-      : []),
     {
       label: "Caja",
       icon: "pi pi-desktop",
@@ -124,6 +115,11 @@ const NavbarCard = () => {
             label: "Reportes",
             icon: "pi pi-chart-bar",
             command: openSalesReport,
+          },
+          {
+            label: "PIN",
+            icon: "pi pi-key",
+            command: () => setIsPinDialogOpen(true),
           },
         ]
       : []),
