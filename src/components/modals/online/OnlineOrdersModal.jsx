@@ -17,8 +17,9 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const [searchedOrder, setSearchedOrder] = useState(null);
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderDetailsVisible, setOrderDetailsVisible] = useState(false);
 
-  // Obtención una sola vez de los diccionarios
   const shopsDict = useShopsDictionary();
   const employeesDict = useEmployeesDictionary();
 
@@ -31,11 +32,10 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     <span>{employeesDict[id_employee] || id_employee}</span>
   );
 
-  // Función para formatear fecha => dd-mm-yyyy hh:mm
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const dateObj = new Date(dateString);
-    if (isNaN(dateObj)) return dateString; // Si no es fecha válida, devuelves la cadena original
+    if (isNaN(dateObj)) return dateString;
 
     const dd = String(dateObj.getDate()).padStart(2, "0");
     const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
@@ -53,7 +53,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       setSearchedOrder(null);
       setSearchOrderId("");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const loadOnlineOrders = async () => {
@@ -93,9 +92,21 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleOpenOrder = (order) => {
+    setSelectedOrder(order);
+    setOrderDetailsVisible(true);
+  };
+
+  const actionBodyTemplate = (rowData) => (
+    <Button
+      icon="pi pi-eye"
+      className="p-button-rounded p-button-text"
+      onClick={() => handleOpenOrder(rowData)}
+    />
+  );
+
   const ordersToDisplay = searchedOrder ? [searchedOrder] : orders;
 
-  // Nuevos arreglos filtrados según condiciones
   const pendingOrders = ordersToDisplay.filter(
     (order) =>
       order.valid !== true &&
@@ -107,35 +118,33 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       [5, 6, 7, 19].includes(Number(order.current_state))
   );
 
-  // Estados para filas expandidas por tabla
   const [pendingExpandedRows, setPendingExpandedRows] = useState(null);
   const [completedExpandedRows, setCompletedExpandedRows] = useState(null);
 
-  // Template para mostrar detalles de pedido (order_details) usando DataTable
   const rowExpansionTemplate = (data) => {
     return (
-      <div className="p-3">
+      <div className="">
         <DataTable
           value={data.order_details || []}
           responsiveLayout="scroll"
           header="Detalles del pedido"
-          tableStyle={{ minWidth: "50rem" }}
+          className="p-datatable-sm"
         >
           <Column
-            header="Cantidad"
+            header="Und"
             field="product_quantity"
-            bodyStyle={{ textAlign: "left", borderBottom: "1px solid #ddd" }}
+            bodyStyle={{ textAlign: "center", width: "5%" }}
           />
           <Column
             header="Producto"
             field="product_name"
-            bodyStyle={{ textAlign: "left", borderBottom: "1px solid #ddd" }}
+            bodyStyle={{ textAlign: "left", width: "80%" }}
           />
           <Column
-            header="Total (€)"
+            header="Total €"
             field="total_price_tax_incl"
             body={(rowData) => Number(rowData.total_price_tax_incl).toFixed(2)}
-            bodyStyle={{ textAlign: "left", borderBottom: "1px solid #ddd" }}
+            bodyStyle={{ textAlign: "center", width: "10%" }}
           />
         </DataTable>
       </div>
@@ -143,170 +152,409 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Dialog
-      header="Pedidos Online"
-      visible={isOpen}
-      onHide={onClose}
-      modal
-      draggable={false}
-      resizable={false}
-      style={{
-        width: "60vw",
-        height: "70vh",
-        minWidth: "900px",
-        minHeight: "650px",
-      }}
-    >
-      <div className="p-3">
-        {/* Sección de búsqueda */}
-        <div className="flex gap-2 mb-3">
-          <InputText
-            value={searchOrderId}
-            onChange={(e) => setSearchOrderId(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSearchOrder();
-            }}
-            placeholder="Número de pedido"
-            className="flex-1"
-          />
-          <Button
-            label="Buscar"
-            onClick={handleSearchOrder}
-            disabled={isLoading || !searchOrderId.trim()}
-          />
+    <>
+      <Dialog
+        header="Pedidos Online"
+        visible={isOpen}
+        onHide={onClose}
+        modal
+        draggable={false}
+        resizable={false}
+        style={{
+          maxWidth: "60vw",
+          maxHeight: "70vh",
+          minWidth: "900px",
+          minHeight: "650px",
+        }}
+      >
+        <div className="p-2">
+          <div className="flex gap-2 mb-2">
+            <InputText
+              value={searchOrderId}
+              onChange={(e) => setSearchOrderId(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSearchOrder();
+              }}
+              placeholder="Número de pedido"
+              className="flex-1"
+            />
+            <Button
+              label="Buscar"
+              onClick={handleSearchOrder}
+              disabled={isLoading || !searchOrderId.trim()}
+            />
+          </div>
+          <TabView>
+            <TabPanel header="Pedidos pendientes">
+              <DataTable
+                value={pendingOrders}
+                loading={isLoading}
+                emptyMessage="No hay pedidos pendientes para mostrar."
+                paginator
+                rows={8}
+                expandedRows={pendingExpandedRows}
+                onRowToggle={(e) => setPendingExpandedRows(e.data)}
+                rowExpansionTemplate={rowExpansionTemplate}
+                tableStyle={{ width: "100%" }}
+              >
+                <Column
+                  expander
+                  style={{
+                    width: "5px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  body={actionBodyTemplate}
+                  header="Acción"
+                  style={{
+                    width: "50px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  field="id_order"
+                  header="# Pedido"
+                  style={{
+                    width: "80px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Fecha"
+                  body={(row) => formatDate(row.date_add)}
+                  style={{
+                    width: "230px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Cliente"
+                  field="customer_name"
+                  style={{
+                    width: "150px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Dirección"
+                  field="address_delivery_name"
+                  style={{
+                    width: "200px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Pago"
+                  field="payment"
+                  body={(rowData) => {
+                    const paymentMethod = rowData.payment
+                      ? rowData.payment.toLowerCase()
+                      : "";
+                    if (
+                      paymentMethod.includes("redsys") ||
+                      paymentMethod.includes("tarjeta")
+                    ) {
+                      return <i className="pi pi-credit-card"></i>;
+                    } else if (
+                      paymentMethod.includes("contra reembolso") ||
+                      paymentMethod.includes("contrareembolso") ||
+                      paymentMethod.includes("efectivo")
+                    ) {
+                      return <i className="pi pi-wallet"></i>;
+                    }
+                    return rowData.payment;
+                  }}
+                  style={{
+                    width: "100px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  field="total_paid"
+                  header="Total (€)"
+                  body={(data) => Number(data.total_paid)?.toFixed(2)}
+                  style={{
+                    width: "100px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Estado"
+                  field="current_state_name"
+                  style={{
+                    width: "150px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Origen"
+                  field="origin"
+                  body={(row) => {
+                    const color =
+                      row.origin === "mayret" ? "bg-blue-500" : "bg-green-500";
+                    let originText =
+                      row.origin === "fajasmaylu" ? "fajas\nmaylu" : row.origin;
+                    return (
+                      <div
+                        className={`text-white py-1 px-2 rounded ${color} text-center`}
+                      >
+                        {originText}
+                      </div>
+                    );
+                  }}
+                  style={{
+                    width: "80px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+              </DataTable>
+            </TabPanel>
+            <TabPanel header="Pedidos completados">
+              <DataTable
+                value={completedOrders}
+                loading={isLoading}
+                emptyMessage="No hay pedidos completados para mostrar."
+                paginator
+                rows={8}
+                expandedRows={completedExpandedRows}
+                onRowToggle={(e) => setCompletedExpandedRows(e.data)}
+                rowExpansionTemplate={rowExpansionTemplate}
+              >
+                <Column
+                  expander
+                  style={{
+                    width: "5px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  body={actionBodyTemplate}
+                  header="Acción"
+                  style={{
+                    width: "50px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  field="id_order"
+                  header="# Pedido"
+                  style={{
+                    width: "80px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Fecha"
+                  body={(row) => formatDate(row.date_add)}
+                  style={{
+                    width: "230px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Cliente"
+                  field="customer_name"
+                  style={{
+                    width: "150px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Dirección"
+                  field="address_delivery_name"
+                  style={{
+                    width: "200px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Pago"
+                  field="payment"
+                  body={(rowData) => {
+                    const paymentMethod = rowData.payment
+                      ? rowData.payment.toLowerCase()
+                      : "";
+                    if (
+                      paymentMethod.includes("redsys") ||
+                      paymentMethod.includes("tarjeta")
+                    ) {
+                      return <i className="pi pi-credit-card"></i>;
+                    } else if (
+                      paymentMethod.includes("contra reembolso") ||
+                      paymentMethod.includes("contrareembolso") ||
+                      paymentMethod.includes("efectivo")
+                    ) {
+                      return <i className="pi pi-wallet"></i>;
+                    }
+                    return rowData.payment;
+                  }}
+                  style={{
+                    width: "100px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  field="total_paid"
+                  header="Total (€)"
+                  body={(data) => Number(data.total_paid)?.toFixed(2)}
+                  style={{
+                    width: "100px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Estado"
+                  field="current_state_name"
+                  style={{
+                    width: "150px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  header="Origen"
+                  field="origin"
+                  body={(row) => {
+                    const color =
+                      row.origin === "mayret" ? "bg-blue-500" : "bg-green-500";
+                    let originText =
+                      row.origin === "fajasmaylu" ? "fajas\nmaylu" : row.origin;
+                    return (
+                      <div
+                        className={`text-white py-1 px-2 rounded ${color} text-center`}
+                      >
+                        {originText}
+                      </div>
+                    );
+                  }}
+                  style={{
+                    width: "80px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+              </DataTable>
+            </TabPanel>
+          </TabView>
         </div>
-        <TabView>
-          <TabPanel header="Pedidos pendientes">
+      </Dialog>
+
+      <Dialog
+        header="Detalles del Pedido"
+        visible={orderDetailsVisible}
+        onHide={() => {
+          setOrderDetailsVisible(false);
+          setSelectedOrder(null);
+        }}
+        modal
+        style={{ width: "50vw" }}
+      >
+        {selectedOrder && (
+          <div>
+            <div className="p-grid p-fluid mb-3">
+              <div className="p-col-6">
+                <strong>ID Pedido:</strong> {selectedOrder.id_order}
+              </div>
+              <div className="p-col-6">
+                <strong>Shop:</strong> {selectedOrder.id_shop}
+              </div>
+              <div className="p-col-6">
+                <strong>Cliente:</strong> {selectedOrder.customer_name}
+              </div>
+              <div className="p-col-6">
+                <strong>Empleado:</strong> {selectedOrder.id_employee}
+              </div>
+              <div className="p-col-6">
+                <strong>Pago:</strong> {selectedOrder.payment}
+              </div>
+              <div className="p-col-6">
+                <strong>Total (€):</strong>{" "}
+                {Number(selectedOrder.total_paid)?.toFixed(2)}
+              </div>
+              <div className="p-col-6">
+                <strong>Estado:</strong> {selectedOrder.current_state_name}
+              </div>
+              <div className="p-col-6">
+                <strong>Fecha:</strong> {formatDate(selectedOrder.date_add)}
+              </div>
+              <div className="p-col-12">
+                <strong>Origen:</strong> {selectedOrder.origin}
+              </div>
+            </div>
             <DataTable
-              value={pendingOrders}
-              loading={isLoading}
-              emptyMessage="No hay pedidos pendientes para mostrar."
-              paginator
-              rows={7}
-              expandedRows={pendingExpandedRows}
-              onRowToggle={(e) => setPendingExpandedRows(e.data)}
-              rowExpansionTemplate={rowExpansionTemplate}
+              value={selectedOrder.order_details || []}
+              responsiveLayout="scroll"
+              header="Detalles del pedido"
+              className="p-datatable-sm"
             >
-              <Column expander style={{ width: "5px" }} />
               <Column
-                field="id_order"
-                header="# Pedido"
-                style={{ width: "5px", textAlign: "center" }}
+                header="Producto"
+                field="product_name"
+                bodyStyle={{ textAlign: "left" }}
               />
               <Column
-                header="Fecha"
-                body={(row) => formatDate(row.date_add)}
-                style={{ width: "130px", textAlign: "center" }}
+                header="Und"
+                field="product_quantity"
+                bodyStyle={{ textAlign: "center" }}
               />
               <Column
-                header="ID Cliente"
-                field="id_customer"
-                style={{ width: "5px", textAlign: "center" }}
+                header="Precio"
+                field="product_price"
+                body={(rowData) => Number(rowData.product_price)?.toFixed(2)}
+                bodyStyle={{ textAlign: "center" }}
               />
               <Column
-                header="ID Dirección"
-                field="id_address_delivery"
-                style={{ width: "5px", textAlign: "center" }}
-              />
-              <Column
-                field="payment"
-                header="Forma de pago"
-                style={{ width: "100px", textAlign: "center" }}
-              />
-              <Column
-                field="total_paid"
-                header="Total (€)"
-                body={(data) => Number(data.total_paid)?.toFixed(2)}
-                style={{ width: "50px", textAlign: "center" }}
-              />
-              <Column
-                header="Estado"
-                field="current_state_name"
-                style={{ width: "5px", textAlign: "center" }}
-              />
-              <Column
-                field="origin"
-                header="Origen"
-                body={(row) => {
-                  const color =
-                    row.origin === "mayret" ? "bg-blue-500" : "bg-green-500";
-                  return (
-                    <span className={`text-white py-1 px-2 rounded ${color}`}>
-                      {row.origin}
-                    </span>
-                  );
-                }}
-                style={{ width: "5px", textAlign: "center" }}
+                header="Total €"
+                field="total_price_tax_incl"
+                body={(rowData) =>
+                  Number(rowData.total_price_tax_incl)?.toFixed(2)
+                }
+                bodyStyle={{ textAlign: "center" }}
               />
             </DataTable>
-          </TabPanel>
-          <TabPanel header="Pedidos completados">
-            <DataTable
-              value={completedOrders}
-              loading={isLoading}
-              emptyMessage="No hay pedidos completados para mostrar."
-              paginator
-              rows={7}
-              expandedRows={completedExpandedRows}
-              onRowToggle={(e) => setCompletedExpandedRows(e.data)}
-              rowExpansionTemplate={rowExpansionTemplate}
-            >
-              <Column expander style={{ width: "5px", textAlign: "left" }} />
-              <Column
-                field="id_order"
-                header="# Pedido"
-                style={{ width: "5px", textAlign: "left" }}
-              />
-              <Column
-                header="Fecha"
-                body={(row) => formatDate(row.date_add)}
-                style={{ width: "130px", textAlign: "left" }}
-              />
-              <Column
-                header="ID Cliente"
-                field="id_customer"
-                style={{ width: "5px", textAlign: "left" }}
-              />
-              <Column
-                header="ID Dirección"
-                field="id_address_delivery"
-                style={{ width: "5px", textAlign: "left" }}
-              />
-              <Column
-                field="payment"
-                header="Forma de pago"
-                style={{ width: "100px", textAlign: "left" }}
-              />
-              <Column
-                field="total_paid"
-                header="Total (€)"
-                body={(data) => Number(data.total_paid)?.toFixed(2)}
-                style={{ width: "50px", textAlign: "left" }}
-              />
-              <Column
-                header="Estado"
-                field="current_state_name"
-                style={{ width: "5px", textAlign: "left" }}
-              />
-              <Column
-                field="origin"
-                header="Origen"
-                body={(row) => {
-                  const color =
-                    row.origin === "mayret" ? "bg-blue-500" : "bg-green-500";
-                  return (
-                    <span className={`text-white py-1 px-2 rounded ${color}`}>
-                      {row.origin}
-                    </span>
-                  );
-                }}
-                style={{ width: "5px", textAlign: "left" }}
-              />
-            </DataTable>
-          </TabPanel>
-        </TabView>
-      </div>
-    </Dialog>
+          </div>
+        )}
+      </Dialog>
+    </>
   );
 };
 
