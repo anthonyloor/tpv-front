@@ -1,7 +1,13 @@
 import createPdf from "./createPdf.js";
+import JsBarcode from "jsbarcode";
 
 // Se actualiza la función para recibir orderData y config como parámetros
-const generateTicket = async (output, orderData, config) => {
+const generateTicket = async (
+  output,
+  orderData,
+  config,
+  employeesDict = {}
+) => {
   if (!orderData) {
     return {
       success: false,
@@ -53,15 +59,29 @@ const generateTicket = async (output, orderData, config) => {
   const formattedDate = dateObj.toLocaleDateString("es-ES");
   const formattedTime = dateObj.toLocaleTimeString("es-ES");
 
-  const content = [
-    // LOGO
-    {
-      image:
-        "data:image/png;base64,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AAASUVORK5CYII=", //Logo
+  const generateBarcodeDataUrl = (text) => {
+    const canvas = document.createElement("canvas");
+    JsBarcode(canvas, text, {
+      format: "code128",
+      width: 1,
+      height: 30,
+      displayValue: false,
+      margin: 2,
+      rotation: 0,
+    });
+    return canvas.toDataURL("image/png");
+  };
 
-      fit: [141.73, 56.692],
-      alignment: "center",
-    },
+  const content = [
+    ...(config.ticket_logo_base64
+      ? [
+          {
+            image: config.ticket_logo_base64,
+            fit: [141.73, 56.692],
+            alignment: "center",
+          },
+        ]
+      : []),
     // Encabezados de config en mayúsculas y negrita
     ...(config.ticket_text_header_1
       ? [
@@ -84,7 +104,7 @@ const generateTicket = async (output, orderData, config) => {
       : []),
     // Datos: fecha y hora extraída de date_add
     {
-      margin: [0, 10, 10, 0],
+      margin: [0, 10, 15, 0],
       table: {
         widths: ["50%", "50%"],
         body: [
@@ -100,27 +120,40 @@ const generateTicket = async (output, orderData, config) => {
       },
       layout: "noBorders",
     },
-    // Cliente y Empleado
+    // Cliente, Direccion y Empleado
     {
-      text: `CLIENTE: ${orderData.customer_name}`,
+      text: `CLIENTE: ${
+        Number(orderData.id_customer) === Number(config.id_customer_default)
+          ? "TPV"
+          : orderData.customer_name
+      }`,
       style: "tHeaderValue",
-      margin: [0, 10, 10, 0],
+      margin: [0, 2, 15, 0],
     },
     {
-      text: `EMPLEADO: ${orderData.id_employee}`,
+      text: `DIRECCION: ${orderData.address_delivery_name}`,
       style: "tHeaderValue",
-      margin: [0, 2, 10, 0],
+      margin: [0, 2, 15, 0],
+    },
+    {
+      text: `EMPLEADO: ${
+        employeesDict[orderData.id_employee]
+          ? employeesDict[orderData.id_employee]
+          : "N/A"
+      }`,
+      style: "tHeaderValue",
+      margin: [0, 6, 15, 0],
     },
     // Tabla de productos
     {
-      margin: [0, 10, 10, 0],
+      margin: [0, 10, 15, 0],
       table: {
-        widths: ["50%", "15%", "17.5%", "17.5%"],
+        widths: ["45%", "13%", "17%", "20%"],
         headerRows: 1,
         body: productTableBody,
       },
       layout: {
-        hLineWidth: () => 0.5,
+        hLineWidth: () => 1,
         vLineWidth: () => 0,
         hLineColor: () => "#f2f0f0",
         paddingTop: (i, node) => (i === 0 ? 10 : 5),
@@ -128,7 +161,7 @@ const generateTicket = async (output, orderData, config) => {
     },
     // Tabla de totales
     {
-      margin: [0, 10, 10, 0],
+      margin: [0, 10, 20, 0],
       table: {
         widths: ["50%", "50%"],
         body: [
@@ -157,9 +190,9 @@ const generateTicket = async (output, orderData, config) => {
       layout: "noBorders",
     },
     // Forma de pago
-    { text: "FORMA DE PAGO:", style: "tTotals", margin: [0, 10, 10, 0] },
+    { text: "FORMA DE PAGO:", style: "tTotals", margin: [0, 10, 15, 0] },
     {
-      margin: [0, 2, 10, 0],
+      margin: [0, 2, 15, 0],
       table: {
         widths: ["33%", "33%", "33%"],
         body: [
@@ -196,7 +229,7 @@ const generateTicket = async (output, orderData, config) => {
             text: config.ticket_text_footer_1.toUpperCase(),
             style: "text",
             alignment: "center",
-            margin: [0, 5, 10, 0],
+            margin: [0, 5, 15, 0],
             bold: true,
           },
         ]
@@ -207,24 +240,22 @@ const generateTicket = async (output, orderData, config) => {
             text: config.ticket_text_footer_2.toUpperCase(),
             style: "text",
             alignment: "center",
-            margin: [0, 2, 10, 0],
+            margin: [0, 2, 15, 0],
             bold: true,
           },
         ]
       : []),
-    // Se sustituye el QR por uno que contenga el id_order
     {
       stack: [
         {
-          qr: orderData.id_order.toString(),
-          fit: 115,
+          image: generateBarcodeDataUrl(orderData.id_order.toString()),
           alignment: "center",
-          eccLevel: "Q",
           margin: [0, 10, 10, 3],
         },
         {
-          text: "Ticket ID: " + orderData.id_order,
+          text: "#" + orderData.id_order,
           style: "text",
+          fontSize: 14,
           alignment: "center",
         },
       ],

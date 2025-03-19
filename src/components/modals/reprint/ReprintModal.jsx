@@ -19,6 +19,7 @@ import { AuthContext } from "../../../contexts/AuthContext";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import { ConfigContext } from "../../../contexts/ConfigContext";
 
 const ReprintModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
@@ -36,6 +37,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
   const shopsDict = useShopsDictionary();
   const employeesDict = useEmployeesDictionary();
   const API_BASE_URL = getApiBaseUrl();
+  const { configData } = useContext(ConfigContext);
 
   const ShopNameCell = ({ id_shop }) => (
     <span>{shopsDict[id_shop] || id_shop}</span>
@@ -292,34 +294,101 @@ const ReprintModal = ({ isOpen, onClose }) => {
                 : "No se encontró esa venta."
             }
           >
-            <Column selectionMode="single" headerStyle={{ width: "1px" }} />
-            <Column expander style={{ width: "1px" }} />
-            <Column field="id_order" header="# Ticket" />
+            <Column
+              selectionMode="single"
+              style={{ width: "5px", textAlign: "center", padding: "0.5rem" }}
+              alignHeader={"center"}
+            />
+            <Column
+              expander
+              style={{
+                width: "5px",
+                textAlign: "center",
+                padding: "0.5rem",
+              }}
+              alignHeader={"center"}
+            />
+            <Column
+              field="id_order"
+              header="# Ticket"
+              style={{ width: "80px", textAlign: "center", padding: "0.5rem" }}
+            />
             <Column
               field="date_add"
-              header="Fecha"
-              body={(rowData) => {
-                const date = new Date(rowData.date_add);
-                const y = date.getFullYear();
-                const m = String(date.getMonth() + 1).padStart(2, "0");
-                const d = String(date.getDate()).padStart(2, "0");
-                const hh = String(date.getHours()).padStart(2, "0");
-                const mm = String(date.getMinutes()).padStart(2, "0");
-                return `${y}-${m}-${d} ${hh}:${mm}`;
+              header="Fecha compra"
+              style={{
+                width: "230px",
+                textAlign: "center",
+                padding: "0.5rem",
               }}
+              alignHeader={"center"}
             />
             <Column
               header="Tienda"
-              body={(row) => <ShopNameCell id_shop={row.id_shop} />}
+              body={(row) => (
+                <ShopNameCell
+                  id_shop={row.id_shop}
+                  style={{
+                    width: "150px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
+              )}
             />
-            <Column field="id_customer" header="Cliente" />
-            <Column field="payment" header="Pago" />
+            <Column
+              header="Cliente"
+              body={(row) =>
+                row.id_customer === configData.id_customer_default
+                  ? "TPV"
+                  : row.customer_name
+              }
+              style={{
+                width: "150px",
+                textAlign: "center",
+                padding: "0.5rem",
+              }}
+              alignHeader={"center"}
+            />
+            <Column
+              header="Pago"
+              field="payment"
+              body={(rowData) => {
+                const paymentMethod = rowData.payment
+                  ? rowData.payment.toLowerCase()
+                  : "";
+                if (
+                  paymentMethod.includes("redsys") ||
+                  paymentMethod.includes("tarjeta")
+                ) {
+                  return <i className="pi pi-credit-card"></i>;
+                } else if (
+                  paymentMethod.includes("contra reembolso") ||
+                  paymentMethod.includes("contrareembolso") ||
+                  paymentMethod.includes("efectivo")
+                ) {
+                  return <i className="pi pi-wallet"></i>;
+                }
+                return rowData.payment;
+              }}
+              style={{
+                width: "100px",
+                textAlign: "center",
+                padding: "0.5rem",
+              }}
+              alignHeader={"center"}
+            />
             <Column
               field="total_paid"
-              header="Total (€)"
+              header="Total"
               body={(data) => data.total_paid?.toFixed(2)}
-              sortable
-              style={{ textAlign: "right" }}
+              style={{
+                width: "100px",
+                textAlign: "center",
+                padding: "0.5rem",
+              }}
+              alignHeader={"center"}
             />
           </DataTable>
           {/* Botones para reimprimir basados en la venta seleccionada */}

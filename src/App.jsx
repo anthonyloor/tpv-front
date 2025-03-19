@@ -5,7 +5,6 @@ import { Toaster } from "sonner";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import PinPage from "./components/pages/PinPage";
 import LoginPage from "./components/pages/LoginPage";
-import NotFoundPage from "./components/pages/NotFoundPage";
 import { AuthContext } from "./contexts/AuthContext";
 import PrivateRoute from "./components/base/PrivateRoute";
 import ConfigLoader from "./components/ConfigLoader";
@@ -119,7 +118,8 @@ function App() {
           }
         />
         <Route path="/:shopRoute" element={<LoginPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+
+        <Route path="*" element={<LoginPage />} />
       </Routes>
     </div>
   );

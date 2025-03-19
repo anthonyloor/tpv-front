@@ -6,6 +6,7 @@ import { useApiFetch } from "../../../utils/useApiFetch";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import generateTicket from "../../../utils/ticket";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
 const TicketViewModal = ({
   isOpen,
@@ -25,6 +26,7 @@ const TicketViewModal = ({
   const [previewHtml, setPreviewHtml] = useState("");
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
+  const employeesDict = useEmployeesDictionary();
 
   const buildPreviewHtmlForTicket = useCallback(
     (orderData, isGiftTicket) => {
@@ -253,17 +255,16 @@ const TicketViewModal = ({
     API_BASE_URL,
   ]);
 
-  // SE MODIFICA para llamar a generateTicket pasando fetchedData y configData
   useEffect(() => {
     if (printOnOpen && fetchedData && configData) {
       (async () => {
-        const response = await generateTicket("print", fetchedData, configData);
+        const response = await generateTicket("print", fetchedData, configData, employeesDict);
         if (!response.success) {
           console.error("Error al imprimir ticket:", response.message);
         }
       })();
     }
-  }, [printOnOpen, previewHtml, fetchedData, configData]);
+  }, [printOnOpen, previewHtml, fetchedData, configData, employeesDict]);
 
   if (!isOpen) return null;
 

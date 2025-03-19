@@ -137,6 +137,7 @@ function LoginPage({ shopRoute }) {
             const newLicenseData = {
               licenseKey: key,
               id_shop: shopData.id_shop,
+              url: shopRoute,
             };
             localStorage.setItem("licenseData", JSON.stringify(newLicenseData));
             setLicenseData(newLicenseData);
@@ -151,6 +152,15 @@ function LoginPage({ shopRoute }) {
               localStorage.getItem("licenseData")
             );
             if (storedLicenseData && storedLicenseData.licenseKey === key) {
+              const updatedLicenseData = {
+                ...storedLicenseData,
+                url: shopRoute,
+              };
+              localStorage.setItem(
+                "licenseData",
+                JSON.stringify(updatedLicenseData)
+              );
+              setLicenseData(updatedLicenseData);
               setHasLicense(true);
               setShowLicenseModal(false);
               proceedToLoadShopAndEmployees();
@@ -224,6 +234,10 @@ function LoginPage({ shopRoute }) {
   };
 
   useEffect(() => {
+    if (licenseData && licenseData.url && licenseData.url !== shopRoute) {
+      navigate(`/${licenseData.url}`);
+      return;
+    }
     if (licenseData) {
       const storedIdShop = licenseData.id_shop;
       const currentShopData = routeToShopInfo[shopRoute];
@@ -460,7 +474,8 @@ function LoginPage({ shopRoute }) {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-800">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-800">
+      <img src="/logo-marca.png" alt="Logo de la Marca" className="mb-8" />
       <Card
         className="w-full max-w-3xl"
         style={{
