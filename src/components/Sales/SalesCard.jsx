@@ -448,7 +448,10 @@ function SalesCard({
               />
               <Column
                 body={(rowData) =>
-                  rowData.product_name + " " + rowData.combination_name
+                  rowData.product_name +
+                  (rowData.combination_name
+                    ? " " + rowData.combination_name
+                    : "")
                 }
                 header="Producto"
                 style={{ width: "50%" }}

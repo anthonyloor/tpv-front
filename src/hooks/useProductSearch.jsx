@@ -205,9 +205,8 @@ const useProductSearch = ({
         );
         let validResults = results.filter(
           (product) =>
-            (product.ean13_combination !== null ||
-              product.ean13_combination_0 !== null) &&
-            product.id_product_attribute !== null
+            product.ean13_combination !== null ||
+            product.ean13_combination_0 !== null
         );
         validResults = validResults.map((product) => {
           const { id_control_stock, ...rest } = product;
@@ -251,9 +250,7 @@ const useProductSearch = ({
         console.log("EAN13 apostrophe search - results:", results);
         let validResults = results.filter(
           (p) =>
-            (p.ean13_combination === eanCode ||
-              p.ean13_combination_0 === eanCode) &&
-            `${p.id_control_stock}` === controlId
+            p.ean13_combination === eanCode || p.ean13_combination_0 === eanCode
         );
         if (validResults.length === 0) {
           toast.error("Este producto no existe.");

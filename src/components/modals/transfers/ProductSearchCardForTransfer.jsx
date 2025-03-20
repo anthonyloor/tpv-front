@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { InputText } from "primereact/inputtext";
@@ -30,6 +30,31 @@ const ProductSearchCardForTransfer = ({
   // Para controlar el foco en el input
   const inputRef = useRef(null);
 
+  // Nueva función para mantener el foco en el input si agregar automático está activo
+  const handleInputBlur = () => {
+    if (
+      autoAdd &&
+      document.querySelector('[role="dialog"]') === null &&
+      inputRef.current
+    ) {
+      inputRef.current.focus();
+    }
+  };
+
+  // (Opcional) Forzar el foco al hacer click en el contenedor si autoAdd está activo
+  const handleContainerClick = () => {
+    if (autoAdd && inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // Agregar useEffect para mantener el foco si autoAdd está activo y searchTerm está vacío
+  useEffect(() => {
+    if (autoAdd && searchTerm === "" && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [autoAdd, searchTerm]);
+
   // Determinar si la búsqueda está deshabilitada
   let isSearchDisabled = false;
   if (type === "traspaso") {
@@ -45,10 +70,15 @@ const ProductSearchCardForTransfer = ({
     setSearchTerm(e.target.value);
   };
 
-  // Modificar la condición de búsqueda en handleKeyDown para no depender de longitud mínima
+  // Modificar handleKeyDown para mantener el foco en el input si autoAdd está marcado
   const handleKeyDown = async (e) => {
     if (e.key === "Enter" && !isSearchDisabled) {
+      if (autoAdd) e.preventDefault();
       await performSearch();
+      // Solo forzar el focus si autoAdd está activo
+      if (autoAdd && inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   };
 
@@ -124,7 +154,10 @@ const ProductSearchCardForTransfer = ({
     } finally {
       setIsLoading(false);
       setSearchTerm("");
-      inputRef.current?.focus();
+      // Solo mantener el focus si autoAdd está marcado
+      if (autoAdd && inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   };
 
@@ -174,8 +207,11 @@ const ProductSearchCardForTransfer = ({
       onAddProduct(item);
     });
     setIsDialogOpen(false);
-    // Reforzar el foco
-    inputRef.current?.focus();
+    setSearchTerm("");
+    // Solo mantener el focus si autoAdd está marcado
+    if (autoAdd && inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
   // Clic en botón “Buscar”
@@ -186,7 +222,7 @@ const ProductSearchCardForTransfer = ({
   };
 
   return (
-    <div className="mt-6">
+    <div className="mt-6" onClick={handleContainerClick}>
       {/* Fila: input + botón Buscar */}
       <div className="flex items-end gap-2 mb-3">
         <div className="flex-1 relative">
@@ -200,6 +236,7 @@ const ProductSearchCardForTransfer = ({
               value={searchTerm}
               onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
+              onBlur={handleInputBlur}
               placeholder="Buscar por referencia o código de barras"
               disabled={isSearchDisabled || isLoading}
               className="w-full pl-8 pr-8"
