@@ -185,7 +185,12 @@ function SalesCardActions({
     setFinalSaleModalOpen(true);
   };
 
-  const handleCloseFinalSaleModal = () => setFinalSaleModalOpen(false);
+  const handleCloseFinalSaleModal = () => {
+    setFinalSaleModalOpen(false);
+    setSelectedMethods([]);
+    setAmounts({ efectivo: "", tarjeta: "", bizum: "" });
+    setChangeAmount(0);
+  };
 
   const handleConfirmSale = () => {
     console.log("=== handleConfirmSale ===");

@@ -182,6 +182,17 @@ const ProductSelectionDialog = ({
                   Stock {destinationShopName}
                 </th>
               )}
+              {type === "traspaso" && (
+                <th
+                  className="py-2 px-4 border-b"
+                  style={{
+                    borderColor: "var(--surface-border)",
+                    textAlign: "left",
+                  }}
+                >
+                  Cantidad Destino
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -242,6 +253,14 @@ const ProductSelectionDialog = ({
                       {prod.stockDestination ?? 0}
                     </td>
                   )}
+                  {type === "traspaso" && (
+                    <td
+                      className="py-2 px-4 border-b"
+                      style={{ borderColor: "var(--surface-border)" }}
+                    >
+                      {prod.destinationQuantity}
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -252,7 +271,8 @@ const ProductSelectionDialog = ({
                   colSpan={
                     3 +
                     (showOriginStock ? 1 : 0) +
-                    (showDestinationStock ? 1 : 0)
+                    (showDestinationStock ? 1 : 0) +
+                    (type === "traspaso" ? 1 : 0)
                   }
                   className="p-4 text-center"
                   style={{ borderColor: "var(--surface-border)" }}

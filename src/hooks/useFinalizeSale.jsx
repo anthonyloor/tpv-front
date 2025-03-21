@@ -82,9 +82,28 @@ export default function useFinalizeSale() {
         id_shop: item.id_shop,
       }));
 
-      const total_cash = selectedMethods.includes("efectivo")
-        ? parseFloat(amounts.efectivo || 0)
-        : 0;
+      let remaining = subtotalInclTaxCalc;
+
+      let total_cash = 0;
+      if (selectedMethods.includes("efectivo")) {
+        if (parseFloat(amounts.efectivo) !== parseFloat(remaining.toFixed(2))) {
+          total_cash = parseFloat(
+            (
+              remaining -
+              (selectedMethods.includes("tarjeta")
+                ? parseFloat(amounts.tarjeta || 0)
+                : 0) -
+              (selectedMethods.includes("bizum")
+                ? parseFloat(amounts.bizum || 0)
+                : 0)
+            ).toFixed(2)
+          );
+          if (total_cash < 0) total_cash = 0; // Ensure total_cash is not negative
+          console.log("Remaining amount to be paid:", remaining.toFixed(2));
+        } else {
+          total_cash = parseFloat(amounts.efectivo);
+        }
+      }
       const total_card = selectedMethods.includes("tarjeta")
         ? parseFloat(amounts.tarjeta || 0)
         : 0;
@@ -92,7 +111,6 @@ export default function useFinalizeSale() {
         ? parseFloat(amounts.bizum || 0)
         : 0;
 
-      let remaining = subtotalInclTaxCalc;
       let total_discounts = 0;
       const discountsArray = [];
 
@@ -154,7 +172,7 @@ export default function useFinalizeSale() {
           name: `Vale descuento por ${voucherAmount.toFixed(2)}€`,
           date_from: new Date().toISOString().split("T")[0] + " 00:00:00",
           date_to:
-            new Date(new Date().setFullYear(new Date().getFullYear() + 1))
+            new Date(new Date().setMonth(new Date().getMonth() + 6))
               .toISOString()
               .split("T")[0] + " 23:59:59",
         };

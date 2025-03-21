@@ -27,7 +27,6 @@ const generateTicket = async (
   ];
   orderData.order_details.forEach((item) => {
     let displayName = item.product_name;
-    // Si product_reference existe y se encuentra en product_name, mostrar desde allí
     if (
       item.product_reference &&
       item.product_name.includes(item.product_reference)
@@ -35,25 +34,81 @@ const generateTicket = async (
       const pos = item.product_name.indexOf(item.product_reference);
       displayName = item.product_name.substring(pos);
     }
+
+    // Calcular precios unitarios
+    const unitPrice = item.unit_price_tax_incl;
+    const hasDiscount = item.reduction_amount_tax_incl !== 0;
+    const finalUnitPrice = hasDiscount
+      ? item.reduction_amount_tax_incl
+      : unitPrice;
+
+    // Construir texto para precio unitario (condicional)
+    const unitPriceText = hasDiscount
+      ? [
+          { text: unitPrice.toFixed(2) + " €", decoration: "lineThrough" },
+          "\n",
+          {
+            text: finalUnitPrice.toFixed(2) + " €",
+            color: "var(--red-500)",
+            bold: true,
+          },
+        ]
+      : unitPrice.toFixed(2) + " €";
+
+    const quantity = item.product_quantity;
+    const totalOriginal = unitPrice * quantity;
+    const totalFinal = finalUnitPrice * quantity;
+
+    // Construir texto para total del producto (condicional)
+    const totalText = hasDiscount
+      ? [
+          { text: totalOriginal.toFixed(2) + " €", decoration: "lineThrough" },
+          "\n",
+          {
+            text: totalFinal.toFixed(2) + " €",
+            color: "var(--red-500)",
+            bold: true,
+          },
+        ]
+      : totalOriginal.toFixed(2) + " €";
+
     productTableBody.push([
       { text: displayName, style: "tProductsBody" },
       {
-        text: item.product_quantity.toString(),
+        text: quantity.toString(),
         style: "tProductsBody",
         alignment: "center",
       },
-      {
-        text: item.unit_price_tax_incl.toFixed(2),
-        style: "tProductsBody",
-        alignment: "right",
-      },
-      {
-        text: item.total_price_tax_incl.toFixed(2),
-        style: "tProductsBody",
-        alignment: "right",
-      },
+      { text: unitPriceText, style: "tProductsBody", alignment: "right" },
+      { text: totalText, style: "tProductsBody", alignment: "right" },
     ]);
   });
+
+  // Calcular totales para la tabla final
+  const subtotal = orderData.order_details.reduce((sum, item) => {
+    return sum + item.unit_price_tax_incl * item.product_quantity;
+  }, 0);
+
+  const totalDiscounts = orderData.order_details.reduce((sum, item) => {
+    if (item.reduction_amount_tax_incl !== 0) {
+      return (
+        sum +
+        (item.unit_price_tax_incl - item.reduction_amount_tax_incl) *
+          item.product_quantity
+      );
+    }
+    return sum;
+  }, 0);
+
+  //const totalAfterDiscount = subtotal - totalDiscounts;
+  const totalAfterDiscount = orderData.total_paid;
+
+  // Calculate IVA (VAT) from total_paid (tax included amount)
+  // Formula: IVA = total_paid - (total_paid / (1 + IVA_RATE))
+  const iva = orderData.total_paid - orderData.total_paid / 1.21;
+
+  // Alternative calculation if total_paid_tax_excl is available and accurate
+  // const iva = orderData.total_paid - orderData.total_paid_tax_excl;
 
   const dateObj = new Date(orderData.date_add);
   const formattedDate = dateObj.toLocaleDateString("es-ES");
@@ -139,16 +194,16 @@ const generateTicket = async (
       text: `EMPLEADO: ${
         employeesDict[orderData.id_employee]
           ? employeesDict[orderData.id_employee]
-          : "N/A"
+          : "TPV"
       }`,
       style: "tHeaderValue",
-      margin: [0, 6, 15, 0],
+      margin: [0, 5, 15, 0],
     },
     // Tabla de productos
     {
       margin: [0, 10, 15, 0],
       table: {
-        widths: ["45%", "13%", "17%", "20%"],
+        widths: ["45%", "14%", "22%", "19%"],
         headerRows: 1,
         body: productTableBody,
       },
@@ -167,12 +222,24 @@ const generateTicket = async (
         body: [
           [
             { text: "SUBTOTAL:", style: "tTotals" },
-            { text: "0€", style: "tTotals", alignment: "right" },
+            {
+              text: subtotal.toFixed(2) + " €",
+              style: "tTotals",
+              alignment: "right",
+            },
+          ],
+          [
+            { text: "TOTAL DESCUENTOS:", style: "tTotals" },
+            {
+              text: totalDiscounts.toFixed(2) + " €",
+              style: "tTotals",
+              alignment: "right",
+            },
           ],
           [
             { text: "I.V.A (21%):", style: "tTotals" },
             {
-              text: (orderData.total_paid * 0.21).toFixed(2),
+              text: iva.toFixed(2) + " €",
               style: "tTotals",
               alignment: "right",
             },
@@ -180,7 +247,7 @@ const generateTicket = async (
           [
             { text: "TOTAL:", style: "tTotals" },
             {
-              text: orderData.total_paid.toFixed(2),
+              text: totalAfterDiscount.toFixed(2) + " €",
               style: "tTotals",
               alignment: "right",
             },
@@ -262,7 +329,10 @@ const generateTicket = async (
     },
   ];
 
-  const pdfDefinition = { content, defaultStyle: { fontSize: 14 } };
+  const pdfDefinition = {
+    content,
+    defaultStyle: { font: "Arial", fontSize: 14 },
+  };
   const response = await createPdf(pdfDefinition, output);
   return response;
 };

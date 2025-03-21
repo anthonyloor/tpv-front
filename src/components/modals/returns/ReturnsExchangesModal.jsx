@@ -309,7 +309,9 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
 
     // Ahora, actualizar los valores originales de pago desde la venta obtenida
     if (orderData.payment) {
-      const originalMethods = orderData.payment.split(",").map((m) => m.trim());
+      const originalMethods = orderData.payment
+        .split(",")
+        .map((m) => m.trim().toLowerCase());
       setOriginalPaymentMethods(originalMethods);
     }
     if (orderData.payment_amounts) {

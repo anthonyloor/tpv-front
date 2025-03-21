@@ -193,7 +193,7 @@ const useProductSearch = ({
 
     // Expresiones regulares para EAN13
     const ean13Regex = /^\d{13}$/;
-    const ean13ApostropheRegex = /^(\d{13})'(\d+)$/;
+    const ean13ApostropheRegex = /^(\d{13})(\d+)$/;
 
     // Caso búsqueda por EAN13
     if (ean13Regex.test(searchTerm)) {
@@ -249,9 +249,9 @@ const useProductSearch = ({
         );
         console.log("EAN13 apostrophe search - results:", results);
         let validResults = results.filter(
-          (p) =>
-            p.ean13_combination === eanCode || p.ean13_combination_0 === eanCode
+          (p) => Number(p.id_control_stock) === Number(controlId)
         );
+
         if (validResults.length === 0) {
           toast.error("Este producto no existe.");
           return;

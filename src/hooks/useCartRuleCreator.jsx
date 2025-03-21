@@ -19,10 +19,10 @@ export function useCartRuleCreator() {
     targetFullProductName // Ej: "Short Push Up Talle Alto Gina Beige - L"
   ) => {
     const now = new Date();
-    const oneYearLater = new Date(now);
-    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+    const sixMonthsLater = new Date(now);
+    sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
     const date_from = now.toISOString().split("T")[0] + " 00:00:00";
-    const date_to = oneYearLater.toISOString().split("T")[0] + " 23:59:59";
+    const date_to = sixMonthsLater.toISOString().split("T")[0] + " 23:59:59";
 
     const client = JSON.parse(localStorage.getItem("selectedClient"));
     // Se usa targetIdentifier para el producto (si existe) y se utiliza targetFullProductName para el name
@@ -53,20 +53,21 @@ export function useCartRuleCreator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(discountData),
       });
+      console.log("createCartRuleWithResponse result:", result);
 
-      if (result) {
+      if (result[0]) {
         const discObj = {
           name: name || "",
           description: description || "",
-          code: result.code || "",
-          reduction_amount: result.reduction_amount || 0,
-          reduction_percent: result.reduction_percent || 0,
+          code: result[0].code,
+          reduction_amount: result[0].reduction_amount || 0,
+          reduction_percent: result[0].reduction_percent || 0,
         };
         if (onDiscountApplied) onDiscountApplied(discObj);
         if (resetDiscountValue) resetDiscountValue("");
         if (setErrorMessage) setErrorMessage("");
         if (onClose) onClose();
-        return result; // Devolvemos el resultado exitoso
+        return result[0]; // Devolvemos el resultado exitoso
       } else {
         if (setErrorMessage)
           setErrorMessage(result.message || "Error al crear el descuento.");

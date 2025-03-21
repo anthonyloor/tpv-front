@@ -13,6 +13,7 @@ import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
 const TransferForm = ({ type, onSave, movementData }) => {
   const [productsToTransfer, setProductsToTransfer] = useState([]);
@@ -382,6 +383,44 @@ const TransferForm = ({ type, onSave, movementData }) => {
     }
   };
 
+  // Nueva función para actualizar el campo revision_count al escanear por EAN13 en modo revisión
+  const handleRevisionScan = (selectedProducts) => {
+    // Verificar que se encontró al menos un producto
+    if (!selectedProducts || selectedProducts.length === 0) {
+      toast.error("No se encontró el producto con el código especificado.");
+      return;
+    }
+    const prod = selectedProducts;
+    if (!prod || !prod.ean13) {
+      toast.error("El producto no tiene EAN13 definido.");
+      return;
+    }
+    let found = false;
+    setProductsToTransfer((prev) =>
+      prev.map((p) => {
+        if (p && p.ean13 === prod.ean13) {
+          found = true;
+          const currentRev = p.revision_count || 0;
+          if (currentRev >= p.quantity) {
+            toast.error("Cantidad máxima alcanzada.");
+            return p;
+          } else {
+            return { ...p, revision_count: currentRev + 1 };
+          }
+        }
+        return p;
+      })
+    );
+    if (!found) {
+      toast.error("Producto no encontrado en la tabla para revisión.");
+    }
+  };
+
+  // Calcular si ya se revisaron todos los productos (revision_count === cantidad)
+  const canExecute =
+    productsToTransfer.length > 0 &&
+    productsToTransfer.every((p) => (p.revision_count || 0) === p.quantity);
+
   const noProducts = productsToTransfer.length === 0;
   const isSameStore = isSameStoreSelected;
   const st = currentStatus.toLowerCase();
@@ -457,12 +496,13 @@ const TransferForm = ({ type, onSave, movementData }) => {
       );
     }
 
+    // Si el estado es "en revision", el botón para Ejecutar queda desactivado
     if (st === "en revision" && type === "traspaso") {
       return (
         <Button
           label="Ejecutar"
           className="w-full p-button-primary"
-          disabled={noProducts}
+          disabled={!canExecute}
           onClick={handleExecuteMovement}
         />
       );
@@ -542,24 +582,53 @@ const TransferForm = ({ type, onSave, movementData }) => {
     );
   }
 
+  // Agregar nueva función revisionBodyTemplate para Und. revisión
+  function revisionBodyTemplate(rowData) {
+    const revCount = rowData.revision_count || 0;
+    // Si revision_count es igual a la cantidad, se resalta con fondo verde claro
+    const style =
+      revCount === rowData.quantity ? { backgroundColor: "#d1fae5" } : {};
+    return (
+      <InputText value={revCount} readOnly className="w-full" style={style} />
+    );
+  }
+
+  // Si es traspaso y el estado es Recibido, insertar la columna Und. revisión
+  if (
+    (type === "traspaso" && currentStatus.toLowerCase() === "en revision")
+  ) {
+    productTableColumns.splice(4, 0, {
+      field: "revision",
+      header: "Und. revisión",
+      body: revisionBodyTemplate,
+    });
+  }
+
+  // Diccionario de empleados
+  const employeesDict = useEmployeesDictionary();
+
+  // Función para formatear fecha a dd-mm-yyyy (asume createDate en formato yyyy-mm-dd)
+  const formatDateDDMMYYYY = (dateStr) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  };
+
   return (
     <div className="p-2">
       <div className="mb-6">
-        <Steps
-          model={stepItems}
-          activeIndex={activeIndex}
-          readOnly
-          className="m-0"
-        />{" "}
-        {/* Quitamos margen */}
+        <Steps model={stepItems} activeIndex={activeIndex} readOnly />{" "}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* 3 columnas */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Descripción</label>
+      {/* Nuevo Grupo 1: Descripción, Tienda Origen y Tienda Destino */}
+      <div className="p-fluid grid grid-cols-3 gap-4">
+        <div className="field" style={{ width: "30%" }}>
+          <label className="mb-2 block font-medium">Descripción</label>
           <InputText
-            placeholder="Ej: Traspaso ropa navidad"
+            placeholder="Reposición de stock"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={
@@ -568,80 +637,10 @@ const TransferForm = ({ type, onSave, movementData }) => {
             className="w-full"
           />
         </div>
-        {type === "traspaso" && (
-          <>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Tienda Origen
-              </label>
-              {isLoadingShops ? (
-                <p>Cargando tiendas...</p>
-              ) : errorLoadingShops ? (
-                <p className="text-red-500">{errorLoadingShops}</p>
-              ) : (
-                <Dropdown
-                  value={selectedOriginStore}
-                  options={shopDropdownOptions}
-                  onChange={(e) => setSelectedOriginStore(e.value)}
-                  placeholder="Selecciona una tienda"
-                  className="w-full"
-                  disabled={!canEditStores}
-                />
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Tienda Destino
-              </label>
-              {isLoadingShops ? (
-                <p>Cargando tiendas...</p>
-              ) : errorLoadingShops ? (
-                <p className="text-red-500">{errorLoadingShops}</p>
-              ) : (
-                <Dropdown
-                  value={selectedDestinationStore}
-                  options={destinationShopDropdownOptions}
-                  onChange={(e) => setSelectedDestinationStore(e.value)}
-                  placeholder="Selecciona una tienda"
-                  className="w-full"
-                  disabled={!canEditStores}
-                />
-              )}
-              {isSameStoreSelected && (
-                <p className="text-red-500">
-                  La tienda origen y destino no pueden ser la misma.
-                </p>
-              )}
-            </div>
-          </>
-        )}
-        {type === "entrada" && (
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Tienda Destino
-            </label>
-            {isLoadingShops ? (
-              <p>Cargando tiendas...</p>
-            ) : errorLoadingShops ? (
-              <p className="text-red-500">{errorLoadingShops}</p>
-            ) : (
-              <Dropdown
-                value={selectedDestinationStore}
-                options={shopDropdownOptions}
-                onChange={(e) => setSelectedDestinationStore(e.value)}
-                placeholder="Selecciona una tienda"
-                className="w-full"
-                disabled={!canEditStores}
-              />
-            )}
-          </div>
-        )}
-        {type === "salida" && (
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Tienda Origen
-            </label>
-            {isLoadingShops ? (
+        <div className="field" style={{ width: "25%" }}>
+          <label className="mb-2 block font-medium">Tienda Origen</label>
+          {type === "traspaso" || type === "salida" ? (
+            isLoadingShops ? (
               <p>Cargando tiendas...</p>
             ) : errorLoadingShops ? (
               <p className="text-red-500">{errorLoadingShops}</p>
@@ -654,35 +653,80 @@ const TransferForm = ({ type, onSave, movementData }) => {
                 className="w-full"
                 disabled={!canEditStores}
               />
-            )}
-          </div>
-        )}
+            )
+          ) : (
+            <InputText
+              value={selectedOriginStore || ""}
+              readOnly
+              className="w-full"
+            />
+          )}
+        </div>
+        <div className="field" style={{ width: "25%" }}>
+          <label className="mb-2 block font-medium">Tienda Destino</label>
+          {type === "traspaso" || type === "entrada" ? (
+            isLoadingShops ? (
+              <p>Cargando tiendas...</p>
+            ) : errorLoadingShops ? (
+              <p className="text-red-500">{errorLoadingShops}</p>
+            ) : (
+              <Dropdown
+                value={selectedDestinationStore}
+                options={
+                  type === "traspaso"
+                    ? destinationShopDropdownOptions
+                    : shopDropdownOptions
+                }
+                onChange={(e) => setSelectedDestinationStore(e.value)}
+                placeholder="Selecciona una tienda"
+                className="w-full"
+                disabled={!canEditStores}
+              />
+            )
+          ) : (
+            <InputText
+              value={selectedDestinationStore || ""}
+              readOnly
+              className="w-full"
+            />
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        {" "}
-        {/* Nueva fila */}
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Fecha Creación
-          </label>
-          <InputText value={createDate} readOnly className="w-full" />
+      {/* Nuevo Grupo 2: Fecha Creación, Empleado y Tipo Movimiento */}
+      <div className="p-fluid grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div className="field" style={{ width: "30%" }}>
+          <label className="mb-2 block font-medium">Fecha Creación</label>
+          <InputText
+            value={formatDateDDMMYYYY(createDate)}
+            readOnly
+            className="w-full"
+          />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">ID Empleado</label>
-          <InputText value={employeeIdV || ""} readOnly className="w-full" />
+        <div className="field" style={{ width: "25%" }}>
+          <label className="mb-2 block font-medium">Empleado</label>
+          <InputText
+            value={employeesDict[employeeIdV] || employeeIdV || ""}
+            readOnly
+            className="w-full"
+          />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Tipo Movimiento
-          </label>
+        <div className="field" style={{ width: "25%" }}>
+          <label className="mb-2 block font-medium">Tipo Movimiento</label>
           <InputText value={type} readOnly className="w-full" />
         </div>
       </div>
 
-      {(isNewMovement || currentStatus.toLowerCase() === "en creacion") && (
+      {(isNewMovement ||
+        ["en creacion", "en revision"].includes(
+          currentStatus.toLowerCase()
+        )) && (
         <ProductSearchCardForTransfer
-          onAddProduct={handleAddProduct}
+          onAddProduct={
+            currentStatus.toLowerCase() === "en revision"
+              ? handleRevisionScan
+              : handleAddProduct
+          }
           selectedOriginStore={selectedOriginStore}
           selectedDestinationStore={selectedDestinationStore}
           type={type}

@@ -107,15 +107,11 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
 
   const ordersToDisplay = searchedOrder ? [searchedOrder] : orders;
 
-  const pendingOrders = ordersToDisplay.filter(
-    (order) =>
-      order.valid !== true &&
-      ![5, 6, 7, 19].includes(Number(order.current_state))
+  const pendingOrders = ordersToDisplay.filter((order) =>
+    [1, 2, 3, 4, 9, 10, 11, 13].includes(Number(order.current_state))
   );
-  const completedOrders = ordersToDisplay.filter(
-    (order) =>
-      order.valid === true &&
-      [5, 6, 7, 19].includes(Number(order.current_state))
+  const completedOrders = ordersToDisplay.filter((order) =>
+    [5].includes(Number(order.current_state))
   );
 
   const [pendingExpandedRows, setPendingExpandedRows] = useState(null);
