@@ -11,6 +11,7 @@ import { InputText } from "primereact/inputtext";
 import ActionResultDialog from "../../common/ActionResultDialog";
 import { Divider } from "primereact/divider";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import { generateClosureTicket } from "../../../utils/ticket";
 
 function formatNumber(value) {
   return isNaN(Number(value)) || value === "" ? "-" : value;
@@ -33,7 +34,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
 
   const apiFetch = useApiFetch();
   const navigate = useNavigate();
-  const { handleLogout, employeeId } = useContext(AuthContext);
+  const { handleLogout, employeeId, employeeName } = useContext(AuthContext);
   const shop = JSON.parse(localStorage.getItem("shop"));
   const licenseData = JSON.parse(localStorage.getItem("licenseData")) || {};
   const license = licenseData.licenseKey;
@@ -152,6 +153,35 @@ const CloseCashRegisterForm = ({ onClose }) => {
   };
 
   const handleCloseCashRegister = async () => {
+    const closingDate = new Date();
+    // Obtener datos de cierre desde get_report_amounts
+    const reportData = await apiFetch(
+      `${API_BASE_URL}/get_report_amounts?license=${license}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    // Construir objeto closureData con datos de reportData y metadatos
+    const totalCash = parseFloat(reportData.total_cash) || 0;
+    const totalCard = parseFloat(reportData.total_card) || 0;
+    const totalBizum = parseFloat(reportData.total_bizum) || 0;
+    const total = totalCash + totalCard + totalBizum;
+    const iva = total - total / 1.21;
+    const closureData = {
+      date_add: reportData.date_add,
+      date_close: closingDate,
+      employee_open: reportData.id_employee_open,
+      employee_close: reportData.id_employee_close,
+      total_cash: totalCash,
+      total_card: totalCard,
+      total_bizum: totalBizum,
+      total,
+      iva,
+    };
+    const ticketConfig = JSON.parse(
+      localStorage.getItem("ticketConfig") || "{}"
+    );
     try {
       const data = await apiFetch(`${API_BASE_URL}/close_pos_session`, {
         method: "POST",
@@ -163,6 +193,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
       });
       if (data.status === "OK") {
         showAlert("Cierre de caja realizado correctamente.", true);
+        await generateClosureTicket("print", closureData, ticketConfig, employeeName);
       } else {
         showAlert(data.message || "No se pudo cerrar la caja");
       }

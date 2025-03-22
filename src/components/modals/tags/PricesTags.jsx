@@ -180,6 +180,7 @@ export default function PricesTags({
           },
         ];
         setTagsData(tags);
+        console.log("DEBUG: Etiquetas a imprimir:", tags);
         let labelsHtml = "";
         // Se generan tantas etiquetas como elementos tenga tags
         tags.forEach((tag, i) => {

@@ -98,7 +98,6 @@ export default function useFinalizeSale() {
                 : 0)
             ).toFixed(2)
           );
-          if (total_cash < 0) total_cash = 0; // Ensure total_cash is not negative
           console.log("Remaining amount to be paid:", remaining.toFixed(2));
         } else {
           total_cash = parseFloat(amounts.efectivo);

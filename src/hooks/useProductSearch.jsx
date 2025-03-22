@@ -2,6 +2,15 @@ import { useState } from "react";
 import { toast } from "sonner";
 import getApiBaseUrl from "../utils/getApiBaseUrl";
 
+// Funciones helper agregadas para refactorizar el filtrado
+const isValidProduct = (product) =>
+  (product.ean13_combination !== null ||
+    product.ean13_combination_0 !== null) &&
+  product.id_product_attribute !== null;
+
+const filterProductsForShop = (products, shopId) =>
+  products.filter((product) => product.id_shop === shopId);
+
 const useProductSearch = ({
   apiFetch,
   shopId,
@@ -26,12 +35,7 @@ const useProductSearch = ({
   // Función para agrupar productos por nombre
   const groupProductsByProductName = (products) => {
     console.log("Agrupando productos. Productos recibidos:", products);
-    const validProducts = products.filter(
-      (product) =>
-        (product.ean13_combination !== null ||
-          product.ean13_combination_0 !== null) &&
-        product.id_product_attribute !== null
-    );
+    const validProducts = products.filter(isValidProduct);
     return validProducts.reduce((acc, product) => {
       const existingGroup = acc.find(
         (group) => group.product_name === product.product_name
@@ -213,8 +217,9 @@ const useProductSearch = ({
           return rest;
         });
         console.log("EAN13 search - valid results filtrados:", validResults);
-        const filteredForCurrentShop = validResults.filter(
-          (product) => product.id_shop === shopId
+        const filteredForCurrentShop = filterProductsForShop(
+          validResults,
+          shopId
         );
         console.log(
           "EAN13 search - filtered for current shop (shopId:",
@@ -238,7 +243,7 @@ const useProductSearch = ({
       return;
     }
 
-    // Caso búsqueda por EAN13 con apóstrofe
+    // Caso búsqueda por EAN13
     if (ean13ApostropheRegex.test(searchTerm)) {
       setIsLoading(true);
       try {
@@ -251,7 +256,6 @@ const useProductSearch = ({
         let validResults = results.filter(
           (p) => Number(p.id_control_stock) === Number(controlId)
         );
-
         if (validResults.length === 0) {
           toast.error("Este producto no existe.");
           return;
@@ -260,8 +264,9 @@ const useProductSearch = ({
           "EAN13 apostrophe search - validResults tras filtrado:",
           validResults
         );
-        const filteredForCurrentShop = validResults.filter(
-          (product) => product.id_shop === shopId
+        const filteredForCurrentShop = filterProductsForShop(
+          validResults,
+          shopId
         );
         console.log(
           "EAN13 apostrophe - filtered for current shop:",
@@ -309,15 +314,11 @@ const useProductSearch = ({
         `${API_BASE_URL}/product_search?b=${encodeURIComponent(searchTerm)}`,
         { method: "GET" }
       );
-      let validResults = results.filter(
-        (product) =>
-          (product.ean13_combination !== null ||
-            product.ean13_combination_0 !== null) &&
-          product.id_product_attribute !== null
-      );
+      let validResults = results.filter(isValidProduct);
       console.log("Búsqueda normal - valid results filtrados:", validResults);
-      const filteredForCurrentShop = validResults.filter(
-        (product) => product.id_shop === shopId
+      const filteredForCurrentShop = filterProductsForShop(
+        validResults,
+        shopId
       );
       console.log(
         "Búsqueda normal - filtered for current shop (shopId:",

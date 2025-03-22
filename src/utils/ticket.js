@@ -6,7 +6,8 @@ const generateTicket = async (
   output,
   orderData,
   config,
-  employeesDict = {}
+  employeesDict = {},
+  employeeName = "TPV"
 ) => {
   if (!orderData) {
     return {
@@ -338,3 +339,158 @@ const generateTicket = async (
 };
 
 export default generateTicket;
+
+// Nueva función para generar ticket de cierre de caja
+// Nueva función para generar ticket de cierre de caja
+export const generateClosureTicket = async (
+  output,
+  closureData,
+  config,
+  employeeName = "TPV"
+) => {
+  // Formatear fechas
+  const formattedOpenDate = new Date(closureData.date_add).toLocaleString(
+    "es-ES"
+  );
+  const formattedCloseDate = new Date(closureData.date_close).toLocaleString(
+    "es-ES"
+  );
+
+  const content = [
+    // Encabezados de config en mayúsculas y negrita
+    ...(config.ticket_text_header_1
+      ? [
+          {
+            text: config.ticket_text_header_1.toUpperCase(),
+            style: "header",
+            margin: [0, 10, 10, 0],
+            bold: true,
+          },
+        ]
+      : []),
+    ...(config.ticket_text_header_2
+      ? [
+          {
+            text: config.ticket_text_header_2.toUpperCase(),
+            style: "header",
+            bold: true,
+          },
+        ]
+      : []),
+    // Fechas de apertura y cierre y empleados
+    {
+      margin: [0, 10, 15, 0],
+      table: {
+        widths: ["50%", "50%"],
+        body: [
+          [
+            { text: "FECHA APERTURA:", style: "tHeaderLabel" },
+            { text: formattedOpenDate, style: "tHeaderValue" },
+          ],
+          [
+            { text: "FECHA CIERRE:", style: "tHeaderLabel" },
+            { text: formattedCloseDate, style: "tHeaderValue" },
+          ],
+          [
+            { text: "EMPLEADO APERTURA:", style: "tHeaderLabel" },
+            {
+              text: closureData.employee_open.toString(),
+              style: "tHeaderValue",
+            },
+          ],
+          [
+            { text: "EMPLEADO CIERRE:", style: "tHeaderLabel" },
+            { text: employeeName, style: "tHeaderValue" },
+          ],
+        ],
+      },
+      layout: "noBorders",
+    },
+    // Tabla de totales e información
+    {
+      margin: [0, 10, 15, 0],
+      table: {
+        widths: ["50%", "50%"],
+        body: [
+          [
+            { text: "TOTAL EFECTIVO:", style: "tTotals" },
+            {
+              text: closureData.total_cash.toFixed(2) + " €",
+              style: "tTotals",
+              alignment: "right",
+            },
+          ],
+          [
+            { text: "TOTAL TARJETA:", style: "tTotals" },
+            {
+              text: closureData.total_card.toFixed(2) + " €",
+              style: "tTotals",
+              alignment: "right",
+            },
+          ],
+          [
+            { text: "TOTAL BIZUM:", style: "tTotals" },
+            {
+              text: closureData.total_bizum.toFixed(2) + " €",
+              style: "tTotals",
+              alignment: "right",
+            },
+          ],
+          [
+            { text: "TOTAL:", style: "tTotals" },
+            {
+              text: closureData.total.toFixed(2) + " €",
+              style: "tTotals",
+              alignment: "right",
+            },
+          ],
+          [
+            { text: "IVA (parte):", style: "tTotals" },
+            {
+              text: closureData.iva.toFixed(2) + " €",
+              style: "tTotals",
+              alignment: "right",
+            },
+          ],
+        ],
+      },
+      layout: "noBorders",
+    },
+    // Recuadro con Firma
+    {
+      margin: [0, 10, 15, 0],
+      table: {
+        widths: ["100%"],
+        body: [
+          [
+            {
+              text: "\n\nFirma: __________________________",
+              style: "text",
+              alignment: "center",
+              border: [true, true, true, true],
+            },
+          ],
+        ],
+      },
+    },
+  ];
+
+  const pdfDefinition = {
+    content,
+    info: {
+      title: "Ticket Cierre de Caja",
+      author: config.author || "TPV",
+      subject: "ticket cierre",
+    },
+    styles: {
+      header: { fontSize: 10, bold: true, alignment: "center" },
+      tHeaderLabel: { fontSize: 8, alignment: "right" },
+      tHeaderValue: { fontSize: 8, bold: true },
+      tTotals: { fontSize: 8, bold: true, alignment: "right" },
+      text: { fontSize: 8, alignment: "center" },
+    },
+    pageMargins: [5.66, 5.66, 5.66, 5.66],
+  };
+
+  return await createPdf(pdfDefinition, output);
+};

@@ -161,7 +161,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
     selectedOriginStore === selectedDestinationStore;
 
   const canEditProducts =
-    isNewMovement || movementStatus.toLowerCase() === "en creacion";
+    isNewMovement || movementStatus.toLowerCase() === "En creacion";
 
   const handleAddProduct = (product) => {
     if (!canEditProducts) return;
@@ -437,24 +437,95 @@ const TransferForm = ({ type, onSave, movementData }) => {
       );
     }
 
+    // Nuevo bloque para traspasos en estados "enviado", "recibido" o "en revision"
+    if (
+      type === "traspaso" &&
+      (st === "enviado" || st === "recibido" || st === "en revision")
+    ) {
+      if (idProfile === 1) {
+        return (
+          <Button
+            label="Ejecutar"
+            className="w-full p-button-primary"
+            disabled={
+              st === "en revision" ? !canExecute : isSameStore || noProducts
+            }
+            onClick={handleExecuteMovement}
+          />
+        );
+      } else {
+        if (st === "enviado") {
+          return (
+            <Button
+              label="Marcar como Recibido"
+              className="w-full p-button-warning"
+              disabled={String(shopId) !== String(selectedDestinationStore)}
+              onClick={() => handleUpdateMovementStatus("Recibido")}
+            />
+          );
+        } else if (st === "recibido") {
+          return (
+            <Button
+              label="Revisar"
+              className="w-full p-button-help"
+              onClick={() => handleUpdateMovementStatus("En revision")}
+            />
+          );
+        } else if (st === "en revision") {
+          return (
+            <Button
+              label="Sin acciones"
+              className="w-full p-button-secondary"
+              disabled
+            />
+          );
+        }
+      }
+    }
+
     if (st === "en creacion") {
       if (type === "traspaso") {
-        return (
-          <div className="flex gap-2 w-full">
-            <Button
-              label="Actualizar"
-              className="p-button-secondary w-1/2"
-              disabled={isSameStore || noProducts}
-              onClick={handleUpdateMovement}
-            />
-            <Button
-              label="Enviar"
-              className="p-button-success w-1/2"
-              disabled={isSameStore || noProducts}
-              onClick={() => handleUpdateMovementStatus("Enviado")}
-            />
-          </div>
-        );
+        if (idProfile === 1) {
+          return (
+            <div className="flex gap-2 w-full">
+              <Button
+                label="Actualizar"
+                className="p-button-secondary w-1/3"
+                disabled={isSameStore || noProducts}
+                onClick={handleUpdateMovement}
+              />
+              <Button
+                label="Enviar"
+                className="p-button-success w-1/3"
+                disabled={isSameStore || noProducts}
+                onClick={() => handleUpdateMovementStatus("Enviado")}
+              />
+              <Button
+                label="Ejecutar"
+                className="p-button-primary w-1/3"
+                disabled={isSameStore || noProducts}
+                onClick={handleExecuteMovement}
+              />
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex gap-2 w-full">
+              <Button
+                label="Actualizar"
+                className="p-button-secondary w-1/2"
+                disabled={isSameStore || noProducts}
+                onClick={handleUpdateMovement}
+              />
+              <Button
+                label="Enviar"
+                className="p-button-success w-1/2"
+                disabled={isSameStore || noProducts}
+                onClick={() => handleUpdateMovementStatus("Enviado")}
+              />
+            </div>
+          );
+        }
       } else if (type === "entrada" || type === "salida") {
         return (
           <div className="flex gap-2 w-full">
@@ -473,39 +544,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
           </div>
         );
       }
-    }
-
-    if (st === "enviado" && type === "traspaso") {
-      return (
-        <Button
-          label="Marcar como Recibido"
-          className="w-full p-button-warning"
-          disabled={String(shopId) !== String(selectedDestinationStore)}
-          onClick={() => handleUpdateMovementStatus("Recibido")}
-        />
-      );
-    }
-
-    if (st === "recibido" && type === "traspaso") {
-      return (
-        <Button
-          label="Revisar"
-          className="w-full p-button-help"
-          onClick={() => handleUpdateMovementStatus("En revision")}
-        />
-      );
-    }
-
-    // Si el estado es "en revision", el botón para Ejecutar queda desactivado
-    if (st === "en revision" && type === "traspaso") {
-      return (
-        <Button
-          label="Ejecutar"
-          className="w-full p-button-primary"
-          disabled={!canExecute}
-          onClick={handleExecuteMovement}
-        />
-      );
     }
 
     return (
@@ -594,9 +632,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
   }
 
   // Si es traspaso y el estado es Recibido, insertar la columna Und. revisión
-  if (
-    (type === "traspaso" && currentStatus.toLowerCase() === "en revision")
-  ) {
+  if (type === "traspaso" && currentStatus.toLowerCase() === "en revision") {
     productTableColumns.splice(4, 0, {
       field: "revision",
       header: "Und. revisión",
