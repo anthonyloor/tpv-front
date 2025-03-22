@@ -97,18 +97,27 @@ export default function PricesTags({
     }, [])
     .sort((a, b) => a.product_name.localeCompare(b.product_name));
 
-  const productsWithGroup = flatProducts
-    .map((product) => ({
-      ...product,
-      group: product.id_control_stock
-        ? "Productos con seguimiento"
-        : "Productos sin seguimiento",
-    }))
-    .sort((a, b) => a.group.localeCompare(b.group));
+  const productsWithGroup = flatProducts.map((product) => ({
+    ...product,
+  }));
 
-  // Se simplifica la agrupación, quedando:
+  // Productos sin seguimiento: sin id_control_stock
   const finalNoTracking = productsWithGroup.filter((p) => !p.id_control_stock);
-  const finalTracking = productsWithGroup.filter((p) => p.id_control_stock);
+
+  // Productos con seguimiento: agrupar por id_control_stock
+  const trackingMap = {};
+  productsWithGroup.forEach((product) => {
+    if (product.id_control_stock) {
+      if (!trackingMap[product.id_control_stock]) {
+        trackingMap[product.id_control_stock] = {
+          ...product,
+          trackingCount: 0,
+        };
+      }
+      trackingMap[product.id_control_stock].trackingCount += 1;
+    }
+  });
+  const finalTracking = Object.values(trackingMap);
 
   // Logs de depuración
   console.log("finalNoTracking:", finalNoTracking);
