@@ -341,7 +341,6 @@ const generateTicket = async (
 export default generateTicket;
 
 // Nueva función para generar ticket de cierre de caja
-// Nueva función para generar ticket de cierre de caja
 export const generateClosureTicket = async (
   output,
   closureData,

@@ -32,35 +32,42 @@ const useProductSearch = ({
     useState(null);
   const API_BASE_URL = getApiBaseUrl();
 
-  // Función para agrupar productos por nombre
-  const groupProductsByProductName = (products) => {
+  const groupProductsByProductName = (products, strategy = "ean") => {
     console.log("Agrupando productos. Productos recibidos:", products);
     const validProducts = products.filter(isValidProduct);
     return validProducts.reduce((acc, product) => {
-      const existingGroup = acc.find(
-        (group) => group.product_name === product.product_name
-      );
       const productStock = {
         shop_name: product.shop_name,
         id_shop: product.id_shop,
         quantity: product.quantity,
         id_stock_available: product.id_stock_available,
       };
-      if (existingGroup) {
-        const existingCombination = existingGroup.combinations.find(
-          (combination) =>
-            combination.id_product_attribute === product.id_product_attribute
-        );
-        if (existingCombination) {
-          existingCombination.stocks.push(productStock);
+      let groupKey;
+      if (strategy === "idcontrolstock") {
+        groupKey = `${product.id_product_attribute}_${product.id_control_stock}`;
+      } else {
+        groupKey = `${product.id_product_attribute}`;
+      }
+      let group = acc.find((grp) => grp.groupKey === groupKey);
+      if (group) {
+        if (strategy !== "idcontrolstock") {
+          let combination = group.combinations.find(
+            (comb) => comb.id_control_stock === product.id_control_stock
+          );
+          if (combination) {
+            combination.stocks.push(productStock);
+          } else {
+            group.combinations.push({
+              ...product,
+              stocks: [productStock],
+            });
+          }
         } else {
-          existingGroup.combinations.push({
-            ...product,
-            stocks: [productStock],
-          });
+          group.combinations[0].stocks.push(productStock);
         }
       } else {
         acc.push({
+          groupKey,
           product_name: product.product_name,
           image_url: product.image_url,
           combinations: [
@@ -207,15 +214,26 @@ const useProductSearch = ({
           `${API_BASE_URL}/product_search?b=${encodeURIComponent(searchTerm)}`,
           { method: "GET" }
         );
-        let validResults = results.filter(
-          (product) =>
-            product.ean13_combination !== null ||
-            product.ean13_combination_0 !== null
-        );
-        validResults = validResults.map((product) => {
-          const { id_control_stock, ...rest } = product;
-          return rest;
+        let validResults = results
+          .filter(
+            (product) =>
+              product.ean13_combination !== null ||
+              product.ean13_combination_0 !== null
+          )
+          .map((product) => {
+            const { id_control_stock, active_control_stock, ...rest } = product;
+            return rest;
+          });
+        const uniqueMap = new Map();
+        validResults = validResults.filter((product) => {
+          const key = `${product.id_product}_${product.id_product_attribute}_${product.id_stock_available}_${product.id_shop}`;
+          if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, true);
+            return true;
+          }
+          return false;
         });
+
         console.log("EAN13 search - valid results filtrados:", validResults);
         const filteredForCurrentShop = filterProductsForShop(
           validResults,
@@ -227,7 +245,10 @@ const useProductSearch = ({
           "):",
           filteredForCurrentShop
         );
-        const groups = groupProductsByProductName(filteredForCurrentShop);
+        const groups = groupProductsByProductName(
+          filteredForCurrentShop,
+          "ean"
+        );
         console.log("EAN13 search - grouped products:", groups);
         setGroupedProducts(groups);
         if (filteredForCurrentShop.length === 1) {
@@ -252,12 +273,16 @@ const useProductSearch = ({
           `${API_BASE_URL}/product_search?b=${encodeURIComponent(eanCode)}`,
           { method: "GET" }
         );
+        if (results.length === 0) {
+          toast.error("Producto no encontrado.");
+          return;
+        }
         console.log("EAN13 apostrophe search - results:", results);
         let validResults = results.filter(
           (p) => Number(p.id_control_stock) === Number(controlId)
         );
-        if (validResults.length === 0) {
-          toast.error("Este producto no existe.");
+        if (validResults.length === 0 && results.length > 0) {
+          toast.error("ID control stock no existe.");
           return;
         }
         console.log(
@@ -292,7 +317,10 @@ const useProductSearch = ({
             setGroupedProducts([]);
           }
         } else {
-          const groups = groupProductsByProductName(filteredForCurrentShop);
+          const groups = groupProductsByProductName(
+            filteredForCurrentShop,
+            "apostrophe"
+          );
           console.log("EAN13 apostrophe search - grouped products:", groups);
           setGroupedProducts(groups);
         }
@@ -326,7 +354,7 @@ const useProductSearch = ({
         "):",
         filteredForCurrentShop
       );
-      const groups = groupProductsByProductName(filteredForCurrentShop);
+      const groups = groupProductsByProductName(filteredForCurrentShop, "ean");
       console.log("Búsqueda normal - grouped products:", groups);
       setGroupedProducts(groups);
     } catch (error) {

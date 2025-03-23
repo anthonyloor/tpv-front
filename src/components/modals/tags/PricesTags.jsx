@@ -14,30 +14,21 @@ import JsBarcode from "jsbarcode";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
-export default function PricesTags({
-  isOpen,
-  onHide,
-  widthPercent = "40%",
-  heightPercent = "65%",
-}) {
+export default function PricesTags({ isOpen, onHide }) {
   const { shopId, idProfile } = useContext(AuthContext);
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
 
-  // Estados locales para el diálogo de cantidad e impresión
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedTrackingProducts, setSelectedTrackingProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [quantityPrint, setQuantityPrint] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const inputRef = useRef(null);
-
-  // Nuevos estados para previsualización de etiquetas
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [barcodesReady, setBarcodesReady] = useState(false);
   const previewContainerRef = useRef(null); // nuevo
-
-  // Agregar estado para almacenar los datos de las etiquetas
   const [tagsData, setTagsData] = useState([]);
 
   // Usar el hook de búsqueda (se usa onAddProduct para actualizar el producto seleccionado)
@@ -58,7 +49,6 @@ export default function PricesTags({
         stocks: filteredStocks,
         id_shop: actualShopId,
       };
-      console.log("DEBUG: Producto seleccionado para carrito:", selected);
       setSelectedProduct(selected);
     },
     onAddDiscount: () => {},
@@ -97,27 +87,19 @@ export default function PricesTags({
     }, [])
     .sort((a, b) => a.product_name.localeCompare(b.product_name));
 
-  const productsWithGroup = flatProducts.map((product) => ({
-    ...product,
-  }));
+  console.log("Productos planos:", flatProducts);
 
-  // Productos sin seguimiento: sin id_control_stock
+  const productsWithGroup = flatProducts
+    .map((product) => ({
+      ...product,
+      group: product.id_control_stock
+        ? "Productos con seguimiento"
+        : "Productos sin seguimiento",
+    }))
+    .sort((a, b) => a.group.localeCompare(b.group));
+
   const finalNoTracking = productsWithGroup.filter((p) => !p.id_control_stock);
-
-  // Productos con seguimiento: agrupar por id_control_stock
-  const trackingMap = {};
-  productsWithGroup.forEach((product) => {
-    if (product.id_control_stock) {
-      if (!trackingMap[product.id_control_stock]) {
-        trackingMap[product.id_control_stock] = {
-          ...product,
-          trackingCount: 0,
-        };
-      }
-      trackingMap[product.id_control_stock].trackingCount += 1;
-    }
-  });
-  const finalTracking = Object.values(trackingMap);
+  const finalTracking = productsWithGroup.filter((p) => p.id_control_stock);
 
   // Logs de depuración
   console.log("finalNoTracking:", finalNoTracking);
@@ -125,7 +107,12 @@ export default function PricesTags({
 
   // Función para abrir el diálogo de cantidad de impresión
   const openQuantityDialog = () => {
-    if (!selectedProduct) return;
+    // Permitir abrir si hay selección única o múltiples tracking
+    if (
+      !selectedProduct &&
+      (!selectedTrackingProducts || selectedTrackingProducts.length === 0)
+    )
+      return;
     setQuantityPrint(1);
     setIsGenerating(false);
     setShowQuantityDialog(true);
@@ -134,141 +121,65 @@ export default function PricesTags({
   // Estado y función de diálogo para cantidad (similares al código previo)
   const [showQuantityDialog, setShowQuantityDialog] = useState(false);
   const handleConfirmQuantity = async () => {
-    if (!selectedProduct) return;
-
-    console.log("DEBUG: selectedProduct antes de payload:", selectedProduct);
     setIsGenerating(true);
     try {
-      let ean13 =
-        selectedProduct.ean13_combination ||
-        selectedProduct.ean13_combination_0 ||
-        "0000000000000";
-      if (ean13.length < 13) {
-        ean13 = ean13.padStart(13, "0");
-      } else if (ean13.length > 13) {
-        ean13 = ean13.substring(0, 13);
-      }
-      let payload;
-      if (selectedProduct.id_control_stock) {
-        payload = {
-          id_control_stock: selectedProduct.id_control_stock,
-          ean13:
-            selectedProduct.ean13_combination ||
-            selectedProduct.ean13_combination_0 ||
-            "",
-        };
-      } else {
-        payload = {
-          quantity_print: quantityPrint,
-          id_control_stock: null,
-          ean13:
-            selectedProduct.ean13_combination ||
-            selectedProduct.ean13_combination_0 ||
-            "",
-          id_product: selectedProduct.id_product,
-          id_product_attribute: selectedProduct.id_product_attribute,
-          id_shop: selectedProduct.id_shop,
-          quantity: selectedProduct.quantity,
-        };
-      }
-      console.log("DEBUG: Payload para get_product_price_tag:", payload);
-      let response = await apiFetch(`${API_BASE_URL}/get_product_price_tag`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      console.log("DEBUG: Respuesta de get_product_price_tag:", response);
-      if (selectedProduct.id_control_stock) {
-        // Reimprimir
-        let info = response;
-        if (Array.isArray(response)) info = response[0];
-        const tags = [
-          {
-            ean13: info.ean13,
-            id_control_stock: info.id_control_stock,
-          },
-        ];
-        setTagsData(tags);
-        console.log("DEBUG: Etiquetas a imprimir:", tags);
-        let labelsHtml = "";
-        // Se generan tantas etiquetas como elementos tenga tags
-        tags.forEach((tag, i) => {
-          // Concatenar ean13 e id_control_stock para construir el valor único
-          const newEan = tag.ean13 + "" + tag.id_control_stock;
-          labelsHtml += `
-            <div class="label" style="margin-bottom:15px;margin-top:15px;margin-left:10px;">
-              <div class="product-name" style="margin:0; padding:0; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-              <span class="product-name" style="margin:0; font-size: 18px;">${selectedProduct.product_name
-                .split(" ")
-                .map(
-                  (word) =>
-                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                )
-                .join(" ")}</span>
-              </div>
-              <div class="content-row" style="display:inline-flex; margin-top:5px;">
-              <div class="barcode-column" style="display:flex; flex-direction:column;">
-                <svg id="barcode-${i}"></svg>
-                <div style="margin-top:5px; text-align:center; font-family: 'Arial', sans-serif; font-size:18px; color:#999; font-weight: bold;">
-              <i class="pi pi-link"></i> ${newEan}
-              </div>
-              </div>
-              <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
-                <span class="combination" style="margin:0; width:70px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-                ${
-                  selectedProduct.combination_name
-                    ? selectedProduct.combination_name.replace(
-                        /-/,
-                        "<br />-----<br />"
-                      )
-                    : ""
-                }
-                </span>
-                <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-                ${
-                  selectedProduct.price
-                    ? selectedProduct.price.toFixed(2) + " €"
-                    : ""
-                }
-                </div>
-              </div>
-              </div>
-            </div>
-            `;
-        });
-        setPreviewHtml(labelsHtml);
-        setBarcodesReady(false);
-        setShowPreviewDialog(true);
-      } else {
-        if (!Array.isArray(response)) {
-          response = [response];
-        }
-        const tags = response[0].tags || [];
+      // Casos múltiples para productos con seguimiento
+      if (selectedTrackingProducts && selectedTrackingProducts.length > 0) {
+        const responses = await Promise.all(
+          selectedTrackingProducts.map(async (prod) => {
+            let ean13 =
+              prod.ean13_combination ||
+              prod.ean13_combination_0 ||
+              "0000000000000";
+            ean13 =
+              ean13.length < 13
+                ? ean13.padStart(13, "0")
+                : ean13.substring(0, 13);
+            const payload = {
+              id_control_stock: prod.id_control_stock,
+              ean13: ean13,
+            };
+            const res = await apiFetch(
+              `${API_BASE_URL}/get_product_price_tag`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              }
+            );
+            return Array.isArray(res) ? res[0] || res : res;
+          })
+        );
+        // Combinar respuestas para generar etiquetas
+        const tags = responses.map((info) => ({
+          ean13: info.ean13,
+          id_control_stock: info.id_control_stock,
+        }));
         setTagsData(tags);
         let labelsHtml = "";
-        // Se generan tantas etiquetas como elementos tenga tags
+        const labelStyle =
+          "box-sizing:border-box; margin-top:15px;margin-left:15px; page-break-after: always; break-after: page;";
         tags.forEach((tag, i) => {
-          // Concatenar ean13 e id_control_stock para construir el valor único
-          const newEan = tag.ean13 + "" + tag.id_control_stock;
+          const newEan = tag.ean13 + "-" + tag.id_control_stock;
           labelsHtml += `
-            <div class="label" style="margin-bottom:15px;margin-top:15px;margin-left:15px;">
+            <div class="label" style="${labelStyle}">
               <div class="product-name" style="margin:0; padding:0; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-                <span class="product-name" style="margin:0; font-size: 18px;">${
-                  selectedProduct.product_name
+                <span style="font-size: 18px;">${
+                  selectedTrackingProducts[0].product_name
                 }</span>
               </div>
               <div class="content-row" style="display:inline-flex; margin-top:5px;">
                 <div class="barcode-column" style="display:flex; flex-direction:column;">
                   <svg id="barcode-${i}"></svg>
                   <div style="margin-top:5px; text-align:center; font-family: 'Arial', sans-serif; font-size:18px; color:#999; font-weight: bold;">
-                <i class="pi pi-link"></i> ${newEan}
-              </div>
+                    <i className="pi pi-link"></i> ${newEan}
+                  </div>
                 </div>
                 <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
                   <span class="combination" style="margin:0; width:70px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
                     ${
-                      selectedProduct.combination_name
-                        ? selectedProduct.combination_name.replace(
+                      selectedTrackingProducts[0].combination_name
+                        ? selectedTrackingProducts[0].combination_name.replace(
                             /-/,
                             "<br />-----<br />"
                           )
@@ -277,8 +188,8 @@ export default function PricesTags({
                   </span>
                   <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
                     ${
-                      selectedProduct.price
-                        ? selectedProduct.price.toFixed(2) + " €"
+                      selectedTrackingProducts[0].price
+                        ? selectedTrackingProducts[0].price.toFixed(2) + " €"
                         : ""
                     }
                   </div>
@@ -290,6 +201,153 @@ export default function PricesTags({
         setPreviewHtml(labelsHtml);
         setBarcodesReady(false);
         setShowPreviewDialog(true);
+      }
+      // Caso de producto único (sin seguimiento o con seguimiento seleccionado de forma individual)
+      else if (selectedProduct) {
+        let ean13 =
+          selectedProduct.ean13_combination ||
+          selectedProduct.ean13_combination_0 ||
+          "0000000000000";
+        ean13 =
+          ean13.length < 13 ? ean13.padStart(13, "0") : ean13.substring(0, 13);
+        let payload;
+        if (selectedProduct.id_control_stock) {
+          payload = {
+            id_control_stock: selectedProduct.id_control_stock,
+            ean13:
+              selectedProduct.ean13_combination ||
+              selectedProduct.ean13_combination_0 ||
+              "",
+          };
+        } else {
+          payload = {
+            quantity_print: quantityPrint,
+            id_control_stock: null,
+            ean13:
+              selectedProduct.ean13_combination ||
+              selectedProduct.ean13_combination_0 ||
+              "",
+            id_product: selectedProduct.id_product,
+            id_product_attribute: selectedProduct.id_product_attribute,
+            id_shop: selectedProduct.id_shop,
+            quantity: selectedProduct.quantity,
+          };
+        }
+        console.log("DEBUG: Payload para get_product_price_tag:", payload);
+        let response = await apiFetch(`${API_BASE_URL}/get_product_price_tag`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        console.log("DEBUG: Respuesta de get_product_price_tag:", response);
+        const labelStyle =
+          "box-sizing:border-box; margin-top:15px;margin-left:15px; page-break-after: always; break-after: page;";
+        if (selectedProduct.id_control_stock) {
+          let info = Array.isArray(response)
+            ? response[0] || response
+            : response;
+          const tags = [
+            { ean13: info.ean13, id_control_stock: info.id_control_stock },
+          ];
+          setTagsData(tags);
+          let labelsHtml = "";
+          tags.forEach((tag, i) => {
+            const newEan = tag.ean13 + "-" + tag.id_control_stock;
+            labelsHtml += `
+              <div class="label" style="margin-bottom:15px;margin-top:15px;margin-left:10px;">
+                <div class="product-name" style="margin:0; padding:0; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                  <span style="font-size: 18px;">${selectedProduct.product_name
+                    .split(" ")
+                    .map(
+                      (word) =>
+                        word.charAt(0).toUpperCase() +
+                        word.slice(1).toLowerCase()
+                    )
+                    .join(" ")}</span>
+                </div>
+                <div class="content-row" style="display:inline-flex; margin-top:5px;">
+                  <div class="barcode-column" style="display:flex; flex-direction:column;">
+                    <svg id="barcode-${i}"></svg>
+                    <div style="margin-top:5px; text-align:center; font-family: 'Arial', sans-serif; font-size:18px; color:#999; font-weight: bold;">
+                      <i className="pi pi-link"></i> ${newEan}
+                    </div>
+                  </div>
+                  <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
+                    <span class="combination" style="margin:0; width:70px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                      ${
+                        selectedProduct.combination_name
+                          ? selectedProduct.combination_name.replace(
+                              /-/,
+                              "<br />-----<br />"
+                            )
+                          : ""
+                      }
+                    </span>
+                    <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                      ${
+                        selectedProduct.price
+                          ? selectedProduct.price.toFixed(2) + " €"
+                          : ""
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+          setPreviewHtml(labelsHtml);
+          setBarcodesReady(false);
+          setShowPreviewDialog(true);
+        } else {
+          if (!Array.isArray(response)) {
+            response = [response];
+          }
+          const tags = response[0].tags || [];
+          setTagsData(tags);
+          let labelsHtml = "";
+          tags.forEach((tag, i) => {
+            const newEan = tag.ean13 + "-" + tag.id_control_stock;
+            labelsHtml += `
+              <div class="label" style="${labelStyle}">
+                <div class="product-name" style="margin:0; padding:0; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                  <span style="font-size: 18px;">${
+                    selectedProduct.product_name
+                  }</span>
+                </div>
+                <div class="content-row" style="display:inline-flex; margin-top:5px;">
+                  <div class="barcode-column" style="display:flex; flex-direction:column;">
+                    <svg id="barcode-${i}"></svg>
+                    <div style="margin-top:5px; text-align:center; font-family: 'Arial', sans-serif; font-size:18px; color:#999; font-weight: bold;">
+                      <i className="pi pi-link"></i> ${newEan}
+                    </div>
+                  </div>
+                  <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
+                    <span class="combination" style="margin:0; width:70px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                      ${
+                        selectedProduct.combination_name
+                          ? selectedProduct.combination_name.replace(
+                              /-/,
+                              "<br />-----<br />"
+                            )
+                          : ""
+                      }
+                    </span>
+                    <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                      ${
+                        selectedProduct.price
+                          ? selectedProduct.price.toFixed(2) + " €"
+                          : ""
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+          setPreviewHtml(labelsHtml);
+          setBarcodesReady(false);
+          setShowPreviewDialog(true);
+        }
       }
     } catch (error) {
       console.error("Error al generar etiquetas:", error);
@@ -388,10 +446,12 @@ export default function PricesTags({
         draggable={false}
         resizable={false}
         style={{
-          width: widthPercent,
-          height: heightPercent,
-          minWidth: "800px",
-          minHeight: "500px",
+          maxWidth: "60vw",
+          maxHeight: "70vh",
+          minWidth: "950px",
+          minHeight: "650px",
+          width: "50vw",
+          height: "65vh",
         }}
       >
         <div className="p-4">
@@ -428,32 +488,59 @@ export default function PricesTags({
                         dataKey="id_product_attribute"
                         scrollable
                         emptyMessage="No hay resultados"
+                        tableStyle={{ width: "100%" }}
                       >
                         <Column
                           selectionMode="single"
-                          headerStyle={{ width: "3em" }}
+                          style={{
+                            width: "5px",
+                            textAlign: "center",
+                            padding: "1rem 0.3rem",
+                          }}
+                          alignHeader={"center"}
                         />
                         <Column
                           header="Nombre"
                           body={(rowData) => rowData.product_name}
+                          style={{
+                            width: "200px",
+                            textAlign: "left",
+                            padding: "1rem 1rem 1rem 0.5rem",
+                          }}
+                          alignHeader={"left"}
                         />
                         <Column
                           header="Combinación"
                           body={(rowData) => rowData.combination_name || ""}
+                          style={{
+                            width: "100px",
+                            textAlign: "center",
+                          }}
+                          alignHeader={"center"}
                         />
                         <Column
                           header="Precio"
                           body={(rowData) =>
                             rowData.price ? rowData.price.toFixed(2) + " €" : ""
                           }
+                          style={{
+                            width: "90px",
+                            textAlign: "center",
+                          }}
+                          alignHeader={"center"}
                         />
                         <Column
-                          header="EAN13"
+                          header="Cod. Barras"
                           body={(rowData) =>
                             rowData.ean13_combination ||
                             rowData.ean13_combination_0 ||
                             ""
                           }
+                          style={{
+                            width: "100px",
+                            textAlign: "center",
+                          }}
+                          alignHeader={"center"}
                         />
                         <Column
                           header="Cantidad"
@@ -468,6 +555,11 @@ export default function PricesTags({
                               )}
                             </>
                           )}
+                          style={{
+                            width: "25px",
+                            textAlign: "center",
+                          }}
+                          alignHeader={"center"}
                         />
                       </DataTable>
                     ) : (
@@ -480,46 +572,71 @@ export default function PricesTags({
                     {finalTracking.length > 0 ? (
                       <DataTable
                         value={finalTracking}
-                        selectionMode="single"
-                        selection={selectedProduct}
-                        onSelectionChange={(e) => setSelectedProduct(e.value)}
-                        dataKey="id_product_attribute"
+                        selectionMode="multiple"
+                        selection={selectedTrackingProducts}
+                        onSelectionChange={(e) =>
+                          setSelectedTrackingProducts(e.value)
+                        }
+                        dataKey="id_control_stock"
                         scrollable
                         emptyMessage="No hay resultados"
+                        tableStyle={{ width: "100%" }}
                       >
                         <Column
-                          selectionMode="single"
-                          headerStyle={{ width: "3em" }}
+                          selectionMode="multiple"
+                          style={{
+                            width: "5px",
+                            textAlign: "center",
+                            padding: "1rem 0.3rem",
+                          }}
+                          alignHeader={"center"}
                         />
                         <Column
                           header="Nombre"
                           body={(rowData) => rowData.product_name}
+                          style={{
+                            width: "200px",
+                            textAlign: "left",
+                            padding: "1rem 1rem 1rem 0.5rem",
+                          }}
+                          alignHeader={"left"}
                         />
                         <Column
                           header="Combinación"
                           body={(rowData) => rowData.combination_name || ""}
+                          style={{
+                            width: "100px",
+                            textAlign: "center",
+                          }}
+                          alignHeader={"center"}
                         />
                         <Column
                           header="Precio"
                           body={(rowData) =>
                             rowData.price ? rowData.price.toFixed(2) + " €" : ""
                           }
+                          style={{
+                            width: "90px",
+                            textAlign: "center",
+                          }}
+                          alignHeader={"center"}
                         />
                         <Column
-                          header="EAN13"
+                          header="Cod. Barras"
                           body={(rowData) => (
                             <>
                               <i className="pi pi-link"></i>{" "}
                               {(rowData.ean13_combination ||
                                 rowData.ean13_combination_0) +
-                                "" +
+                                "-" +
                                 rowData.id_control_stock}
                             </>
                           )}
-                        />
-                        <Column
-                          header="Cantidad"
-                          body={(rowData) => rowData.quantity}
+                          style={{
+                            width: "100px",
+                            textAlign: "center",
+                          }}
+                          alignHeader={"center"}
                         />
                       </DataTable>
                     ) : (
@@ -539,7 +656,11 @@ export default function PricesTags({
               }
               icon="pi pi-print"
               onClick={openQuantityDialog}
-              disabled={!selectedProduct}
+              disabled={
+                !selectedProduct &&
+                (!selectedTrackingProducts ||
+                  selectedTrackingProducts.length === 0)
+              }
             />
           </div>
         </div>
@@ -590,6 +711,10 @@ export default function PricesTags({
         modal
         draggable={false}
         resizable={false}
+        style={{
+          maxWidth: "30vw",
+          maxHeight: "70vh",
+        }}
       >
         <div
           ref={previewContainerRef}
