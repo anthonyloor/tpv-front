@@ -4,13 +4,7 @@ import React from "react";
 import { Dialog } from "primereact/dialog";
 import CloseCashRegisterForm from "./CloseCashRegisterForm";
 
-const CloseCashRegisterModal = ({
-  isOpen,
-  onClose,
-  inlineMode = false,
-  widthPercent = "40%",
-  heightPercent = "40%",
-}) => {
+const CloseCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
   return (
     <Dialog
       header="Cierre de caja"
@@ -20,10 +14,12 @@ const CloseCashRegisterModal = ({
       draggable={false}
       resizable={false}
       style={{
-        width: widthPercent,
-        height: heightPercent,
-        minWidth: "800px",
+        maxWidth: "800px",
+        maxHeight: "550px",
+        minWidth: "750px",
         minHeight: "500px",
+        width: "50vw",
+        height: "60vh",
       }}
     >
       <CloseCashRegisterForm onClose={onClose} />

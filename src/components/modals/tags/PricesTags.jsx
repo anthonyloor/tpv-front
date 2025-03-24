@@ -98,24 +98,44 @@ export default function PricesTags({ isOpen, onHide }) {
     }))
     .sort((a, b) => a.group.localeCompare(b.group));
 
-  const finalNoTracking = productsWithGroup.filter((p) => !p.id_control_stock);
+  const finalNoTracking = productsWithGroup
+    .reduce((unique, item) => {
+      const key = `${item.id_product}_${item.id_product_attribute}_${
+        item.id_stock_available || ""
+      }`;
+      if (!unique.some((u) => u.uniqueKey === key)) {
+        // Contar registros con id_control_stock para el mismo key
+        const trackingCount = productsWithGroup.filter((p) => {
+          const pKey = `${p.id_product}_${p.id_product_attribute}_${
+            p.id_stock_available || ""
+          }`;
+          return pKey === key && p.id_control_stock;
+        }).length;
+        // Remover id_control_stock y active_control_stock, y agregar trackingCount
+        const { id_control_stock, active_control_stock, ...rest } = item;
+        unique.push({ ...rest, uniqueKey: key, trackingCount });
+      }
+      return unique;
+    }, [])
+    .map(({ uniqueKey, ...rest }) => rest);
+
   const finalTracking = productsWithGroup.filter((p) => p.id_control_stock);
 
   // Logs de depuración
   console.log("finalNoTracking:", finalNoTracking);
   console.log("finalTracking:", finalTracking);
 
-  // Función para abrir el diálogo de cantidad de impresión
+  // Función para abrir el diálogo o llamar directamente para imprimir según el tipo de producto
   const openQuantityDialog = () => {
-    // Permitir abrir si hay selección única o múltiples tracking
-    if (
-      !selectedProduct &&
-      (!selectedTrackingProducts || selectedTrackingProducts.length === 0)
-    )
-      return;
-    setQuantityPrint(1);
-    setIsGenerating(false);
-    setShowQuantityDialog(true);
+    // Si hay productos con seguimiento seleccionados, llamar directamente a la API
+    if (selectedTrackingProducts && selectedTrackingProducts.length > 0) {
+      handleConfirmQuantity();
+    } else if (selectedProduct) {
+      // Para productos sin seguimiento se solicita la cantidad
+      setQuantityPrint(1);
+      setIsGenerating(false);
+      setShowQuantityDialog(true);
+    }
   };
 
   // Estado y función de diálogo para cantidad (similares al código previo)
@@ -436,10 +456,29 @@ export default function PricesTags({ isOpen, onHide }) {
     printWindow.close();
   };
 
+  // Footer fijo para los botones
+  const dialogFooter = (
+    <div className="flex justify-end">
+      <Button
+        label={
+          selectedProduct?.id_control_stock
+            ? "Reimprimir etiquetas"
+            : "Imprimir etiquetas"
+        }
+        icon="pi pi-print"
+        onClick={openQuantityDialog}
+        disabled={
+          !selectedProduct &&
+          (!selectedTrackingProducts || selectedTrackingProducts.length === 0)
+        }
+      />
+    </div>
+  );
+
   return (
     <>
       <Dialog
-        header="Etiquetas de Producto"
+        header="Generar etiquetas de producto"
         visible={isOpen}
         onHide={onHide}
         modal
@@ -453,12 +492,13 @@ export default function PricesTags({ isOpen, onHide }) {
           width: "50vw",
           height: "65vh",
         }}
+        footer={dialogFooter}
       >
-        <div className="p-4">
+        <div className="p-4" style={{ overflowY: "auto", maxHeight: "100%" }}>
           <div className="mb-4 flex items-center">
             <InputText
               ref={inputRef}
-              placeholder="Buscar por referencia o EAN13..."
+              placeholder="Buscar por referencia"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
               onKeyDown={onInputKeyDown}
@@ -625,11 +665,11 @@ export default function PricesTags({ isOpen, onHide }) {
                           header="Cod. Barras"
                           body={(rowData) => (
                             <>
-                              <i className="pi pi-link"></i>{" "}
                               {(rowData.ean13_combination ||
                                 rowData.ean13_combination_0) +
                                 "-" +
-                                rowData.id_control_stock}
+                                rowData.id_control_stock}{" "}
+                              <i className="pi pi-link"></i>
                             </>
                           )}
                           style={{
@@ -647,22 +687,6 @@ export default function PricesTags({ isOpen, onHide }) {
               </TabView>
             </>
           )}
-          <div className="mt-4 flex justify-end">
-            <Button
-              label={
-                selectedProduct?.id_control_stock
-                  ? "Reimprimir etiquetas"
-                  : "Imprimir etiquetas"
-              }
-              icon="pi pi-print"
-              onClick={openQuantityDialog}
-              disabled={
-                !selectedProduct &&
-                (!selectedTrackingProducts ||
-                  selectedTrackingProducts.length === 0)
-              }
-            />
-          </div>
         </div>
       </Dialog>
 

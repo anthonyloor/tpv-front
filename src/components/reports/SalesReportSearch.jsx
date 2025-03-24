@@ -7,9 +7,7 @@ import { Calendar } from "primereact/calendar";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import getApiBaseUrl from "../../utils/getApiBaseUrl";
-import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { AuthContext } from "../../contexts/AuthContext";
 
 const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
   const apiFetch = useApiFetch();
@@ -20,7 +18,6 @@ const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
     ? JSON.parse(localStorage.getItem("licenseData"))
     : null;
   const license = licenseData?.licenseKey;
-  const { shopName } = useContext(AuthContext);
 
   // Fechas
   const today = new Date();
@@ -156,135 +153,6 @@ const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
       alert("Error obteniendo reporte de ventas.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Nueva función para generar PDF
-  const handleGeneratePdf = async () => {
-    if (!dateTo) return;
-    try {
-      const todayStr = new Date().toISOString().split("T")[0];
-      const dateFromStr = dateFrom
-        ? dateFrom.toISOString().split("T")[0]
-        : null;
-      let dateFromWithTime =
-        dateFromStr && dateFromStr !== todayStr
-          ? `${dateFromStr} 00:00:00`
-          : null;
-      const dateToStr = dateTo.toISOString().split("T")[0];
-      const dateToWithTime = `${dateToStr} 23:59:59`;
-
-      const data = await apiFetch(`${API_BASE_URL}/get_sale_report_orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          license,
-          date1: dateFromWithTime,
-          date2: dateToWithTime,
-        }),
-      });
-
-      if (!Array.isArray(data)) {
-        alert("Datos del reporte no válidos.");
-        return;
-      }
-
-      // Aplanar líneas de producto para la tabla del PDF
-      const productLines = data.flatMap((order) =>
-        order.order_details.map((detail) => ({
-          id_order: order.id_order,
-          customer_name: order.customer_name?.includes("TPV")
-            ? "TPV"
-            : order.customer_name,
-          payment: order.payment,
-          product_quantity: detail.product_quantity,
-          product_name: detail.product_name,
-          total_price_tax_incl: detail.total_price_tax_incl,
-          reduction_amount_tax_incl: detail.reduction_amount_tax_incl || 0,
-          total_cash: order.total_cash || 0,
-          total_card: order.total_card || 0,
-          total_bizum: order.total_bizum || 0,
-        }))
-      );
-
-      // Calcular totales para el footer
-      const totalCash = data.reduce(
-        (acc, order) => acc + (order.total_cash || 0),
-        0
-      );
-      const totalCard = data.reduce(
-        (acc, order) => acc + (order.total_card || 0),
-        0
-      );
-      const totalBizum = data.reduce(
-        (acc, order) => acc + (order.total_bizum || 0),
-        0
-      );
-
-      // Crear PDF
-      const doc = new jsPDF("p", "pt", "a4");
-      const margin = 40;
-      let yPos = margin;
-
-      // Header
-      doc.setFontSize(18);
-      doc.text(`Reporte de ventas: ${shopName}`, margin, yPos);
-      yPos += 25;
-      doc.setFontSize(12);
-      doc.text(`Fecha impresión: ${new Date().toLocaleString()}`, margin, yPos);
-      yPos += 30;
-
-      // Tabla: construir filas según condiciones del precio
-      const tableColumn = [
-        "Ticket",
-        "Cliente",
-        "Pago",
-        "Cant.",
-        "Producto",
-        "Precio",
-      ];
-      const tableRows = productLines.map((item) => {
-        let precio = "";
-        if (
-          item.reduction_amount_tax_incl &&
-          item.reduction_amount_tax_incl !== 0
-        ) {
-          precio = `~~${Number(item.total_price_tax_incl).toFixed(
-            2
-          )}€~~ ${Number(item.reduction_amount_tax_incl).toFixed(2)}€`;
-        } else {
-          precio = Number(item.total_price_tax_incl).toFixed(2) + "€";
-        }
-        return [
-          item.id_order,
-          item.customer_name,
-          item.payment,
-          item.product_quantity,
-          item.product_name,
-          precio,
-        ];
-      });
-
-      doc.autoTable({
-        head: [tableColumn],
-        body: tableRows,
-        startY: yPos,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 10 },
-        theme: "grid",
-      });
-
-      // Footer: totales
-      const finalY = doc.lastAutoTable.finalY + 20;
-      doc.setFontSize(12);
-      doc.text(`Total Efectivo: ${totalCash.toFixed(2)}€`, margin, finalY);
-      doc.text(`Total Tarjeta: ${totalCard.toFixed(2)}€`, margin + 150, finalY);
-      doc.text(`Total Bizum: ${totalBizum.toFixed(2)}€`, margin + 300, finalY);
-
-      doc.save("reporte_ventas.pdf");
-    } catch (error) {
-      console.error("Error generando PDF:", error);
-      alert("Error al generar el PDF.");
     }
   };
 
@@ -459,12 +327,6 @@ const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
             label="30 días"
             onClick={() => setDaysAgo(30)}
             className="p-button-rounded p-button-secondary"
-          />
-          {/* Nuevo botón para generar PDF */}
-          <Button
-            label="Generar Reporte PDF"
-            onClick={handleGeneratePdf}
-            className="p-button-rounded p-button-success"
           />
         </div>
       </div>

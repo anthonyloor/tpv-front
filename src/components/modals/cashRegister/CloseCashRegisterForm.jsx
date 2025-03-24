@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import SalesReportModal from "../../reports/SalesReportModal";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import { InputNumber } from "primereact/inputnumber";
 import { Button } from "primereact/button";
@@ -12,9 +11,11 @@ import ActionResultDialog from "../../common/ActionResultDialog";
 import { Divider } from "primereact/divider";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { generateClosureTicket } from "../../../utils/ticket";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 function formatNumber(value) {
-  return isNaN(Number(value)) || value === "" ? "-" : value;
+  return isNaN(Number(value)) || value === "" ? "0" : value;
 }
 
 const CloseCashRegisterForm = ({ onClose }) => {
@@ -25,16 +26,19 @@ const CloseCashRegisterForm = ({ onClose }) => {
   const [inputTotalCard, setInputTotalCard] = useState("");
   const [inputTotalBizum, setInputTotalBizum] = useState("");
   const [isCloseButtonDisabled, setIsCloseButtonDisabled] = useState(true);
-  const [isSalesReportOpen, setIsSalesReportOpen] = useState(false);
   const [salesCount, setSalesCount] = useState(0);
   const [returnsCount, setReturnsCount] = useState(0);
   const [closingModalVisible, setClosingModalVisible] = useState(false);
   const [closingModalMessage, setClosingModalMessage] = useState("");
   const [closingModalSuccess, setClosingModalSuccess] = useState(false);
+  const [reportDateAdd, setReportDateAdd] = useState(null);
+  const [pdfReportGenerated, setPdfReportGenerated] = useState(false);
+  const [salesSummaryGenerated, setSalesSummaryGenerated] = useState(false);
 
   const apiFetch = useApiFetch();
   const navigate = useNavigate();
-  const { handleLogout, employeeId, employeeName } = useContext(AuthContext);
+  const { handleLogout, employeeId, employeeName, shopName } =
+    useContext(AuthContext);
   const shop = JSON.parse(localStorage.getItem("shop"));
   const licenseData = JSON.parse(localStorage.getItem("licenseData")) || {};
   const license = licenseData.licenseKey;
@@ -57,12 +61,13 @@ const CloseCashRegisterForm = ({ onClose }) => {
           }
         );
         if (data.status === "OK") {
-          const totalCashNum = parseFloat(data.total_cash);
-          const totalCardNum = parseFloat(data.total_card);
-          const totalBizumNum = parseFloat(data.total_bizum);
+          const totalCashNum = parseFloat(data.total_cash) || 0;
+          const totalCardNum = parseFloat(data.total_card) || 0;
+          const totalBizumNum = parseFloat(data.total_bizum) || 0;
           setFetchedTotalCash(totalCashNum);
           setFetchedTotalCard(totalCardNum);
           setFetchedTotalBizum(totalBizumNum);
+          setReportDateAdd(data.date_add);
         } else {
           showAlert(data.message || "No se pudo obtener el reporte de caja");
         }
@@ -77,14 +82,16 @@ const CloseCashRegisterForm = ({ onClose }) => {
   }, [license, apiFetch, API_BASE_URL]);
 
   useEffect(() => {
-    const cashMatches = parseFloat(inputTotalCash) === fetchedTotalCash;
-    const cardMatches = parseFloat(inputTotalCard) === fetchedTotalCard;
-    const bizumMatches = parseFloat(inputTotalBizum) === fetchedTotalBizum;
-    const allFilled =
-      inputTotalCash !== "" && inputTotalCard !== "" && inputTotalBizum !== "";
-    setIsCloseButtonDisabled(
-      !(allFilled && cashMatches && cardMatches && bizumMatches)
-    );
+    const inputCashNum = inputTotalCash === "" ? 0 : parseFloat(inputTotalCash);
+    const inputCardNum = inputTotalCard === "" ? 0 : parseFloat(inputTotalCard);
+    const inputBizumNum =
+      inputTotalBizum === "" ? 0 : parseFloat(inputTotalBizum);
+    const validInput =
+      inputCashNum === fetchedTotalCash &&
+      inputCardNum === fetchedTotalCard &&
+      inputBizumNum === fetchedTotalBizum;
+    const reportsGenerated = pdfReportGenerated && salesSummaryGenerated;
+    setIsCloseButtonDisabled(!(validInput && reportsGenerated));
   }, [
     inputTotalCash,
     inputTotalCard,
@@ -92,6 +99,8 @@ const CloseCashRegisterForm = ({ onClose }) => {
     fetchedTotalCash,
     fetchedTotalCard,
     fetchedTotalBizum,
+    pdfReportGenerated,
+    salesSummaryGenerated,
   ]);
 
   useEffect(() => {
@@ -104,7 +113,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             license,
-            date1: null,
+            date1: reportDateAdd,
             date2: dateToStr,
           }),
         });
@@ -139,22 +148,34 @@ const CloseCashRegisterForm = ({ onClose }) => {
       }
     };
 
-    if (license) {
+    if (license && reportDateAdd) {
       fetchSalesSummary();
     }
-  }, [license, apiFetch, API_BASE_URL]);
-
-  const handleCloseSalesReport = () => {
-    setIsSalesReportOpen(false);
-  };
-
-  const handleOpenSalesReport = () => {
-    setIsSalesReportOpen(true);
-  };
+  }, [license, apiFetch, API_BASE_URL, reportDateAdd]);
 
   const handleCloseCashRegister = async () => {
+    try {
+      const data = await apiFetch(`${API_BASE_URL}/close_pos_session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          license,
+          id_employee: employeeId,
+        }),
+      });
+      if (data.status === "OK") {
+        showAlert("Cierre de caja realizado correctamente.", true);
+      } else {
+        showAlert(data.message || "No se pudo cerrar la caja");
+      }
+    } catch (error) {
+      console.error("Error al cerrar la caja:", error);
+      showAlert("Error al cerrar la caja: " + error.message);
+    }
+  };
+
+  const handleGenerateSalesSummary = async () => {
     const closingDate = new Date();
-    // Obtener datos de cierre desde get_report_amounts
     const reportData = await apiFetch(
       `${API_BASE_URL}/get_report_amounts?license=${license}`,
       {
@@ -162,7 +183,6 @@ const CloseCashRegisterForm = ({ onClose }) => {
         headers: { "Content-Type": "application/json" },
       }
     );
-    // Construir objeto closureData con datos de reportData y metadatos
     const totalCash = parseFloat(reportData.total_cash) || 0;
     const totalCard = parseFloat(reportData.total_card) || 0;
     const totalBizum = parseFloat(reportData.total_bizum) || 0;
@@ -183,23 +203,144 @@ const CloseCashRegisterForm = ({ onClose }) => {
       localStorage.getItem("ticketConfig") || "{}"
     );
     try {
-      const data = await apiFetch(`${API_BASE_URL}/close_pos_session`, {
+      await generateClosureTicket(
+        "print",
+        closureData,
+        ticketConfig,
+        employeeName
+      );
+      alert("Resumen del reporte de ventas generado correctamente.");
+      setSalesSummaryGenerated(true);
+    } catch (error) {
+      console.error("Error generando el resumen:", error);
+      alert("Error al generar el resumen del reporte de ventas.");
+    }
+  };
+
+  const handleGeneratePdf = async () => {
+    const today = new Date();
+    // Usamos hoy como fecha desde y hasta
+    const dateFrom = today;
+    const dateTo = today;
+    if (!dateTo) return;
+    try {
+      const todayStr = today.toISOString().split("T")[0];
+      const dateFromStr = dateFrom
+        ? dateFrom.toISOString().split("T")[0]
+        : null;
+      let dateFromWithTime =
+        dateFromStr && dateFromStr !== todayStr
+          ? `${dateFromStr} 00:00:00`
+          : null;
+      const dateToStr = dateTo.toISOString().split("T")[0];
+      const dateToWithTime = `${dateToStr} 23:59:59`;
+
+      const data = await apiFetch(`${API_BASE_URL}/get_sale_report_orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           license,
-          id_employee: employeeId,
+          date1: dateFromWithTime,
+          date2: dateToWithTime,
         }),
       });
-      if (data.status === "OK") {
-        showAlert("Cierre de caja realizado correctamente.", true);
-        await generateClosureTicket("print", closureData, ticketConfig, employeeName);
-      } else {
-        showAlert(data.message || "No se pudo cerrar la caja");
+
+      if (!Array.isArray(data)) {
+        alert("Datos del reporte no válidos.");
+        return;
       }
+
+      const productLines = data.flatMap((order) =>
+        order.order_details.map((detail) => ({
+          id_order: order.id_order,
+          customer_name: order.customer_name?.includes("TPV")
+            ? "TPV"
+            : order.customer_name,
+          payment: order.payment,
+          product_quantity: detail.product_quantity,
+          product_name: detail.product_name,
+          total_price_tax_incl: detail.total_price_tax_incl,
+          reduction_amount_tax_incl: detail.reduction_amount_tax_incl || 0,
+          total_cash: order.total_cash || 0,
+          total_card: order.total_card || 0,
+          total_bizum: order.total_bizum || 0,
+        }))
+      );
+
+      const totalCash = data.reduce(
+        (acc, order) => acc + (order.total_cash || 0),
+        0
+      );
+      const totalCard = data.reduce(
+        (acc, order) => acc + (order.total_card || 0),
+        0
+      );
+      const totalBizum = data.reduce(
+        (acc, order) => acc + (order.total_bizum || 0),
+        0
+      );
+
+      const doc = new jsPDF("p", "pt", "a4");
+      const margin = 40;
+      let yPos = margin;
+
+      doc.setFontSize(18);
+      doc.text(`Reporte de ventas: ${shopName}`, margin, yPos);
+      yPos += 25;
+      doc.setFontSize(12);
+      doc.text(`Fecha impresión: ${new Date().toLocaleString()}`, margin, yPos);
+      yPos += 30;
+
+      const tableColumn = [
+        "Ticket",
+        "Cliente",
+        "Pago",
+        "Cant.",
+        "Producto",
+        "Precio",
+      ];
+      const tableRows = productLines.map((item) => {
+        let precio = "";
+        if (
+          item.reduction_amount_tax_incl &&
+          item.reduction_amount_tax_incl !== 0
+        ) {
+          precio = `~~${Number(item.total_price_tax_incl).toFixed(
+            2
+          )}€~~ ${Number(item.reduction_amount_tax_incl).toFixed(2)}€`;
+        } else {
+          precio = Number(item.total_price_tax_incl).toFixed(2) + "€";
+        }
+        return [
+          item.id_order,
+          item.customer_name,
+          item.payment,
+          item.product_quantity,
+          item.product_name,
+          precio,
+        ];
+      });
+
+      doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: yPos,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 10 },
+        theme: "grid",
+      });
+
+      const finalY = doc.lastAutoTable.finalY + 20;
+      doc.setFontSize(12);
+      doc.text(`Total Efectivo: ${totalCash.toFixed(2)}€`, margin, finalY);
+      doc.text(`Total Tarjeta: ${totalCard.toFixed(2)}€`, margin + 150, finalY);
+      doc.text(`Total Bizum: ${totalBizum.toFixed(2)}€`, margin + 300, finalY);
+
+      doc.save("reporte_ventas.pdf");
+      setPdfReportGenerated(true);
     } catch (error) {
-      console.error("Error al cerrar la caja:", error);
-      showAlert("Error al cerrar la caja: " + error.message);
+      console.error("Error generando PDF:", error);
+      alert("Error al generar el PDF.");
     }
   };
 
@@ -362,24 +503,21 @@ const CloseCashRegisterForm = ({ onClose }) => {
 
       <div className="flex justify-between items-center">
         <Button
-          label="Reporte de Ventas"
-          className="p-button-secondary"
-          onClick={handleOpenSalesReport}
+          label="Generar Reporte PDF"
+          className="p-button-success"
+          onClick={handleGeneratePdf}
+        />
+        <Button
+          label="Resumen Reporte Ventas"
+          className="p-button-info"
+          onClick={handleGenerateSalesSummary}
         />
         <Button
           label="Cerrar Caja"
           className="p-button-danger"
-          disabled={isCloseButtonDisabled}
           onClick={handleCloseCashRegister}
         />
       </div>
-
-      {isSalesReportOpen && (
-        <SalesReportModal
-          isOpen={isSalesReportOpen}
-          onClose={handleCloseSalesReport}
-        />
-      )}
 
       <ActionResultDialog
         visible={closingModalVisible}
