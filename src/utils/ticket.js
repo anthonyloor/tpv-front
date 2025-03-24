@@ -2,13 +2,7 @@ import createPdf from "./createPdf.js";
 import JsBarcode from "jsbarcode";
 
 // Se actualiza la función para recibir orderData y config como parámetros
-const generateTicket = async (
-  output,
-  orderData,
-  config,
-  employeesDict = {},
-  employeeName = "TPV"
-) => {
+const generateTicket = async (output, orderData, config, employeesDict) => {
   if (!orderData) {
     return {
       success: false,
@@ -345,7 +339,8 @@ export const generateClosureTicket = async (
   output,
   closureData,
   config,
-  employeeName = "TPV"
+  employeesDict,
+  employeeName
 ) => {
   // Formatear fechas
   const formattedOpenDate = new Date(closureData.date_add).toLocaleString(
@@ -383,19 +378,25 @@ export const generateClosureTicket = async (
         widths: ["50%", "50%"],
         body: [
           [
+            { text: "TIENDA:", style: "tHeaderLabel" },
+            { text: closureData.shop_name || "N/A", style: "tHeaderValue" },
+          ],
+          [
             { text: "FECHA APERTURA:", style: "tHeaderLabel" },
             { text: formattedOpenDate, style: "tHeaderValue" },
           ],
           [
-            { text: "FECHA CIERRE:", style: "tHeaderLabel" },
-            { text: formattedCloseDate, style: "tHeaderValue" },
-          ],
-          [
             { text: "EMPLEADO APERTURA:", style: "tHeaderLabel" },
             {
-              text: closureData.employee_open.toString(),
+              text: employeesDict[Number(closureData.employee_open)]
+                ? employeesDict[Number(closureData.employee_open)]
+                : "TPV",
               style: "tHeaderValue",
             },
+          ],
+          [
+            { text: "FECHA CIERRE:", style: "tHeaderLabel" },
+            { text: formattedCloseDate, style: "tHeaderValue" },
           ],
           [
             { text: "EMPLEADO CIERRE:", style: "tHeaderLabel" },
@@ -482,7 +483,7 @@ export const generateClosureTicket = async (
       subject: "ticket cierre",
     },
     styles: {
-      header: { fontSize: 10, bold: true, alignment: "center" },
+      header: { fontSize: 8, bold: true, alignment: "center" },
       tHeaderLabel: { fontSize: 8, alignment: "right" },
       tHeaderValue: { fontSize: 8, bold: true },
       tTotals: { fontSize: 8, bold: true, alignment: "right" },

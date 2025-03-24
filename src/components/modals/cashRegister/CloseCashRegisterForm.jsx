@@ -11,6 +11,8 @@ import ActionResultDialog from "../../common/ActionResultDialog";
 import { Divider } from "primereact/divider";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { generateClosureTicket } from "../../../utils/ticket";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import { ConfigContext } from "../../../contexts/ConfigContext";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
@@ -34,6 +36,8 @@ const CloseCashRegisterForm = ({ onClose }) => {
   const [reportDateAdd, setReportDateAdd] = useState(null);
   const [pdfReportGenerated, setPdfReportGenerated] = useState(false);
   const [salesSummaryGenerated, setSalesSummaryGenerated] = useState(false);
+  const employeesDict = useEmployeesDictionary();
+  const { configData } = useContext(ConfigContext);
 
   const apiFetch = useApiFetch();
   const navigate = useNavigate();
@@ -107,14 +111,28 @@ const CloseCashRegisterForm = ({ onClose }) => {
     const fetchSalesSummary = async () => {
       try {
         const today = new Date();
-        const dateToStr = today.toISOString().split("T")[0] + " 23:59:59";
+        const dateToWithTime = today
+          .toLocaleString("en-GB", {
+            timeZone: "Europe/Madrid",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          })
+          .replace(
+            /(\d+)\/(\d+)\/(\d+), (\d+):(\d+):(\d+)/,
+            "$3-$2-$1 $4:$5:$6"
+          );
         const data = await apiFetch(`${API_BASE_URL}/get_sale_report_orders`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             license,
             date1: reportDateAdd,
-            date2: dateToStr,
+            date2: dateToWithTime,
           }),
         });
         if (Array.isArray(data)) {
@@ -196,20 +214,18 @@ const CloseCashRegisterForm = ({ onClose }) => {
       total_cash: totalCash,
       total_card: totalCard,
       total_bizum: totalBizum,
+      shop_name: shopName,
       total,
       iva,
     };
-    const ticketConfig = JSON.parse(
-      localStorage.getItem("ticketConfig") || "{}"
-    );
     try {
       await generateClosureTicket(
         "print",
         closureData,
-        ticketConfig,
+        configData,
+        employeesDict,
         employeeName
       );
-      alert("Resumen del reporte de ventas generado correctamente.");
       setSalesSummaryGenerated(true);
     } catch (error) {
       console.error("Error generando el resumen:", error);
@@ -219,28 +235,26 @@ const CloseCashRegisterForm = ({ onClose }) => {
 
   const handleGeneratePdf = async () => {
     const today = new Date();
-    // Usamos hoy como fecha desde y hasta
-    const dateFrom = today;
-    const dateTo = today;
-    if (!dateTo) return;
+    if (!today) return;
     try {
-      const todayStr = today.toISOString().split("T")[0];
-      const dateFromStr = dateFrom
-        ? dateFrom.toISOString().split("T")[0]
-        : null;
-      let dateFromWithTime =
-        dateFromStr && dateFromStr !== todayStr
-          ? `${dateFromStr} 00:00:00`
-          : null;
-      const dateToStr = dateTo.toISOString().split("T")[0];
-      const dateToWithTime = `${dateToStr} 23:59:59`;
-
+      const dateToWithTime = today
+        .toLocaleString("en-GB", {
+          timeZone: "Europe/Madrid",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        })
+        .replace(/(\d+)\/(\d+)\/(\d+), (\d+):(\d+):(\d+)/, "$3-$2-$1 $4:$5:$6");
       const data = await apiFetch(`${API_BASE_URL}/get_sale_report_orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           license,
-          date1: dateFromWithTime,
+          date1: reportDateAdd,
           date2: dateToWithTime,
         }),
       });
@@ -251,20 +265,42 @@ const CloseCashRegisterForm = ({ onClose }) => {
       }
 
       const productLines = data.flatMap((order) =>
-        order.order_details.map((detail) => ({
-          id_order: order.id_order,
-          customer_name: order.customer_name?.includes("TPV")
-            ? "TPV"
-            : order.customer_name,
-          payment: order.payment,
-          product_quantity: detail.product_quantity,
-          product_name: detail.product_name,
-          total_price_tax_incl: detail.total_price_tax_incl,
-          reduction_amount_tax_incl: detail.reduction_amount_tax_incl || 0,
-          total_cash: order.total_cash || 0,
-          total_card: order.total_card || 0,
-          total_bizum: order.total_bizum || 0,
-        }))
+        order.order_details.map((detail) => {
+          // Extract combination from product_name
+          let combination = "";
+          if (detail.product_name && detail.product_reference) {
+            const refIndex = detail.product_name.indexOf(
+              detail.product_reference
+            );
+            if (refIndex !== -1) {
+              const afterRef = detail.product_name.substring(
+                refIndex + detail.product_reference.length
+              );
+              // Get text after the dash (and trim whitespace)
+              const dashIndex = afterRef.indexOf("-");
+              if (dashIndex !== -1) {
+                combination = afterRef.substring(dashIndex + 1).trim();
+              }
+            }
+          }
+
+          return {
+            id_order: order.id_order,
+            customer_name: order.customer_name?.includes("TPV")
+              ? "TPV"
+              : order.customer_name,
+            payment: order.payment,
+            product_quantity: detail.product_quantity,
+            product_reference: detail.product_reference,
+            combination_name: combination,
+            product_name: detail.product_name,
+            total_price_tax_incl: detail.total_price_tax_incl,
+            reduction_amount_tax_incl: detail.reduction_amount_tax_incl || 0,
+            total_cash: order.total_cash || 0,
+            total_card: order.total_card || 0,
+            total_bizum: order.total_bizum || 0,
+          };
+        })
       );
 
       const totalCash = data.reduce(
@@ -294,9 +330,10 @@ const CloseCashRegisterForm = ({ onClose }) => {
       const tableColumn = [
         "Ticket",
         "Cliente",
-        "Pago",
         "Cant.",
-        "Producto",
+        "Referencia",
+        "Combinación",
+        "Pago",
         "Precio",
       ];
       const tableRows = productLines.map((item) => {
@@ -314,8 +351,10 @@ const CloseCashRegisterForm = ({ onClose }) => {
         return [
           item.id_order,
           item.customer_name,
-          item.payment,
           item.product_quantity,
+          item.product_reference,
+          item.payment,
+
           item.product_name,
           precio,
         ];

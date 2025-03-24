@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { DataTable } from "primereact/datatable";
@@ -6,8 +6,6 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import { toast } from "sonner";
-import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
-import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
@@ -20,17 +18,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderDetailsVisible, setOrderDetailsVisible] = useState(false);
 
-  const shopsDict = useShopsDictionary();
-  const employeesDict = useEmployeesDictionary();
-
   const API_BASE_URL = getApiBaseUrl();
-
-  const ShopNameCell = ({ id_shop }) => (
-    <span>{shopsDict[id_shop] || id_shop}</span>
-  );
-  const EmployeeNameCell = ({ id_employee }) => (
-    <span>{employeesDict[id_employee] || id_employee}</span>
-  );
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -47,15 +35,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      loadOnlineOrders();
-      setSearchedOrder(null);
-      setSearchOrderId("");
-    }
-  }, [isOpen]);
-
-  const loadOnlineOrders = async () => {
+  const loadOnlineOrders = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await apiFetch(`${API_BASE_URL}/get_shop_orders`, {
@@ -68,7 +48,23 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [apiFetch, API_BASE_URL]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadOnlineOrders();
+      setSearchedOrder(null);
+      setSearchOrderId("");
+    }
+  }, [isOpen, loadOnlineOrders]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadOnlineOrders();
+      setSearchedOrder(null);
+      setSearchOrderId("");
+    }
+  }, [isOpen, loadOnlineOrders]);
 
   const handleSearchOrder = async () => {
     if (!searchOrderId.trim()) return;
