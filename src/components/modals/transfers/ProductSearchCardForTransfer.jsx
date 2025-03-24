@@ -6,6 +6,7 @@ import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 import ProductSelectionDialog from "./ProductSelectionDialog";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import useProductSearch from "../../../hooks/useProductSearch";
 
 const ProductSearchCardForTransfer = ({
   onAddProduct,
@@ -65,6 +66,22 @@ const ProductSearchCardForTransfer = ({
     isSearchDisabled = !selectedOriginStore;
   }
 
+  // Definir shopId para la búsqueda: para "entrada" se usa selectedDestinationStore; para "salida"/"traspaso" se usa selectedOriginStore.
+  const searchShopId =
+    type === "entrada" ? selectedDestinationStore : selectedOriginStore;
+  const {
+    groupedProducts,
+    isLoading: searchHookLoading,
+    handleSearch: productSearch,
+  } = useProductSearch({
+    apiFetch,
+    shopId: searchShopId,
+    allowOutOfStockSales: true,
+    onAddProduct: () => {},
+    onAddDiscount: () => {},
+    idProfile: null,
+  });
+
   // Manejar el cambio del input
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -98,52 +115,36 @@ const ProductSearchCardForTransfer = ({
     setIsLoading(true);
     try {
       const plainEanRegex = /^\d{13}$/;
-      const eanApostropheRegex = /^(\d{13})'(\d+)$/;
-      let code = "";
+      const eanIdControlRegex = /^(\d{13})(\d+)$/;
       let results = [];
-
-      if (eanApostropheRegex.test(term)) {
-        // Caso: EAN13 con id control stock
-        const [, eanCode, control] = term.match(eanApostropheRegex);
-        code = eanCode;
-        const resp = await apiFetch(
-          `${API_BASE_URL}/product_search?b=${encodeURIComponent(code)}`,
-          { method: "GET" }
+      if (plainEanRegex.test(term) || eanIdControlRegex.test(term)) {
+        // Búsqueda por EAN13 o EAN13+id_controlstock usando el hook useProductSearch
+        await productSearch(term);
+        const flatResults = groupedProducts.reduce(
+          (acc, group) => acc.concat(group.combinations),
+          []
         );
-        const valid = resp.filter(isProductValid);
-        results = valid.filter(
-          (prod) =>
-            (prod.ean13_combination === code ||
-              prod.ean13_combination_0 === code) &&
-            String(prod.id_control_stock) === control
-        );
-      } else if (plainEanRegex.test(term)) {
-        // Caso: EAN13 sin id control stock
-        code = term;
-        const resp = await apiFetch(
-          `${API_BASE_URL}/product_search?b=${encodeURIComponent(code)}`,
-          { method: "GET" }
-        );
-        const valid = resp.filter(isProductValid);
-        results = valid.filter(
-          (prod) =>
-            prod.ean13_combination === code || prod.ean13_combination_0 === code
-        );
+        results = flatResults;
       } else {
-        alert("Formato de búsqueda incorrecto. Ingresa un EAN13 o EAN13'id.");
-        return;
+        // Búsqueda normal (API)
+        const resp = await apiFetch(
+          `${API_BASE_URL}/product_search?b=${encodeURIComponent(term)}`,
+          { method: "GET" }
+        );
+        const valid = resp.filter(isProductValid);
+        results = valid;
       }
-
       if (results.length === 0) {
         alert("No se encontró producto con el código especificado.");
         return;
       }
-
-      // Transformar solo los productos que cumplen con la condición
       const transformed = transformProductsForTransfer(results);
-
-      if (transformed.length === 1) {
-        handleAddSelectedProducts(transformed);
+      if (
+        transformed.length === 1 &&
+        (plainEanRegex.test(term) || eanIdControlRegex.test(term))
+      ) {
+        // Agregar automáticamente el primer resultado encontrado
+        handleAddSelectedProducts([transformed[0]]);
       } else {
         setSearchResults(transformed);
         setIsDialogOpen(true);
