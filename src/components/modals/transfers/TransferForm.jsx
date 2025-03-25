@@ -161,23 +161,41 @@ const TransferForm = ({ type, onSave, movementData }) => {
     selectedOriginStore === selectedDestinationStore;
 
   const canEditProducts =
-    isNewMovement || movementStatus.toLowerCase() === "En creacion";
+    isNewMovement || movementStatus.toLowerCase() === "en creacion";
+
+  // Nueva función para mostrar el código de barras combinado
+  const barcodeBodyTemplate = (rowData) => {
+    const { ean13, id_control_stock } = rowData;
+    return id_control_stock ? `${ean13}-${id_control_stock}` : ean13;
+  };
 
   const handleAddProduct = (product) => {
     if (!canEditProducts) return;
 
     setProductsToTransfer((prev) => {
-      const maxStock = product.stockOrigin;
-
-      // Si es entrada, no hay restricción de stock
-      if (type === "entrada") {
+      // Si el producto tiene id_control_stock, se impide volver a añadir el mismo
+      if (product.id_control_stock) {
+        const exists = prev.find(
+          (p) =>
+            p.id_control_stock &&
+            p.id_control_stock === product.id_control_stock
+        );
+        if (exists) {
+          toast.error("Producto con control de stock ya añadido.");
+          return prev;
+        }
+        // Para productos con control stock se añade sin combinar cantidades
         setRecentlyAddedId(product.id_product_attribute);
         return [...prev, product];
       }
 
-      // Si es traspaso o salida, controlamos el stock
+      // Para productos sin id_control_stock, combinar solo si ya existe otro sin id_control_stock
+      const maxStock = product.stockOrigin;
+      if (type === "entrada") {
+        setRecentlyAddedId(product.id_product_attribute);
+        return [...prev, product];
+      }
       if (product.quantity > maxStock) {
-        // Si es admin, permitimos añadir pero avisamos
         if (idProfile === 1) {
           toast.warning(
             `[ADMIN] No hay suficiente stock (${maxStock}). Se ha añadido igualmente.`
@@ -185,38 +203,39 @@ const TransferForm = ({ type, onSave, movementData }) => {
           setRecentlyAddedId(product.id_product_attribute);
           return [...prev, product];
         } else {
-          // Si no es admin, no permitimos añadir
           toast.error("No dispones de más stock para añadir.");
           return prev;
         }
       }
 
       const existing = prev.find(
-        (p) => p.id_product_attribute === product.id_product_attribute
+        (p) =>
+          !p.id_control_stock &&
+          p.id_product_attribute === product.id_product_attribute
       );
       if (existing) {
         const newQty = existing.quantity + product.quantity;
         if (newQty > maxStock) {
-          // Si es admin, permitimos añadir pero avisamos
           if (idProfile === 1) {
             toast.warning(
               `[ADMIN] No hay suficiente stock (${maxStock}). Se ha añadido igualmente.`
             );
             setRecentlyAddedId(product.id_product_attribute);
             return prev.map((p) =>
-              p.id_product_attribute === product.id_product_attribute
+              p.id_product_attribute === product.id_product_attribute &&
+              !p.id_control_stock
                 ? { ...p, quantity: newQty }
                 : p
             );
           } else {
-            // Si no es admin, no permitimos añadir
             toast.error("No dispones de más stock para añadir.");
             return prev;
           }
         }
         setRecentlyAddedId(product.id_product_attribute);
         return prev.map((p) =>
-          p.id_product_attribute === product.id_product_attribute
+          p.id_product_attribute === product.id_product_attribute &&
+          !p.id_control_stock
             ? { ...p, quantity: newQty }
             : p
         );
@@ -489,7 +508,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
           return (
             <div className="flex gap-2 w-full">
               <Button
-                label="Actualizar"
+                label="Guardar"
                 className="p-button-secondary w-1/3"
                 disabled={isSameStore || noProducts}
                 onClick={handleUpdateMovement}
@@ -512,7 +531,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
           return (
             <div className="flex gap-2 w-full">
               <Button
-                label="Actualizar"
+                label="Guardar"
                 className="p-button-secondary w-1/2"
                 disabled={isSameStore || noProducts}
                 onClick={handleUpdateMovement}
@@ -530,7 +549,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
         return (
           <div className="flex gap-2 w-full">
             <Button
-              label="Actualizar"
+              label="Guardar"
               className="p-button-secondary w-1/2"
               disabled={noProducts}
               onClick={handleUpdateMovement}
@@ -590,8 +609,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
 
   const productTableColumns = [
     { field: "product_name", header: "Producto" },
-    { field: "ean13", header: "EAN13" },
-    { field: "id_control_stock", header: "id_stock" },
+    { field: "barcode", header: "Cod. Barras", body: barcodeBodyTemplate },
     { field: "quantity", header: "Cantidad", body: quantityBodyTemplate },
     { field: "action", header: "", body: actionBodyTemplate },
   ];
@@ -633,15 +651,20 @@ const TransferForm = ({ type, onSave, movementData }) => {
 
   // Si es traspaso y el estado es Recibido, insertar la columna Und. revisión
   if (type === "traspaso" && currentStatus.toLowerCase() === "en revision") {
-    productTableColumns.splice(4, 0, {
+    productTableColumns.splice(3, 0, {
       field: "revision",
-      header: "Und. revisión",
+      header: "Cantidad revisión",
       body: revisionBodyTemplate,
     });
   }
 
   // Diccionario de empleados
   const employeesDict = useEmployeesDictionary();
+  // Agregar la suma total de la cantidad de productos
+  const totalQuantity = productsToTransfer.reduce(
+    (acc, product) => acc + (product.quantity || 0),
+    0
+  );
 
   // Función para formatear fecha a dd-mm-yyyy (asume createDate en formato yyyy-mm-dd)
   const formatDateDDMMYYYY = (dateStr) => {
@@ -777,7 +800,8 @@ const TransferForm = ({ type, onSave, movementData }) => {
             ? "Productos a Traspasar"
             : type === "entrada"
             ? "Productos a Ingresar"
-            : "Productos a Retirar"}
+            : "Productos a Retirar"}{""}
+          {`: ${totalQuantity}`}
         </h3>
         <DataTable value={productsToTransfer} responsiveLayout="scroll">
           {productTableColumns.map((col) => (

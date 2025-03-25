@@ -18,12 +18,7 @@ import { addLocale } from "primereact/api";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
-const TransfersModal = ({
-  isOpen,
-  onClose,
-  widthPercent = "45%",
-  heightPercent = "65%",
-}) => {
+const TransfersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
   const shopsDict = useShopsDictionary();
   const employeesDict = useEmployeesDictionary();
@@ -129,7 +124,7 @@ const TransfersModal = ({
     { label: "Enviado", value: "Enviado" },
     { label: "Recibido", value: "Recibido" },
     { label: "En revision", value: "En revision" },
-    { label: "Finalizado", value: "Finalizado" },
+    { label: "Ejecutado", value: "Ejecutado" },
   ];
 
   // Reset filtros
@@ -628,29 +623,31 @@ const TransfersModal = ({
             header="Estado"
             style={{ width: "125px" }}
             body={(rowData) => {
-              let statusColor = "surface-500"; // Default color
+              let statusColor = "#5ab5ff"; // Default: En creación
               switch (rowData.status) {
                 case "En creacion":
-                  statusColor = "surface-300";
+                  statusColor = "#5ab5ff";
                   break;
                 case "Enviado":
-                  statusColor = "blue-300";
+                  statusColor = "#f45eca";
                   break;
                 case "Recibido":
-                  statusColor = "green-300";
+                  statusColor = "#ffed00";
                   break;
                 case "En revision":
-                  statusColor = "yellow-300";
+                  statusColor = "#ff9100";
                   break;
-                case "Finalizado":
-                  statusColor = "green-500";
+                case "Ejecutado":
+                  statusColor = "#50ef19";
                   break;
                 default:
                   break;
               }
-
               return (
-                <span className={`p-tag p-tag-rounded ${statusColor}`}>
+                <span
+                  className="p-tag"
+                  style={{ backgroundColor: statusColor }}
+                >
                   {rowData.status}
                 </span>
               );
@@ -782,10 +779,12 @@ const TransfersModal = ({
       closable={false}
       modal
       style={{
-        width: widthPercent,
-        height: heightPercent,
-        minWidth: "850px",
-        minHeight: "750px",
+        maxWidth: "1250px",
+        maxHeight: "950px",
+        minWidth: "900px",
+        minHeight: "700px",
+        width: "45vw",
+        height: "70vh",
       }}
     >
       {content}

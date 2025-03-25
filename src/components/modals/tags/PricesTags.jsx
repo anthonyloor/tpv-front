@@ -13,6 +13,7 @@ import useProductSearch from "../../../hooks/useProductSearch";
 import JsBarcode from "jsbarcode";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import { Checkbox } from "primereact/checkbox";
 
 export default function PricesTags({ isOpen, onHide }) {
   const { shopId, idProfile } = useContext(AuthContext);
@@ -28,8 +29,14 @@ export default function PricesTags({ isOpen, onHide }) {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [barcodesReady, setBarcodesReady] = useState(false);
-  const previewContainerRef = useRef(null); // nuevo
+  const previewContainerRef = useRef(null);
   const [tagsData, setTagsData] = useState([]);
+  const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [discountPrices, setDiscountPrices] = useState({});
+
+  const handleDiscountPriceChange = (key, value) => {
+    setDiscountPrices((prev) => ({ ...prev, [key]: value }));
+  };
 
   // Usar el hook de búsqueda (se usa onAddProduct para actualizar el producto seleccionado)
   const { groupedProducts, isLoading, handleSearch } = useProductSearch({
@@ -37,7 +44,7 @@ export default function PricesTags({ isOpen, onHide }) {
     shopId,
     allowOutOfStockSales: true,
     onAddProduct: (prod) => {
-      const filteredStocks = prod.stocksﬁ
+      const filteredStocks = prod.stocks
         ? prod.stocks.filter(
             (stock) => Number(stock.id_shop) === Number(shopId)
           )
@@ -60,6 +67,7 @@ export default function PricesTags({ isOpen, onHide }) {
     if (isOpen) {
       setSearchTerm("");
       setSelectedProduct(null);
+      setSelectedTrackingProducts([]);
       setQuantityPrint(1);
       setIsGenerating(false);
       if (inputRef.current) inputRef.current.focus();
@@ -174,6 +182,9 @@ export default function PricesTags({ isOpen, onHide }) {
         const tags = responses.map((info) => ({
           ean13: info.ean13,
           id_control_stock: info.id_control_stock,
+          price: selectedTrackingProducts.find(
+            (p) => p.id_control_stock === info.id_control_stock
+          ).price,
         }));
         setTagsData(tags);
         let labelsHtml = "";
@@ -181,42 +192,57 @@ export default function PricesTags({ isOpen, onHide }) {
           "box-sizing:border-box; margin-top:15px;margin-left:15px; page-break-after: always; break-after: page;";
         tags.forEach((tag, i) => {
           const newEan = tag.ean13 + "-" + tag.id_control_stock;
+          // Buscar el nuevo precio para el registro (si existe) o usar el original.
+          const key = tag.id_control_stock;
+          const newPrice =
+            discountEnabled && discountPrices[key]
+              ? discountPrices[key]
+              : tag.price;
           labelsHtml += `
             <div class="label" style="${labelStyle}">
               <div class="product-name" style="margin:0; padding:0; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-                <span style="font-size: 18px;">${
-                  selectedTrackingProducts[0].product_name
-                }</span>
+              <span style="font-size: 18px;">${selectedTrackingProducts[i].product_name
+                .split(" ")
+                .map(
+                  (word) =>
+                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                )
+                .join(" ")}</span>
               </div>
               <div class="content-row" style="display:inline-flex; margin-top:5px;">
-                <div class="barcode-column" style="display:flex; flex-direction:column;">
-                  <svg id="barcode-${i}"></svg>
-                  <div style="margin-top:5px; text-align:center; font-family: 'Arial', sans-serif; font-size:18px; color:#999; font-weight: bold;">
-                    <i className="pi pi-link"></i> ${newEan}
-                  </div>
-                </div>
-                <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
-                  <span class="combination" style="margin:0; width:70px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-                    ${
-                      selectedTrackingProducts[0].combination_name
-                        ? selectedTrackingProducts[0].combination_name.replace(
-                            /-/,
-                            "<br />-----<br />"
-                          )
-                        : ""
-                    }
-                  </span>
-                  <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-                    ${
-                      selectedTrackingProducts[0].price
-                        ? selectedTrackingProducts[0].price.toFixed(2) + " €"
-                        : ""
-                    }
-                  </div>
+              <div class="barcode-column" style="display:flex; flex-direction:column;">
+                <svg id="barcode-${i}"></svg>
+                <div style="margin-top:5px; text-align:center; font-family: 'Arial', sans-serif; font-size:18px; color:#999; font-weight: bold;">
+                <i className="pi pi-link"></i> ${newEan}
                 </div>
               </div>
+              <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
+                <span class="combination" style="margin:0; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                ${
+                  selectedTrackingProducts[i].combination_name
+                    ? selectedTrackingProducts[i].combination_name.replace(
+                        /-/,
+                        "<br />-----<br />"
+                      )
+                    : ""
+                }
+                </span>
+                  <div class="price" style="margin:0; padding:10px 0px 0px 0px; width:90px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                ${
+                  discountEnabled
+                    ? `<span style="text-decoration: line-through;font-size: 12px;">${
+                        tag.price ? tag.price + " €" : ""
+                      }</span>
+                     <span style="color:red;font-size: 18px; font-weight: bold;">${newPrice} €</span>`
+                    : tag.price
+                    ? tag.price + " €"
+                    : ""
+                }
+                </div>
+              </div>
+              </div>
             </div>
-          `;
+            `;
         });
         setPreviewHtml(labelsHtml);
         setBarcodesReady(false);
@@ -267,14 +293,23 @@ export default function PricesTags({ isOpen, onHide }) {
             ? response[0] || response
             : response;
           const tags = [
-            { ean13: info.ean13, id_control_stock: info.id_control_stock },
+            {
+              ean13: info.ean13,
+              id_control_stock: info.id_control_stock,
+              price: info.price,
+            },
           ];
           setTagsData(tags);
           let labelsHtml = "";
           tags.forEach((tag, i) => {
             const newEan = tag.ean13 + "-" + tag.id_control_stock;
+            const key = selectedProduct.id_product_attribute;
+            const newPrice =
+              discountEnabled && discountPrices[key]
+                ? discountPrices[key]
+                : tag.price;
             labelsHtml += `
-              <div class="label" style="margin-bottom:15px;margin-top:15px;margin-left:10px;">
+              <div class="label" style="${labelStyle}">
                 <div class="product-name" style="margin:0; padding:0; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
                   <span style="font-size: 18px;">${selectedProduct.product_name
                     .split(" ")
@@ -293,7 +328,7 @@ export default function PricesTags({ isOpen, onHide }) {
                     </div>
                   </div>
                   <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
-                    <span class="combination" style="margin:0; width:70px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                <span class="combination" style="margin:0; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
                       ${
                         selectedProduct.combination_name
                           ? selectedProduct.combination_name.replace(
@@ -303,12 +338,19 @@ export default function PricesTags({ isOpen, onHide }) {
                           : ""
                       }
                     </span>
-                    <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-                      ${
-                        selectedProduct.price
-                          ? selectedProduct.price.toFixed(2) + " €"
-                          : ""
-                      }
+                  <div class="price" style="margin:0; padding:10px 0px 0px 0px; width:90px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                  ${
+                    discountEnabled
+                      ? `<span style="text-decoration: line-through;font-size: 12px;">${
+                          selectedProduct.price
+                            ? selectedProduct.price + " €"
+                            : ""
+                        }</span>
+                       <span style="color:red;font-size: 18px; font-weight: bold;">${newPrice} €</span>`
+                      : selectedProduct.price
+                      ? selectedProduct.price + " €"
+                      : ""
+                  }
                     </div>
                   </div>
                 </div>
@@ -327,12 +369,22 @@ export default function PricesTags({ isOpen, onHide }) {
           let labelsHtml = "";
           tags.forEach((tag, i) => {
             const newEan = tag.ean13 + "-" + tag.id_control_stock;
+            const key = selectedProduct.id_product_attribute;
+            const newPrice =
+              discountEnabled && discountPrices[key]
+                ? discountPrices[key]
+                : selectedProduct.price;
             labelsHtml += `
               <div class="label" style="${labelStyle}">
                 <div class="product-name" style="margin:0; padding:0; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-                  <span style="font-size: 18px;">${
-                    selectedProduct.product_name
-                  }</span>
+                  <span style="font-size: 18px;">${selectedProduct.product_name
+                    .split(" ")
+                    .map(
+                      (word) =>
+                        word.charAt(0).toUpperCase() +
+                        word.slice(1).toLowerCase()
+                    )
+                    .join(" ")}</span>
                 </div>
                 <div class="content-row" style="display:inline-flex; margin-top:5px;">
                   <div class="barcode-column" style="display:flex; flex-direction:column;">
@@ -342,7 +394,7 @@ export default function PricesTags({ isOpen, onHide }) {
                     </div>
                   </div>
                   <div class="info-column" style="display:flex; flex-direction:column;font-weight:bold;">
-                    <span class="combination" style="margin:0; width:70px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                <span class="combination" style="margin:0; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
                       ${
                         selectedProduct.combination_name
                           ? selectedProduct.combination_name.replace(
@@ -352,12 +404,19 @@ export default function PricesTags({ isOpen, onHide }) {
                           : ""
                       }
                     </span>
-                    <div class="price" style="margin:0; padding:10px 0 0 5px; width:80px; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-                      ${
-                        selectedProduct.price
-                          ? selectedProduct.price.toFixed(2) + " €"
-                          : ""
-                      }
+                  <div class="price" style="margin:0; padding:10px 0px 0px 0px; width:90px; text-align:center; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
+                    ${
+                      discountEnabled
+                        ? `<span style="text-decoration: line-through;font-size: 12px;">${
+                            selectedProduct.price
+                              ? selectedProduct.price + " €"
+                              : ""
+                          }</span>
+                         <span style="color:red;font-size: 18px; font-weight: bold;">${newPrice} €</span>`
+                        : selectedProduct.price
+                        ? selectedProduct.price + " €"
+                        : ""
+                    }
                     </div>
                   </div>
                 </div>
@@ -404,7 +463,7 @@ export default function PricesTags({ isOpen, onHide }) {
             rotation: 0,
           });
           elem.style.width = "230px";
-          elem.style.height = "70px";
+          elem.style.height = "75px";
         } catch (error) {
           console.error("Error generando código de barras:", error);
           elem.insertAdjacentHTML(
@@ -458,10 +517,16 @@ export default function PricesTags({ isOpen, onHide }) {
 
   // Footer fijo para los botones
   const dialogFooter = (
-    <div className="flex justify-end">
+    <div className="flex justify-end items-center gap-3">
+      <Checkbox
+        inputId="discountCheckbox"
+        checked={discountEnabled}
+        onChange={(e) => setDiscountEnabled(e.checked)}
+      />
+      <label htmlFor="discountCheckbox">Precios con oferta</label>
       <Button
         label={
-          selectedProduct?.id_control_stock
+          selectedProduct?.id_control_stock || selectedTrackingProducts.length > 0
             ? "Reimprimir etiquetas"
             : "Imprimir etiquetas"
         }
@@ -560,9 +625,38 @@ export default function PricesTags({ isOpen, onHide }) {
                         />
                         <Column
                           header="Precio"
-                          body={(rowData) =>
-                            rowData.price ? rowData.price.toFixed(2) + " €" : ""
-                          }
+                          body={(rowData) => {
+                            if (discountEnabled) {
+                              const key = rowData.id_product_attribute;
+                              return (
+                                <>
+                                  <span
+                                    style={{
+                                      textDecoration: "line-through",
+                                      fontSize: "12px",
+                                    }}
+                                  >
+                                    {rowData.price
+                                      ? rowData.price.toFixed(2) + " €"
+                                      : ""}
+                                  </span>
+                                  <InputText
+                                    value={discountPrices[key] ?? rowData.price}
+                                    onChange={(e) =>
+                                      handleDiscountPriceChange(
+                                        key,
+                                        e.target.value
+                                      )
+                                    }
+                                    style={{ color: "red" }}
+                                  />
+                                </>
+                              );
+                            }
+                            return rowData.price
+                              ? rowData.price.toFixed(2) + " €"
+                              : "";
+                          }}
                           style={{
                             width: "90px",
                             textAlign: "center",
@@ -587,10 +681,10 @@ export default function PricesTags({ isOpen, onHide }) {
                           body={(rowData) => (
                             <>
                               {rowData.quantity}
-                              {rowData.trackingCount
-                                ? ` | ${rowData.trackingCount} `
+                              {Number(rowData.trackingCount) > 0
+                                ? ` | ${rowData.trackingCount}`
                                 : ""}
-                              {rowData.trackingCount && (
+                              {Number(rowData.trackingCount) > 0 && (
                                 <i className="pi pi-link"></i>
                               )}
                             </>
@@ -652,9 +746,38 @@ export default function PricesTags({ isOpen, onHide }) {
                         />
                         <Column
                           header="Precio"
-                          body={(rowData) =>
-                            rowData.price ? rowData.price.toFixed(2) + " €" : ""
-                          }
+                          body={(rowData) => {
+                            if (discountEnabled) {
+                              const key = rowData.id_control_stock;
+                              return (
+                                <>
+                                  <span
+                                    style={{
+                                      textDecoration: "line-through",
+                                      fontSize: "12px",
+                                    }}
+                                  >
+                                    {rowData.price
+                                      ? rowData.price.toFixed(2) + " €"
+                                      : ""}
+                                  </span>
+                                  <InputText
+                                    value={discountPrices[key] ?? rowData.price}
+                                    onChange={(e) =>
+                                      handleDiscountPriceChange(
+                                        key,
+                                        e.target.value
+                                      )
+                                    }
+                                    style={{ color: "red" }}
+                                  />
+                                </>
+                              );
+                            }
+                            return rowData.price
+                              ? rowData.price.toFixed(2) + " €"
+                              : "";
+                          }}
                           style={{
                             width: "90px",
                             textAlign: "center",

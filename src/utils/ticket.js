@@ -121,6 +121,50 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     });
     return canvas.toDataURL("image/png");
   };
+  const totalsBody = [
+    [
+      { text: "SUBTOTAL:", style: "tTotals" },
+      {
+        text: subtotal.toFixed(2) + " €",
+        style: "tTotals",
+        alignment: "right",
+      },
+    ],
+  ];
+  if (totalDiscounts !== 0) {
+    totalsBody.push([
+      { text: "TOTAL DESCUENTOS:", style: "tTotals" },
+      {
+        text: totalDiscounts.toFixed(2) + " €",
+        style: "tTotals",
+        alignment: "right",
+      },
+    ]);
+  }
+  if (orderData.id_shop === 1 || orderData.id_shop === 13) {
+    totalsBody.push([
+      { text: "ENVIO:", style: "tTotals" },
+      {
+        text: (orderData.total_shipping || 0).toFixed(2) + " €",
+        style: "tTotals",
+        alignment: "right",
+      },
+    ]);
+  }
+  totalsBody.push(
+    [
+      { text: "I.V.A (21%):", style: "tTotals" },
+      { text: iva.toFixed(2) + " €", style: "tTotals", alignment: "right" },
+    ],
+    [
+      { text: "TOTAL:", style: "tTotals" },
+      {
+        text: totalAfterDiscount.toFixed(2) + " €",
+        style: "tTotals",
+        alignment: "right",
+      },
+    ]
+  );
 
   const content = [
     ...(config.ticket_logo_base64
@@ -187,7 +231,9 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     },
     {
       text: `EMPLEADO: ${
-        employeesDict[orderData.id_employee]
+        orderData.id_shop === 1 || orderData.id_shop === 13
+          ? "ONLINE"
+          : employeesDict[orderData.id_employee]
           ? employeesDict[orderData.id_employee]
           : "TPV"
       }`,
@@ -214,76 +260,56 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
       margin: [0, 10, 20, 0],
       table: {
         widths: ["50%", "50%"],
-        body: [
-          [
-            { text: "SUBTOTAL:", style: "tTotals" },
-            {
-              text: subtotal.toFixed(2) + " €",
-              style: "tTotals",
-              alignment: "right",
-            },
-          ],
-          [
-            { text: "TOTAL DESCUENTOS:", style: "tTotals" },
-            {
-              text: totalDiscounts.toFixed(2) + " €",
-              style: "tTotals",
-              alignment: "right",
-            },
-          ],
-          [
-            { text: "I.V.A (21%):", style: "tTotals" },
-            {
-              text: iva.toFixed(2) + " €",
-              style: "tTotals",
-              alignment: "right",
-            },
-          ],
-          [
-            { text: "TOTAL:", style: "tTotals" },
-            {
-              text: totalAfterDiscount.toFixed(2) + " €",
-              style: "tTotals",
-              alignment: "right",
-            },
-          ],
-        ],
+        body: totalsBody,
       },
       layout: "noBorders",
     },
     // Forma de pago
-    { text: "FORMA DE PAGO:", style: "tTotals", margin: [0, 10, 15, 0] },
-    {
-      margin: [0, 2, 15, 0],
-      table: {
-        widths: ["33%", "33%", "33%"],
-        body: [
-          [
-            { text: "EFECTIVO:", style: "tTotals" },
-            { text: "TARJETA:", style: "tTotals" },
-            { text: "BIZUM:", style: "tTotals" },
-          ],
-          [
-            {
-              text: orderData.payment_amounts?.total_cash?.toString() || "0",
-              style: "tTotals",
-              alignment: "right",
+    ...(orderData.id_shop === 1 || orderData.id_shop === 13
+      ? [
+          {
+            text: `FORMA DE PAGO: ${orderData.payment || ""}`,
+            style: "tTotals",
+            margin: [0, 10, 15, 0],
+          },
+        ]
+      : [
+          { text: "FORMA DE PAGO:", style: "tTotals", margin: [0, 10, 15, 0] },
+          {
+            margin: [0, 2, 15, 0],
+            table: {
+              widths: ["33%", "33%", "33%"],
+              body: [
+                [
+                  { text: "EFECTIVO:", style: "tTotals" },
+                  { text: "TARJETA:", style: "tTotals" },
+                  { text: "BIZUM:", style: "tTotals" },
+                ],
+                [
+                  {
+                    text:
+                      orderData.payment_amounts?.total_cash?.toString() || "0",
+                    style: "tTotals",
+                    alignment: "right",
+                  },
+                  {
+                    text:
+                      orderData.payment_amounts?.total_card?.toString() || "0",
+                    style: "tTotals",
+                    alignment: "right",
+                  },
+                  {
+                    text:
+                      orderData.payment_amounts?.total_bizum?.toString() || "0",
+                    style: "tTotals",
+                    alignment: "right",
+                  },
+                ],
+              ],
             },
-            {
-              text: orderData.payment_amounts?.total_card?.toString() || "0",
-              style: "tTotals",
-              alignment: "right",
-            },
-            {
-              text: orderData.payment_amounts?.total_bizum?.toString() || "0",
-              style: "tTotals",
-              alignment: "right",
-            },
-          ],
-        ],
-      },
-      layout: "noBorders",
-    },
+            layout: "noBorders",
+          },
+        ]),
     // Nota de pie (si existen) con mayúsculas y negrita
     ...(config.ticket_text_footer_1
       ? [

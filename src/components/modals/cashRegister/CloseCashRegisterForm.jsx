@@ -284,12 +284,39 @@ const CloseCashRegisterForm = ({ onClose }) => {
             }
           }
 
+          // Calcular texto de pago usando los amounts en la orden según reglas:
+          const payments = order.payment
+            .split(",")
+            .map((p) => p.trim().toLowerCase());
+          const cashAmount = order.total_cash || 0;
+          const cardAmount = order.total_card || 0;
+          const bizumAmount = order.total_bizum || 0;
+          const includedMethods = [];
+          if (payments.includes("efectivo")) {
+            includedMethods.push({ method: "efectivo", amount: cashAmount });
+          }
+          if (payments.includes("tarjeta")) {
+            includedMethods.push({ method: "tarjeta", amount: cardAmount });
+          }
+          if (payments.includes("bizum")) {
+            includedMethods.push({ method: "bizum", amount: bizumAmount });
+          }
+          const nonZeroCount = includedMethods.filter(
+            (m) => m.amount > 0
+          ).length;
+          const paymentText = includedMethods
+            .map((m) =>
+              nonZeroCount > 1 && m.amount > 0
+                ? `${m.method}: ${m.amount.toFixed(2)}€`
+                : m.method
+            )
+            .join(", ");
           return {
             id_order: order.id_order,
             customer_name: order.customer_name?.includes("TPV")
               ? "TPV"
               : order.customer_name,
-            payment: order.payment,
+            payment: paymentText,
             product_quantity: detail.product_quantity,
             product_reference: detail.product_reference,
             combination_name: combination,
@@ -302,6 +329,44 @@ const CloseCashRegisterForm = ({ onClose }) => {
           };
         })
       );
+
+      // Calcular suma de descuentos realizados en todas las líneas:
+      let discountSum = 0;
+      data.forEach((order) => {
+        order.order_details.forEach((detail) => {
+          const reduction = parseFloat(detail.reduction_amount_tax_incl) || 0;
+          if (reduction !== 0) {
+            const original = parseFloat(detail.total_price_tax_incl);
+            discountSum += (original - reduction) * detail.product_quantity;
+          }
+        });
+      });
+
+      const tableRows = productLines.map((item) => {
+        // Se genera el valor para "Importe" según si existe descuento
+        let precio;
+        if (
+          item.reduction_amount_tax_incl &&
+          item.reduction_amount_tax_incl !== 0
+        ) {
+          precio = {
+            discount: true,
+            original: Number(item.total_price_tax_incl).toFixed(2) + "€",
+            discounted: Number(item.reduction_amount_tax_incl).toFixed(2) + "€",
+          };
+        } else {
+          precio = Number(item.total_price_tax_incl).toFixed(2) + "€";
+        }
+        return [
+          item.id_order,
+          item.customer_name,
+          item.product_quantity,
+          item.product_reference,
+          item.combination_name,
+          item.payment,
+          precio,
+        ];
+      });
 
       const totalCash = data.reduce(
         (acc, order) => acc + (order.total_cash || 0),
@@ -324,7 +389,11 @@ const CloseCashRegisterForm = ({ onClose }) => {
       doc.text(`Reporte de ventas: ${shopName}`, margin, yPos);
       yPos += 25;
       doc.setFontSize(12);
-      doc.text(`Fecha impresión: ${new Date().toLocaleString()}`, margin, yPos);
+      doc.text(
+        `Fecha generación reporte: ${new Date().toLocaleString()}`,
+        margin,
+        yPos
+      );
       yPos += 30;
 
       const tableColumn = [
@@ -334,46 +403,120 @@ const CloseCashRegisterForm = ({ onClose }) => {
         "Referencia",
         "Combinación",
         "Pago",
-        "Precio",
+        "Importe",
       ];
-      const tableRows = productLines.map((item) => {
-        let precio = "";
-        if (
-          item.reduction_amount_tax_incl &&
-          item.reduction_amount_tax_incl !== 0
-        ) {
-          precio = `~~${Number(item.total_price_tax_incl).toFixed(
-            2
-          )}€~~ ${Number(item.reduction_amount_tax_incl).toFixed(2)}€`;
-        } else {
-          precio = Number(item.total_price_tax_incl).toFixed(2) + "€";
-        }
-        return [
-          item.id_order,
-          item.customer_name,
-          item.product_quantity,
-          item.product_reference,
-          item.payment,
-
-          item.product_name,
-          precio,
-        ];
-      });
-
       doc.autoTable({
         head: [tableColumn],
         body: tableRows,
         startY: yPos,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 10 },
+        styles: { fontSize: 12 },
+        theme: "grid",
+        // Nuevo hook para evitar que se imprima el objeto por defecto
+        didParseCell: function (data) {
+          if (
+            data.column.index === 6 &&
+            data.cell.raw &&
+            data.cell.raw.discount
+          ) {
+            data.cell.text = [];
+          }
+        },
+        didDrawCell: function (data) {
+          // Verificar si es la columna de "Importe" y si el valor es un objeto de descuento
+          if (
+            data.column.index === 6 &&
+            data.cell.raw &&
+            data.cell.raw.discount
+          ) {
+            const originalText = data.cell.raw.original;
+            const discountedText = data.cell.raw.discounted;
+            const { x, y } = data.cell;
+            // Dibujar importe original mas pequeño y con tachado
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(8);
+            const origX = x + 2;
+            const origY = y + 10;
+            doc.text(originalText, origX, origY);
+            const origTextWidth = doc.getTextWidth(originalText);
+            doc.setDrawColor(255, 0, 0);
+            doc.setLineWidth(0.5);
+            doc.line(origX, origY - 2, origX + origTextWidth, origY - 2);
+            // Dibujar importe con descuento en rojo mas grande
+            doc.setTextColor(255, 0, 0);
+            doc.setFontSize(12);
+            doc.text(discountedText, origX, origY + 10);
+          }
+        },
+      });
+
+      // Obtener posición final tras la tabla de productos
+      let finalY = doc.lastAutoTable.finalY + 20;
+
+      // Nueva tabla de pagos similar a la de productos
+      const paymentTableHead = [
+        ["Total Efectivo", "Total Tarjeta", "Total Bizum"],
+      ];
+      const paymentTableBody = [
+        [
+          totalCash.toFixed(2) + "€",
+          totalCard.toFixed(2) + "€",
+          totalBizum.toFixed(2) + "€",
+        ],
+      ];
+      doc.autoTable({
+        head: paymentTableHead,
+        body: paymentTableBody,
+        startY: finalY,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 12 },
         theme: "grid",
       });
 
-      const finalY = doc.lastAutoTable.finalY + 20;
-      doc.setFontSize(12);
-      doc.text(`Total Efectivo: ${totalCash.toFixed(2)}€`, margin, finalY);
-      doc.text(`Total Tarjeta: ${totalCard.toFixed(2)}€`, margin + 150, finalY);
-      doc.text(`Total Bizum: ${totalBizum.toFixed(2)}€`, margin + 300, finalY);
+      finalY = doc.lastAutoTable.finalY + 20;
+
+      // Tabla de totales generales; se añade la fila de descuentos si corresponde
+      const totalsTableBody = [];
+      if (discountSum > 0) {
+        totalsTableBody.push([
+          "TOTAL SIN DESCUENTOS:",
+          data
+            .reduce((sum, order) => {
+              // Se asume que el total de cada producto está en total_price_tax_incl * cantidad
+              return (
+                sum +
+                order.order_details.reduce(
+                  (s, d) =>
+                    s + parseFloat(d.total_price_tax_incl) * d.product_quantity,
+                  0
+                )
+              );
+            }, 0)
+            .toFixed(2) + "€",
+        ]);
+        totalsTableBody.push([
+          "TOTAL DESCUENTOS:",
+          discountSum.toFixed(2) + "€",
+        ]);
+      }
+      // Se calcula el IVA y Total general a partir de data.total_paid (similar a lo que ya se usa en otros reportes)
+      const totalPaid = data.reduce(
+        (acc, order) => acc + (order.total_paid || 0),
+        0
+      );
+      //const iva = totalPaid - totalPaid / 1.21;
+      totalsTableBody.push(
+        // ["I.V.A (21%):", iva.toFixed(2) + "€"],
+        ["TOTAL:", totalPaid.toFixed(2) + "€"]
+      );
+      doc.autoTable({
+        head: [],
+        body: totalsTableBody,
+        startY: finalY,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 12, halign: "right" },
+        tableLineWidth: 0,
+      });
 
       doc.save("reporte_ventas.pdf");
       setPdfReportGenerated(true);

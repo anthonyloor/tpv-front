@@ -1,5 +1,11 @@
 import React, { useState } from "react";
 import { Dialog } from "primereact/dialog";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Checkbox } from "primereact/checkbox";
+import { Button } from "primereact/button";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import { useApiFetch } from "../../../utils/useApiFetch";
 
 /**
  * Componente para mostrar un diálogo (PrimeReact) con la lista de productos
@@ -23,6 +29,10 @@ const ProductSelectionDialog = ({
   type = "traspaso", // 'traspaso' | 'entrada' | 'salida'
 }) => {
   const [selectedItems, setSelectedItems] = useState([]);
+  // Nuevo estado para celdas seleccionadas en la columna Cod. Barras
+  const [selectedBarcodeItems, setSelectedBarcodeItems] = useState([]);
+  const apiFetch = useApiFetch();
+  const API_BASE_URL = getApiBaseUrl();
 
   // Al hacer check
   const handleCheckboxChange = (product) => {
@@ -55,9 +65,61 @@ const ProductSelectionDialog = ({
         p.id_product_attribute === product.id_product_attribute
     );
 
-  // Determina si se muestra la columna "stockOrigin"
+  // Nuevas funciones para manejar la selección en la columna Cod. Barras
+  const handleBarcodeClick = (product) => {
+    setSelectedBarcodeItems((prev) => {
+      const exists = prev.find(
+        (p) =>
+          p.id_product === product.id_product &&
+          p.id_product_attribute === product.id_product_attribute
+      );
+      if (exists) {
+        return prev.filter(
+          (p) =>
+            !(
+              p.id_product === product.id_product &&
+              p.id_product_attribute === product.id_product_attribute
+            )
+        );
+      } else {
+        return [...prev, product];
+      }
+    });
+  };
+
+  const isBarcodeSelected = (product) =>
+    !!selectedBarcodeItems.find(
+      (p) =>
+        p.id_product === product.id_product &&
+        p.id_product_attribute === product.id_product_attribute
+    );
+
+  // Función para llamar a /generate_ean13 con datos de las celdas seleccionadas
+  const handleGenerateBarcode = async () => {
+    const payload = {
+      products: selectedBarcodeItems.map((p) => ({
+        id_product: p.id_product,
+        id_product_attribute: p.id_product_attribute,
+      })),
+    };
+    try {
+      const response = await apiFetch(`${API_BASE_URL}/generate_ean13`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      if (response && !response.error) {
+        setSelectedBarcodeItems([]);
+        onHide();
+      } else {
+        alert("Error al generar código de barras.");
+      }
+    } catch (error) {
+      alert("Error al generar código de barras.");
+    }
+  };
+
+  // Mostrar columnas según el tipo
   const showOriginStock = type === "salida" || type === "traspaso";
-  // Determina si se muestra la columna "stockDestination"
   const showDestinationStock = type === "entrada" || type === "traspaso";
 
   // Al pulsar "Añadir" en el footer
@@ -70,24 +132,68 @@ const ProductSelectionDialog = ({
     setSelectedItems([]);
   };
 
+  // Footer del diálogo adaptado a PrimeReact, se agrega botón "Generar codigo de barras" si hay selección en la columna
   const renderFooter = () => {
     return (
       <div className="flex justify-end gap-2">
-        <button
-          className="p-button p-component p-button-text"
+        <Button
+          label="Cancelar"
+          className="p-button-text"
           onClick={() => {
             setSelectedItems([]);
+            setSelectedBarcodeItems([]);
             onHide();
           }}
-        >
-          Cancelar
-        </button>
-        <button
-          className="p-button p-component p-button-primary"
+        />
+        {selectedBarcodeItems.length > 0 && (
+          <Button
+            label="Generar codigo de barras"
+            className="p-button-warning"
+            onClick={handleGenerateBarcode}
+          />
+        )}
+        <Button
+          label="Añadir"
+          className="p-button-primary"
           onClick={handleConfirm}
-        >
-          Añadir
-        </button>
+        />
+      </div>
+    );
+  };
+
+  // Función para renderizar la columna de selección (Checkbox) modificada para permitir selección múltiple en todos los registros
+  const selectionBodyTemplate = (rowData) => {
+    return (
+      <Checkbox
+        checked={isSelected(rowData)}
+        onChange={() => handleCheckboxChange(rowData)}
+      />
+    );
+  };
+
+  // Cuerpo para columnas estándares
+  const productNameBodyTemplate = (rowData) =>
+    `${rowData.product_name} ${rowData.combination_name}`;
+
+  // Se modifica la función para renderizar el código de barras, haciéndola clickable
+  const barcodeBodyTemplate = (rowData) => {
+    return (
+      <div
+        onClick={() => handleBarcodeClick(rowData)}
+        style={{
+          cursor: "pointer",
+          backgroundColor: isBarcodeSelected(rowData) ? "#c8e6c9" : "inherit",
+        }}
+      >
+        {rowData.ean13 === "" ? (
+          <>
+            <i className="pi pi-refresh"></i> <i className="pi pi-barcode"></i>
+          </>
+        ) : rowData.id_control_stock ? (
+          `${rowData.ean13} - ${rowData.id_control_stock}`
+        ) : (
+          rowData.ean13
+        )}
       </div>
     );
   };
@@ -109,180 +215,35 @@ const ProductSelectionDialog = ({
       footer={renderFooter()}
     >
       <div className="overflow-auto" style={{ maxHeight: "65vh" }}>
-        <table
-          className="min-w-full border"
+        <DataTable
+          value={products}
+          responsiveLayout="scroll"
+          emptyMessage="No hay productos para mostrar."
           style={{
             backgroundColor: "var(--surface-0)",
             color: "var(--text-color)",
           }}
         >
-          <thead
-            className="sticky top-0 z-10"
-            style={{
-              backgroundColor: "var(--surface-100)",
-              color: "var(--text-color)",
-            }}
-          >
-            <tr>
-              <th
-                className="py-2 px-4 border-b"
-                style={{
-                  borderColor: "var(--surface-border)",
-                  textAlign: "left",
-                }}
-              >
-                Selec.
-              </th>
-              <th
-                className="py-2 px-4 border-b"
-                style={{
-                  borderColor: "var(--surface-border)",
-                  textAlign: "left",
-                }}
-              >
-                Producto
-              </th>
-              <th
-                className="py-2 px-4 border-b"
-                style={{
-                  borderColor: "var(--surface-border)",
-                  textAlign: "left",
-                }}
-              >
-                EAN13
-              </th>
-              <th
-                className="py-2 px-4 border-b"
-                style={{
-                  borderColor: "var(--surface-border)",
-                  textAlign: "left",
-                }}
-              >
-                idCS
-              </th>
-              {showOriginStock && (
-                <th
-                  className="py-2 px-4 border-b"
-                  style={{
-                    borderColor: "var(--surface-border)",
-                    textAlign: "left",
-                  }}
-                >
-                  Stock {originShopName}
-                </th>
-              )}
-              {showDestinationStock && (
-                <th
-                  className="py-2 px-4 border-b"
-                  style={{
-                    borderColor: "var(--surface-border)",
-                    textAlign: "left",
-                  }}
-                >
-                  Stock {destinationShopName}
-                </th>
-              )}
-              {type === "traspaso" && (
-                <th
-                  className="py-2 px-4 border-b"
-                  style={{
-                    borderColor: "var(--surface-border)",
-                    textAlign: "left",
-                  }}
-                >
-                  Cantidad Destino
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((prod) => {
-              const selected = isSelected(prod);
-              return (
-                <tr
-                  key={`${prod.id_product}_${prod.id_product_attribute}`}
-                  // Efecto hover acorde al tema
-                  style={{
-                    borderColor: "var(--surface-border)",
-                    backgroundColor: "var(--surface-0)",
-                  }}
-                  className="hover:bg-[var(--surface-100)]"
-                >
-                  <td
-                    className="py-2 px-4 border-b"
-                    style={{ borderColor: "var(--surface-border)" }}
-                  >
-                    <input
-                      type="checkbox"
-                      disabled={!!prod.id_control_stock} // Desactivar si tiene id_control_stock
-                      checked={selected}
-                      onChange={() => handleCheckboxChange(prod)}
-                    />
-                  </td>
-                  <td
-                    className="py-2 px-4 border-b"
-                    style={{ borderColor: "var(--surface-border)" }}
-                  >
-                    {`${prod.product_name} ${prod.combination_name}`}
-                  </td>
-                  <td
-                    className="py-2 px-4 border-b"
-                    style={{ borderColor: "var(--surface-border)" }}
-                  >
-                    {prod.ean13}
-                  </td>
-                  <td
-                    className="py-2 px-4 border-b"
-                    style={{ borderColor: "var(--surface-border)" }}
-                  >
-                    {prod.id_control_stock || ''}
-                  </td>
-                  {showOriginStock && (
-                    <td
-                      className="py-2 px-4 border-b"
-                      style={{ borderColor: "var(--surface-border)" }}
-                    >
-                      {prod.stockOrigin ?? 0}
-                    </td>
-                  )}
-                  {showDestinationStock && (
-                    <td
-                      className="py-2 px-4 border-b"
-                      style={{ borderColor: "var(--surface-border)" }}
-                    >
-                      {prod.stockDestination ?? 0}
-                    </td>
-                  )}
-                  {type === "traspaso" && (
-                    <td
-                      className="py-2 px-4 border-b"
-                      style={{ borderColor: "var(--surface-border)" }}
-                    >
-                      {prod.destinationQuantity}
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-
-            {products.length === 0 && (
-              <tr style={{ backgroundColor: "var(--surface-0)" }}>
-                <td
-                  colSpan={
-                    3 +
-                    (showOriginStock ? 1 : 0) +
-                    (showDestinationStock ? 1 : 0) +
-                    (type === "traspaso" ? 1 : 0)
-                  }
-                  className="p-4 text-center"
-                  style={{ borderColor: "var(--surface-border)" }}
-                >
-                  No hay productos para mostrar.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          <Column
+            body={selectionBodyTemplate}
+            style={{ textAlign: "center", width: "80px" }}
+          />
+          <Column header="Producto" body={productNameBodyTemplate} />
+          {/* Se reemplaza la columna "EAN13" por "Cod. Barras" usando la función barcodeBodyTemplate */}
+          <Column header="Cod. Barras" body={barcodeBodyTemplate} />
+          {showOriginStock && (
+            <Column
+              header={`Stock ${originShopName}`}
+              body={(rowData) => rowData.stockOrigin ?? 0}
+            />
+          )}
+          {showDestinationStock && (
+            <Column
+              header={`Stock ${destinationShopName}`}
+              body={(rowData) => rowData.stockDestination ?? 0}
+            />
+          )}
+        </DataTable>
       </div>
     </Dialog>
   );

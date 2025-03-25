@@ -84,32 +84,6 @@ export default function useFinalizeSale() {
 
       let remaining = subtotalInclTaxCalc;
 
-      let total_cash = 0;
-      if (selectedMethods.includes("efectivo")) {
-        if (parseFloat(amounts.efectivo) !== parseFloat(remaining.toFixed(2))) {
-          total_cash = parseFloat(
-            (
-              remaining -
-              (selectedMethods.includes("tarjeta")
-                ? parseFloat(amounts.tarjeta || 0)
-                : 0) -
-              (selectedMethods.includes("bizum")
-                ? parseFloat(amounts.bizum || 0)
-                : 0)
-            ).toFixed(2)
-          );
-          console.log("Remaining amount to be paid:", remaining.toFixed(2));
-        } else {
-          total_cash = parseFloat(amounts.efectivo);
-        }
-      }
-      const total_card = selectedMethods.includes("tarjeta")
-        ? parseFloat(amounts.tarjeta || 0)
-        : 0;
-      const total_bizum = selectedMethods.includes("bizum")
-        ? parseFloat(amounts.bizum || 0)
-        : 0;
-
       let total_discounts = 0;
       const discountsArray = [];
 
@@ -130,6 +104,31 @@ export default function useFinalizeSale() {
         });
         remaining -= discountValue;
       });
+
+      let total_cash = 0;
+      if (selectedMethods.includes("efectivo")) {
+        if (parseFloat(amounts.efectivo) !== parseFloat(remaining.toFixed(2))) {
+          total_cash = parseFloat(
+            (
+              remaining -
+              (selectedMethods.includes("tarjeta")
+                ? parseFloat(amounts.tarjeta || 0)
+                : 0) -
+              (selectedMethods.includes("bizum")
+                ? parseFloat(amounts.bizum || 0)
+                : 0)
+            ).toFixed(2)
+          );
+        } else {
+          total_cash = parseFloat(amounts.efectivo);
+        }
+      }
+      const total_card = selectedMethods.includes("tarjeta")
+        ? parseFloat(amounts.tarjeta || 0)
+        : 0;
+      const total_bizum = selectedMethods.includes("bizum")
+        ? parseFloat(amounts.bizum || 0)
+        : 0;
 
       // Si remaining es negativo, definir voucherAmount; de lo contrario es 0.
       const voucherAmount = remaining < 0 ? Math.abs(remaining) : 0;

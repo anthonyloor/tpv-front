@@ -8,8 +8,13 @@ const isValidProduct = (product) =>
     product.ean13_combination_0 !== null) &&
   product.id_product_attribute !== null;
 
-const filterProductsForShop = (products, shopId) =>
-  products.filter((product) => product.id_shop === shopId);
+const filterProductsForShop = (products, shopId) => {
+  console.log("Filtrando productos para la tienda:", shopId);
+  if (shopId === "all") return products;
+  return products.filter(
+    (product) => Number(product.id_shop) === Number(shopId)
+  );
+};
 
 const useProductSearch = ({
   apiFetch,
@@ -133,7 +138,24 @@ const useProductSearch = ({
   };
 
   // Función principal de búsqueda
-  const handleSearch = async (searchTerm) => {
+  const handleSearch = async (
+    searchTerm,
+    forStock = false,
+    forEan13 = false
+  ) => {
+    // Si es búsqueda para stock, garantizar que searchTerm tenga 13 dígitos
+    if (forStock && searchTerm.length < 13) {
+      searchTerm = searchTerm.padStart(13, "0");
+    }
+    // Agregar log para ver cuándo se invoca la búsqueda para stock
+    console.log(
+      "useProductSearch.handleSearch invoked. forStock:",
+      forStock,
+      "forEan13:",
+      forEan13,
+      "searchTerm:",
+      searchTerm
+    );
     if (!searchTerm) {
       setGroupedProducts([]);
       return;
@@ -250,11 +272,11 @@ const useProductSearch = ({
           "ean"
         );
         console.log("EAN13 search - grouped products:", groups);
-        setGroupedProducts(groups);
-        if (filteredForCurrentShop.length === 1) {
+        if (filteredForCurrentShop.length === 1 && !forStock) {
           addProductToCart(filteredForCurrentShop[0]);
           setGroupedProducts([]);
         }
+        return groups;
       } catch (error) {
         console.error("Error en la búsqueda por EAN13:", error);
         alert("Error al buscar producto por EAN13. Inténtalo de nuevo.");
@@ -297,12 +319,17 @@ const useProductSearch = ({
           "EAN13 apostrophe - filtered for current shop:",
           filteredForCurrentShop
         );
+        const prod = groupProductsByProductName(
+          filteredForCurrentShop,
+          "idcontrolstock"
+        );
         if (
           filteredForCurrentShop.length === 1 &&
           filteredForCurrentShop[0].active_control_stock
         ) {
           addProductToCart(filteredForCurrentShop[0]);
           setGroupedProducts([]);
+          return prod;
         } else if (validResults.length > 0) {
           if (validResults[0].active_control_stock) {
             // Mostrar modal/dialog de venta de producto en tienda distinta (control stock activo)
@@ -323,6 +350,7 @@ const useProductSearch = ({
           );
           console.log("EAN13 apostrophe search - grouped products:", groups);
           setGroupedProducts(groups);
+          return groups;
         }
       } catch (error) {
         console.error("Error en la búsqueda por EAN13 con apóstrofe:", error);
@@ -344,19 +372,27 @@ const useProductSearch = ({
       );
       let validResults = results.filter(isValidProduct);
       console.log("Búsqueda normal - valid results filtrados:", validResults);
-      const filteredForCurrentShop = filterProductsForShop(
-        validResults,
-        shopId
-      );
-      console.log(
-        "Búsqueda normal - filtered for current shop (shopId:",
-        shopId,
-        "):",
-        filteredForCurrentShop
-      );
-      const groups = groupProductsByProductName(filteredForCurrentShop, "ean");
-      console.log("Búsqueda normal - grouped products:", groups);
-      setGroupedProducts(groups);
+      if (forEan13) {
+        const groups = groupProductsByProductName(validResults, "ean");
+        console.log("Búsqueda normal - grouped products:", groups);
+        setGroupedProducts(groups);
+        return groups;
+      } else {
+        const filteredForCurrentShop = filterProductsForShop(
+          validResults,
+          shopId
+        );
+        console.log(
+          "Búsqueda normal - filtered for current shop (shopId:",
+          shopId,
+          "):",
+          filteredForCurrentShop
+        );
+        const groups = groupProductsByProductName(filteredForCurrentShop, "ean");
+        console.log("Búsqueda normal - grouped products:", groups);
+        setGroupedProducts(groups);
+        return groups;
+      }
     } catch (error) {
       console.error("Error en la búsqueda:", error);
       alert("Error al buscar productos. Inténtalo de nuevo más tarde.");

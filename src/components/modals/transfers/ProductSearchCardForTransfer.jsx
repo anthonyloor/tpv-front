@@ -5,7 +5,6 @@ import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 import ProductSelectionDialog from "./ProductSelectionDialog";
-import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import useProductSearch from "../../../hooks/useProductSearch";
 
 const ProductSearchCardForTransfer = ({
@@ -23,7 +22,6 @@ const ProductSearchCardForTransfer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const API_BASE_URL = getApiBaseUrl();
 
   // Modo “Agregar Automático”
   const [autoAdd, setAutoAdd] = useState(false);
@@ -99,51 +97,24 @@ const ProductSearchCardForTransfer = ({
     }
   };
 
-  // Lógica para filtrar productos válidos (que tengan combination o EAN)
-  const isProductValid = (prod) => {
-    return !(
-      prod.id_product_attribute === null &&
-      prod.ean13_combination === null &&
-      prod.ean13_combination_0 === null
-    );
-  };
-
   // Realizar la búsqueda usando el código EAN13 ingresado
   const performSearch = async () => {
     if (isSearchDisabled || !searchTerm.trim()) return;
-    const term = searchTerm.trim();
     setIsLoading(true);
     try {
-      const plainEanRegex = /^\d{13}$/;
-      const eanIdControlRegex = /^(\d{13})(\d+)$/;
-      let results = [];
-      if (plainEanRegex.test(term) || eanIdControlRegex.test(term)) {
-        // Búsqueda por EAN13 o EAN13+id_controlstock usando el hook useProductSearch
-        await productSearch(term);
-        const flatResults = groupedProducts.reduce(
-          (acc, group) => acc.concat(group.combinations),
-          []
-        );
-        results = flatResults;
-      } else {
-        // Búsqueda normal (API)
-        const resp = await apiFetch(
-          `${API_BASE_URL}/product_search?b=${encodeURIComponent(term)}`,
-          { method: "GET" }
-        );
-        const valid = resp.filter(isProductValid);
-        results = valid;
-      }
-      if (results.length === 0) {
+      const groups = await productSearch(searchTerm, false, true);
+      console.log("[ProductSearchCardForTransfer] Search results:", groups);
+      const flatResults = groups
+        ? groups.reduce((acc, group) => acc.concat(group.combinations), [])
+        : [];
+      console.log("[ProductSearchCardForTransfer] Flat results:", flatResults);
+      if (flatResults.length === 0) {
         alert("No se encontró producto con el código especificado.");
         return;
       }
-      const transformed = transformProductsForTransfer(results);
-      if (
-        transformed.length === 1 &&
-        (plainEanRegex.test(term) || eanIdControlRegex.test(term))
-      ) {
-        // Agregar automáticamente el primer resultado encontrado
+      const transformed = transformProductsForTransfer(flatResults);
+      if (transformed.length === 1) {
+        // Agregar automáticamente si sólo hay un resultado
         handleAddSelectedProducts([transformed[0]]);
       } else {
         setSearchResults(transformed);
@@ -155,7 +126,6 @@ const ProductSearchCardForTransfer = ({
     } finally {
       setIsLoading(false);
       setSearchTerm("");
-      // Solo mantener el focus si autoAdd está marcado
       if (autoAdd && inputRef.current) {
         inputRef.current.focus();
       }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { DataTable } from "primereact/datatable";
@@ -8,6 +8,10 @@ import { useApiFetch } from "../../../utils/useApiFetch";
 import { toast } from "sonner";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import useProductSearch from "../../../hooks/useProductSearch";
+import { AuthContext } from "../../../contexts/AuthContext";
+import ActionResultDialog from "../../common/ActionResultDialog";
+import TicketViewModal from "../ticket/TicketViewModal";
 
 const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
@@ -17,8 +21,28 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderDetailsVisible, setOrderDetailsVisible] = useState(false);
+  const [stockModalVisible, setStockModalVisible] = useState(false);
+  const [selectedOrderForStock, setSelectedOrderForStock] = useState(null);
+  const [stockData, setStockData] = useState([]);
+  const [shops, setShops] = useState([]);
+  const [selectedCells, setSelectedCells] = useState([]);
+  const { employeeId } = useContext(AuthContext);
+  const [resultDialogVisible, setResultDialogVisible] = useState(false);
+  const [resultDialogMessage, setResultDialogMessage] = useState("");
+  const [resultDialogSuccess, setResultDialogSuccess] = useState(false);
+  const [ticketModalVisible, setTicketModalVisible] = useState(false);
+  const [viewTicketOrderId, setViewTicketOrderId] = useState(null);
 
   const API_BASE_URL = getApiBaseUrl();
+
+  const stockSearch = useProductSearch({
+    apiFetch,
+    shopId: "all",
+    allowOutOfStockSales: true,
+    onAddProduct: () => {},
+    onAddDiscount: () => {},
+    idProfile: null,
+  });
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -59,12 +83,16 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   }, [isOpen, loadOnlineOrders]);
 
   useEffect(() => {
-    if (isOpen) {
-      loadOnlineOrders();
-      setSearchedOrder(null);
-      setSearchOrderId("");
-    }
-  }, [isOpen, loadOnlineOrders]);
+    const loadShops = async () => {
+      try {
+        const data = await apiFetch(`${API_BASE_URL}/shops`, { method: "GET" });
+        setShops(data.filter((s) => s.id_shop !== 1));
+      } catch (error) {
+        console.error("Error loading shops:", error);
+      }
+    };
+    loadShops();
+  }, [apiFetch, API_BASE_URL]);
 
   const handleSearchOrder = async () => {
     if (!searchOrderId.trim()) return;
@@ -93,12 +121,114 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     setOrderDetailsVisible(true);
   };
 
+  const handleOpenStock = async (order) => {
+    console.log("handleOpenStock", order);
+    setSelectedOrderForStock(order);
+    const productsStockData = await Promise.all(
+      order.order_details.map(async (detail) => {
+        let ean = detail.product_ean13;
+        const groups = await stockSearch.handleSearch(ean, true);
+        let stockByShop = {};
+        if (groups && groups.length > 0) {
+          const stocks = groups[0].combinations[0]?.stocks || [];
+          stocks.forEach((s) => {
+            stockByShop[s.id_shop] = (stockByShop[s.id_shop] || 0) + s.quantity;
+          });
+        }
+        return {
+          product_name: detail.product_name,
+          id_product: detail.product_id,
+          id_product_attribute: detail.product_attribute_id,
+          product_quantity: detail.product_quantity,
+          product_ean13: detail.product_ean13,
+          ...stockByShop,
+        };
+      })
+    );
+    setStockData(productsStockData);
+    setStockModalVisible(true);
+  };
+
+  const handleUpdateOnlineOrder = async () => {
+    if (!selectedOrderForStock) {
+      toast.error("No hay un pedido seleccionado para actualizar.");
+      return;
+    }
+
+    const shopsMap = {};
+    selectedCells.forEach((cell) => {
+      console.log("cell", cell);
+      const shopId = Number(cell.field);
+      const row = stockData[cell.rowIndex];
+      if (!row) return;
+      if (!shopsMap[shopId]) {
+        shopsMap[shopId] = { id_shop: shopId, products: [] };
+      }
+      // Se usa la cantidad original de la order en lugar de la cantidad de la tienda
+      const qty = row.product_quantity;
+      shopsMap[shopId].products.push({
+        ean13: row.product_ean13,
+        quantity: qty,
+        id_product: row.id_product,
+        id_product_attribute: row.id_product_attribute,
+        product_name: row.product_name,
+      });
+    });
+    const payload = {
+      id_order: selectedOrderForStock.id_order,
+      status: 4,
+      origin: selectedOrderForStock.origin,
+      id_employee: employeeId,
+      shops: Object.values(shopsMap),
+    };
+    console.log("Payload para update_online_orders:", payload);
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/update_online_orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.status === "OK") {
+        setResultDialogSuccess(true);
+        setResultDialogMessage("Actualización realizada con éxito");
+      } else {
+        setResultDialogSuccess(false);
+        setResultDialogMessage(
+          res.message || "Error al actualizar el pedido online"
+        );
+      }
+    } catch (error) {
+      console.error("Error en update_online_orders:", error);
+      setResultDialogSuccess(false);
+      setResultDialogMessage("Error: " + error.message);
+    } finally {
+      setResultDialogVisible(true);
+    }
+  };
+
+  const handlePrintTicket = (order) => {
+    setViewTicketOrderId(order.id_order);
+    setTicketModalVisible(true);
+  };
+
   const actionBodyTemplate = (rowData) => (
-    <Button
-      icon="pi pi-eye"
-      className="p-button-rounded p-button-text"
-      onClick={() => handleOpenOrder(rowData)}
-    />
+    <>
+      <Button
+        icon="pi pi-eye"
+        className="p-button-rounded p-button-text"
+        onClick={() => handleOpenOrder(rowData)}
+      />
+      <Button
+        icon="pi pi-cog"
+        className="p-button-rounded p-button-text"
+        onClick={() => handleOpenStock(rowData)}
+      />
+      <Button
+        icon="pi pi-receipt"
+        className="p-button-rounded p-button-text"
+        onClick={() => handlePrintTicket(rowData)}
+      />
+    </>
   );
 
   const ordersToDisplay = searchedOrder ? [searchedOrder] : orders;
@@ -153,10 +283,12 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
         draggable={false}
         resizable={false}
         style={{
-          maxWidth: "60vw",
-          maxHeight: "70vh",
-          minWidth: "900px",
+          maxWidth: "1300px",
+          maxHeight: "850px",
+          minWidth: "950px",
           minHeight: "650px",
+          width: "60vw",
+          height: "70vh",
         }}
       >
         <div className="p-2">
@@ -192,29 +324,20 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                 <Column
                   expander
                   style={{
-                    width: "5px",
+                    width: "1px",
                     textAlign: "center",
-                    padding: "0.5rem",
+                    padding: "1rem 0.3rem",
                   }}
                   alignHeader={"center"}
                 />
-                <Column
-                  body={actionBodyTemplate}
-                  header="Acción"
-                  style={{
-                    width: "50px",
-                    textAlign: "center",
-                    padding: "0.5rem",
-                  }}
-                  alignHeader={"center"}
-                />
+
                 <Column
                   field="id_order"
                   header="# Pedido"
                   style={{
-                    width: "80px",
+                    width: "auto",
                     textAlign: "center",
-                    padding: "0.5rem",
+                    padding: "1rem 0.3rem",
                   }}
                   alignHeader={"center"}
                 />
@@ -222,9 +345,9 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                   header="Fecha"
                   body={(row) => formatDate(row.date_add)}
                   style={{
-                    width: "230px",
+                    width: "auto",
                     textAlign: "center",
-                    padding: "0.5rem",
+                    padding: "1rem 0.3rem",
                   }}
                   alignHeader={"center"}
                 />
@@ -232,9 +355,9 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                   header="Cliente"
                   field="customer_name"
                   style={{
-                    width: "150px",
+                    width: "auto",
                     textAlign: "center",
-                    padding: "0.5rem",
+                    padding: "1rem 0.3rem",
                   }}
                   alignHeader={"center"}
                 />
@@ -242,9 +365,9 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                   header="Dirección"
                   field="address_delivery_name"
                   style={{
-                    width: "200px",
+                    width: "auto",
                     textAlign: "center",
-                    padding: "0.5rem",
+                    padding: "1rem 0.3rem",
                   }}
                   alignHeader={"center"}
                 />
@@ -270,9 +393,9 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                     return rowData.payment;
                   }}
                   style={{
-                    width: "100px",
+                    width: "auto",
                     textAlign: "center",
-                    padding: "0.5rem",
+                    padding: "1rem 0.3rem",
                   }}
                   alignHeader={"center"}
                 />
@@ -281,9 +404,9 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                   header="Total (€)"
                   body={(data) => Number(data.total_paid)?.toFixed(2)}
                   style={{
-                    width: "100px",
+                    width: "auto",
                     textAlign: "center",
-                    padding: "0.5rem",
+                    padding: "1rem 0.3rem",
                   }}
                   alignHeader={"center"}
                 />
@@ -291,9 +414,9 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                   header="Estado"
                   field="current_state_name"
                   style={{
-                    width: "150px",
+                    width: "auto",
                     textAlign: "center",
-                    padding: "0.5rem",
+                    padding: "1rem 0.3rem",
                   }}
                   alignHeader={"center"}
                 />
@@ -314,9 +437,18 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                     );
                   }}
                   style={{
-                    width: "80px",
+                    width: "auto",
                     textAlign: "center",
-                    padding: "0.5rem",
+                    padding: "1rem 0.3rem",
+                  }}
+                  alignHeader={"center"}
+                />
+                <Column
+                  body={actionBodyTemplate}
+                  style={{
+                    width: "auto",
+                    textAlign: "center",
+                    padding: "1rem 0.3rem",
                   }}
                   alignHeader={"center"}
                 />
@@ -343,16 +475,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                   alignHeader={"center"}
                 />
                 <Column
-                  body={actionBodyTemplate}
-                  header="Acción"
-                  style={{
-                    width: "50px",
-                    textAlign: "center",
-                    padding: "0.5rem",
-                  }}
-                  alignHeader={"center"}
-                />
-                <Column
                   field="id_order"
                   header="# Pedido"
                   style={{
@@ -464,11 +586,94 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                   }}
                   alignHeader={"center"}
                 />
+                <Column
+                  body={actionBodyTemplate}
+                  header="Acción"
+                  style={{
+                    width: "80px",
+                    textAlign: "center",
+                    padding: "0.5rem",
+                  }}
+                  alignHeader={"center"}
+                />
               </DataTable>
             </TabPanel>
           </TabView>
         </div>
       </Dialog>
+
+      <Dialog
+        header="Stock de Productos"
+        visible={stockModalVisible}
+        onHide={() => setStockModalVisible(false)}
+        modal
+        draggable={false}
+        resizable={false}
+        style={{
+          maxWidth: "900px",
+          maxHeight: "600px",
+          minWidth: "800px",
+          minHeight: "550px",
+          width: "60vw",
+          height: "60vh",
+        }}
+      >
+        <div className="p-2">
+          <DataTable
+            value={stockData}
+            emptyMessage="No hay productos"
+            cellSelection
+            selectionMode="multiple"
+            selection={selectedCells}
+            metaKeySelection={false}
+            dragSelection
+            onSelectionChange={(e) => {
+              const cells = Array.isArray(e.value) ? e.value : [e.value];
+              const uniqueCells = [];
+              const seenRows = new Set();
+              cells.forEach((cell) => {
+                if (
+                  cell.field === "product_name" ||
+                  cell.field === "product_quantity"
+                )
+                  return;
+                const rowId = cell.rowIndex;
+                if (!seenRows.has(rowId)) {
+                  seenRows.add(rowId);
+                  uniqueCells.push(cell);
+                }
+              });
+              setSelectedCells(uniqueCells);
+            }}
+          >
+            <Column header="Producto" field="product_name" />
+            <Column header="Cantidad" field="product_quantity" />
+            {shops.map((shop) => (
+              // Agregamos field para que cell.field sea el id_shop y se convierta correctamente a número
+              <Column
+                key={shop.id_shop}
+                header={shop.name}
+                field={`${shop.id_shop}`}
+                body={(row) => row[shop.id_shop] || 0}
+              />
+            ))}
+          </DataTable>
+        </div>
+        <div className="mt-2 flex justify-end">
+          <Button
+            label="Actualizar Pedido Online"
+            icon="pi pi-check"
+            onClick={handleUpdateOnlineOrder}
+          />
+        </div>
+      </Dialog>
+
+      <ActionResultDialog
+        visible={resultDialogVisible}
+        onClose={() => setResultDialogVisible(false)}
+        success={resultDialogSuccess}
+        message={resultDialogMessage}
+      />
 
       <Dialog
         header="Detalles del Pedido"
@@ -546,6 +751,16 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
           </div>
         )}
       </Dialog>
+
+      {ticketModalVisible && viewTicketOrderId && (
+        <TicketViewModal
+          isOpen={ticketModalVisible}
+          onClose={() => setTicketModalVisible(false)}
+          mode="ticket"
+          orderId={viewTicketOrderId}
+          printOnOpen
+        />
+      )}
     </>
   );
 };
