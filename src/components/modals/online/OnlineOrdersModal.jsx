@@ -11,11 +11,12 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import useProductSearch from "../../../hooks/useProductSearch";
 import { AuthContext } from "../../../contexts/AuthContext";
 import ActionResultDialog from "../../common/ActionResultDialog";
-import TicketViewModal from "../ticket/TicketViewModal";
+import generateTicket from "../../../utils/ticket";
+import { ConfigContext } from "../../../contexts/ConfigContext";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
 const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
-  const [searchOrderId, setSearchOrderId] = useState("");
   const [searchedOrder, setSearchedOrder] = useState(null);
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +33,8 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const [resultDialogSuccess, setResultDialogSuccess] = useState(false);
   const [ticketModalVisible, setTicketModalVisible] = useState(false);
   const [viewTicketOrderId, setViewTicketOrderId] = useState(null);
+  const { configData } = useContext(ConfigContext);
+  const employeesDict = useEmployeesDictionary();
 
   const API_BASE_URL = getApiBaseUrl();
 
@@ -78,7 +81,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     if (isOpen) {
       loadOnlineOrders();
       setSearchedOrder(null);
-      setSearchOrderId("");
     }
   }, [isOpen, loadOnlineOrders]);
 
@@ -93,28 +95,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     };
     loadShops();
   }, [apiFetch, API_BASE_URL]);
-
-  const handleSearchOrder = async () => {
-    if (!searchOrderId.trim()) return;
-    try {
-      setIsLoading(true);
-      const data = await apiFetch(
-        `${API_BASE_URL}/get_order?id_order=${encodeURIComponent(
-          searchOrderId.trim()
-        )}`,
-        { method: "GET" }
-      );
-      if (data) {
-        setSearchedOrder(data);
-      } else {
-        toast.error("No se encontró el pedido.");
-      }
-    } catch (error) {
-      toast.error("Error al buscar el pedido.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleOpenOrder = (order) => {
     setSelectedOrder(order);
@@ -207,7 +187,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   };
 
   const handlePrintTicket = (order) => {
-    setViewTicketOrderId(order.id_order);
+    setViewTicketOrderId(order);
     setTicketModalVisible(true);
   };
 
@@ -273,6 +253,23 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     );
   };
 
+  useEffect(() => {
+    if (ticketModalVisible && viewTicketOrderId) {
+      (async () => {
+        const response = await generateTicket(
+          "print",
+          viewTicketOrderId,
+          configData,
+          employeesDict
+        );
+        if (!response.success) {
+          console.error("Error al imprimir ticket:", response.message);
+        }
+        setTicketModalVisible(false);
+      })();
+    }
+  }, [ticketModalVisible, viewTicketOrderId, configData, employeesDict]);
+
   return (
     <>
       <Dialog
@@ -292,22 +289,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
         }}
       >
         <div className="p-2">
-          <div className="flex gap-2 mb-2">
-            <InputText
-              value={searchOrderId}
-              onChange={(e) => setSearchOrderId(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearchOrder();
-              }}
-              placeholder="Número de pedido"
-              className="flex-1"
-            />
-            <Button
-              label="Buscar"
-              onClick={handleSearchOrder}
-              disabled={isLoading || !searchOrderId.trim()}
-            />
-          </div>
           <TabView>
             <TabPanel header="Pedidos pendientes">
               <DataTable
@@ -751,16 +732,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
           </div>
         )}
       </Dialog>
-
-      {ticketModalVisible && viewTicketOrderId && (
-        <TicketViewModal
-          isOpen={ticketModalVisible}
-          onClose={() => setTicketModalVisible(false)}
-          mode="ticket"
-          orderId={viewTicketOrderId}
-          printOnOpen
-        />
-      )}
     </>
   );
 };

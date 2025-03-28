@@ -131,7 +131,8 @@ export default function useFinalizeSale() {
         : 0;
 
       // Si remaining es negativo, definir voucherAmount; de lo contrario es 0.
-      const voucherAmount = remaining < 0 ? Math.abs(remaining) : 0;
+      const voucherAmount =
+        remaining < 0 ? parseFloat(Math.abs(remaining).toFixed(2)) : 0;
       const finalTotalInclTax = Math.max(0, remaining);
       const total_discounts_tax_excl = total_discounts / factorTax;
 
@@ -161,7 +162,9 @@ export default function useFinalizeSale() {
 
       // Solo se crea vale descuento si voucherAmount > 0 y no se seleccionó ningún método de pago
       let newCartRuleCode = null;
-      if (voucherAmount > 0 && selectedMethods.length === 0) {
+      console.log("voucherAmount", voucherAmount);
+      console.log("selectedMethods", selectedMethods);
+      if (voucherAmount > 0 && selectedMethods.includes("vale")) {
         const cartRulePayload = {
           reduction_amount: parseFloat(voucherAmount.toFixed(2)),
           reduction_percent: 0,

@@ -14,12 +14,12 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { Toast } from "primereact/toast";
 import { useApiFetch } from "../../../utils/useApiFetch";
-import TicketViewModal from "../ticket/TicketViewModal";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
-import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { ConfigContext } from "../../../contexts/ConfigContext";
+import generateTicket from "../../../utils/ticket";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
 const ReprintModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
@@ -33,17 +33,13 @@ const ReprintModal = ({ isOpen, onClose }) => {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [expandedRows, setExpandedRows] = useState(null);
   const toast = useRef(null);
-  // Obtención una sola vez de los diccionarios
   const shopsDict = useShopsDictionary();
-  const employeesDict = useEmployeesDictionary();
   const API_BASE_URL = getApiBaseUrl();
   const { configData } = useContext(ConfigContext);
+  const employeesDict = useEmployeesDictionary();
 
   const ShopNameCell = ({ id_shop }) => (
     <span>{shopsDict[id_shop] || id_shop}</span>
-  );
-  const EmployeeNameCell = ({ id_employee }) => (
-    <span>{employeesDict[id_employee] || id_employee}</span>
   );
 
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
@@ -87,10 +83,13 @@ const ReprintModal = ({ isOpen, onClose }) => {
       setError(null);
       setIsLoading(true);
       setMode("search");
-      const data = await apiFetch(
-        `${API_BASE_URL}/get_order?id_order=${encodeURIComponent(orderId)}`,
-        { method: "GET" }
-      );
+      const data = await apiFetch(`${API_BASE_URL}/get_order`, {
+        method: "POST",
+        body: JSON.stringify({
+          id_order: orderId,
+          origin: "mayret",
+        }),
+      });
       setSearchedOrder(data);
     } catch (err) {
       console.error("Error buscando la orden:", err);
@@ -138,7 +137,8 @@ const ReprintModal = ({ isOpen, onClose }) => {
       return;
     }
     setTicketModalOpen(true);
-    setViewTicketOrderId(saleToReprint.id_order);
+    console.log("Reprint initiated for order ID:", saleToReprint);
+    setViewTicketOrderId(saleToReprint);
     setTicketGift(gift);
   };
 
@@ -155,12 +155,13 @@ const ReprintModal = ({ isOpen, onClose }) => {
       setLoading(true);
       (async () => {
         try {
-          const data = await apiFetch(
-            `${API_BASE_URL}/get_order?id_order=${encodeURIComponent(
-              order.id_order
-            )}`,
-            { method: "GET" }
-          );
+          const data = await apiFetch(`${API_BASE_URL}/get_order`, {
+            method: "POST",
+            body: JSON.stringify({
+              id_order: order.id_order,
+              origin: "mayret",
+            }),
+          });
           setDetails(data.order_details || []);
           order.order_cart_rules = data.order_cart_rules || [];
         } catch (err) {
@@ -228,6 +229,47 @@ const ReprintModal = ({ isOpen, onClose }) => {
   const rowExpansionTemplate = (order) => {
     return <OrderExpansion order={order} apiFetch={apiFetch} />;
   };
+
+  useEffect(() => {
+    if (ticketModalOpen && viewTicketOrderId) {
+      (async () => {
+        try {
+          // Se consulta la orden usando id y origin "mayret"
+          const data = await apiFetch(`${API_BASE_URL}/get_order`, {
+            method: "POST",
+            body: JSON.stringify({
+              id_order: viewTicketOrderId.id_order || viewTicketOrderId,
+              origin: "mayret",
+            }),
+          });
+          if (!data || !data.order_details) {
+            console.error("Error al recuperar datos del ticket");
+          } else {
+            const response = await generateTicket(
+              "print",
+              data,
+              configData,
+              employeesDict
+            );
+            if (!response.success) {
+              console.error("Error al imprimir ticket:", response.message);
+            }
+          }
+        } catch (err) {
+          console.error("Error en la consulta get_order para ticket:", err);
+        } finally {
+          setTicketModalOpen(false);
+        }
+      })();
+    }
+  }, [
+    ticketModalOpen,
+    viewTicketOrderId,
+    configData,
+    employeesDict,
+    apiFetch,
+    API_BASE_URL,
+  ]);
 
   return (
     <>
@@ -408,17 +450,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
           </div>
         </div>
       </Dialog>
-
-      {ticketModalOpen && viewTicketOrderId && (
-        <TicketViewModal
-          isOpen={ticketModalOpen}
-          onClose={() => setTicketModalOpen(false)}
-          mode="ticket"
-          orderId={viewTicketOrderId}
-          giftTicket={ticketGift}
-          printOnOpen
-        />
-      )}
     </>
   );
 };

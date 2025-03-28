@@ -14,6 +14,8 @@ import JsBarcode from "jsbarcode";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { Checkbox } from "primereact/checkbox";
+import DiscountModal from "../discount/DiscountModal";
+import ActionResultDialog from "../../common/ActionResultDialog";
 
 export default function PricesTags({ isOpen, onHide }) {
   const { shopId, idProfile } = useContext(AuthContext);
@@ -33,6 +35,14 @@ export default function PricesTags({ isOpen, onHide }) {
   const [tagsData, setTagsData] = useState([]);
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discountPrices, setDiscountPrices] = useState({});
+  const [showDiscountVoucherModal, setShowDiscountVoucherModal] =
+    useState(false);
+  const [voucherData, setVoucherData] = useState([]); // nuevo estado para descuentos desde etiquetas
+  const [actionDialogVisible, setActionDialogVisible] = useState(false);
+  const [actionDialogMessage, setActionDialogMessage] = useState(
+    "Generando descuento..."
+  );
+  const [actionDialogSuccess, setActionDialogSuccess] = useState(true);
 
   const handleDiscountPriceChange = (key, value) => {
     setDiscountPrices((prev) => ({ ...prev, [key]: value }));
@@ -201,7 +211,9 @@ export default function PricesTags({ isOpen, onHide }) {
           labelsHtml += `
             <div class="label" style="${labelStyle}">
               <div class="product-name" style="margin:0; padding:0; font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold;">
-              <span style="font-size: 18px;">${selectedTrackingProducts[i].product_name
+              <span style="font-size: 18px;">${selectedTrackingProducts[
+                i
+              ].product_name
                 .split(" ")
                 .map(
                   (word) =>
@@ -437,44 +449,103 @@ export default function PricesTags({ isOpen, onHide }) {
     }
   };
 
+  // Función para recibir los datos de descuento (vales) desde DiscountModal
+  const handleDiscountVoucherReceived = (discountRules) => {
+    // Mostrar diálogo de acción con spinner
+    setActionDialogVisible(true);
+    setActionDialogMessage("Descuento generado, generando códigos...");
+    // Guardar el arreglo recibido (discountRules es ahora un array)
+    setVoucherData(discountRules);
+    // Construir HTML con etiquetas solo con código de barras usando el campo code
+    let labelsHtml = "";
+    const labelStyle =
+      "box-sizing:border-box; margin-top:15px;margin-left:10px; page-break-after: always; break-after: page;";
+    discountRules.forEach((rule, i) => {
+      labelsHtml += `
+        <div class="label" style="${labelStyle}">
+          <div class="barcode-column" style="display:flex; flex-direction:column;">
+            <svg id="voucher-barcode-${i}"></svg>
+          </div>
+          <div class="info-column" style="text-align:center; font-family: 'Arial', sans-serif; font-size: 14px;">
+            ${rule.code}
+          </div>
+        </div>
+      `;
+    });
+    setPreviewHtml(labelsHtml);
+    setBarcodesReady(false);
+    setShowPreviewDialog(true);
+    // Ocultar el diálogo de acción luego de generar las etiquetas (después de 1.2s)
+    setTimeout(() => {
+      setActionDialogVisible(false);
+    }, 1200);
+  };
+
   const handleGenerateBarcodes = () => {
     console.log("Iniciando generación de códigos de barras");
-    // Se genera un código de barras por cada etiqueta en tagsData
-    tagsData.forEach((tag, i) => {
-      const elem = previewContainerRef.current
-        ? previewContainerRef.current.querySelector(`#barcode-${i}`)
-        : null;
-      if (elem) {
-        // Concatenar ean13 e id_control_stock para formar el valor a codificar
-        const newEan = tag.ean13 + "" + tag.id_control_stock;
-        console.log(
-          `Generando código de barras para elemento barcode-${i} con valor ${newEan}`
-        );
-        try {
-          JsBarcode(elem, newEan, {
-            format: "code128",
-            width: 2,
-            height: 100,
-            displayValue: false,
-            fontSize: 18,
-            margin: 4,
-            textPosition: "bottom",
-            textAlign: "center",
-            rotation: 0,
-          });
-          elem.style.width = "230px";
-          elem.style.height = "75px";
-        } catch (error) {
-          console.error("Error generando código de barras:", error);
-          elem.insertAdjacentHTML(
-            "afterend",
-            '<div style="color: red; font-size: 12px;">Error al generar código de barras</div>'
-          );
+    if (voucherData.length > 0) {
+      // Generar códigos de barras para las etiquetas de descuento (vales)
+      voucherData.forEach((rule, i) => {
+        const elem = previewContainerRef.current
+          ? previewContainerRef.current.querySelector(`#voucher-barcode-${i}`)
+          : null;
+        if (elem) {
+          try {
+            JsBarcode(elem, rule.code, {
+              format: "code128",
+              displayValue: false,
+              fontSize: 18,
+              margin: 2,
+              textPosition: "bottom",
+              textAlign: "center",
+              rotation: 0,
+            });
+            elem.style.width = "175px";
+            elem.style.height = "60px";
+          } catch (error) {
+            console.error("Error generando código de barras:", error);
+            elem.insertAdjacentHTML(
+              "afterend",
+              '<div style="color: red; font-size: 12px;">Error al generar código de barras</div>'
+            );
+          }
+        } else {
+          console.error(`Elemento voucher-barcode-${i} no encontrado`);
         }
-      } else {
-        console.error(`Elemento barcode-${i} no encontrado`);
-      }
-    });
+      });
+    } else {
+      // ...existing código para etiquetas de productos...
+      tagsData.forEach((tag, i) => {
+        const elem = previewContainerRef.current
+          ? previewContainerRef.current.querySelector(`#barcode-${i}`)
+          : null;
+        if (elem) {
+          try {
+            JsBarcode(elem, tag.ean13 + "" + tag.id_control_stock, {
+              format: "code128",
+              width: 2,
+              height: 100,
+              displayValue: false,
+              fontSize: 18,
+              margin: 4,
+              textPosition: "bottom",
+              textAlign: "center",
+              rotation: 0,
+            });
+            elem.style.width = "230px";
+            elem.style.height = "75px";
+          } catch (error) {
+            console.error("Error generando código de barras:", error);
+            elem.insertAdjacentHTML(
+              "afterend",
+              '<div style="color: red; font-size: 12px;">Error al generar código de barras</div>'
+            );
+          }
+        } else {
+          console.error(`Elemento barcode-${i} no encontrado`);
+        }
+      });
+    }
     console.log("Finalizada generación de códigos de barras");
     setBarcodesReady(true);
   };
@@ -497,14 +568,16 @@ export default function PricesTags({ isOpen, onHide }) {
   // Nueva función para imprimir únicamente la parte de la etiqueta en tamaño 62mm x 29mm
   const handlePrint = () => {
     const printContents = previewContainerRef.current.innerHTML;
+    // Si existen datos de vales, se usa un tamaño de 40mm x 30mm
+    const pageStyle =
+      voucherData.length > 0
+        ? "@page { size: 40mm 30mm; margin: 1mm; } body { margin: 0; }"
+        : "@page { size: 62mm 32mm; margin: 1mm; } body { margin: 0; }";
     const printWindow = window.open("", "_blank", "width=600,height=400");
     printWindow.document.write(`
       <html>
         <head>
-          <style>
-            @page { size: 62mm 32mm; margin: 1mm; }
-            body { margin: 0; }
-          </style>
+          <style>${pageStyle}</style>
         </head>
         <body>${printContents}</body>
       </html>
@@ -517,26 +590,35 @@ export default function PricesTags({ isOpen, onHide }) {
 
   // Footer fijo para los botones
   const dialogFooter = (
-    <div className="flex justify-end items-center gap-3">
-      <Checkbox
-        inputId="discountCheckbox"
-        checked={discountEnabled}
-        onChange={(e) => setDiscountEnabled(e.checked)}
-      />
-      <label htmlFor="discountCheckbox">Precios con oferta</label>
+    <div className="flex justify-between items-center gap-3">
       <Button
-        label={
-          selectedProduct?.id_control_stock || selectedTrackingProducts.length > 0
-            ? "Reimprimir etiquetas"
-            : "Imprimir etiquetas"
-        }
-        icon="pi pi-print"
-        onClick={openQuantityDialog}
-        disabled={
-          !selectedProduct &&
-          (!selectedTrackingProducts || selectedTrackingProducts.length === 0)
-        }
+        label="Etiquetas con vales descuento"
+        icon="pi pi-tag"
+        className="p-button-info"
+        onClick={() => setShowDiscountVoucherModal(true)}
       />
+      <div className="flex items-center gap-3">
+        <Checkbox
+          inputId="discountCheckbox"
+          checked={discountEnabled}
+          onChange={(e) => setDiscountEnabled(e.checked)}
+        />
+        <label htmlFor="discountCheckbox">Precios con oferta</label>
+        <Button
+          label={
+            selectedProduct?.id_control_stock ||
+            selectedTrackingProducts.length > 0
+              ? "Reimprimir etiquetas"
+              : "Imprimir etiquetas"
+          }
+          icon="pi pi-print"
+          onClick={openQuantityDialog}
+          disabled={
+            !selectedProduct &&
+            (!selectedTrackingProducts || selectedTrackingProducts.length === 0)
+          }
+        />
+      </div>
     </div>
   );
 
@@ -898,6 +980,23 @@ export default function PricesTags({ isOpen, onHide }) {
           <Button label="Cerrar" onClick={() => setShowPreviewDialog(false)} />
         </div>
       </Dialog>
+      {showDiscountVoucherModal && (
+        <DiscountModal
+          isOpen={showDiscountVoucherModal}
+          onClose={() => setShowDiscountVoucherModal(false)}
+          fromEtiquetas={true}
+          onDiscountApplied={handleDiscountVoucherReceived}
+          onProductDiscountApplied={() => {}}
+          targetProduct={null}
+          cartTotal={0}
+        />
+      )}
+      <ActionResultDialog
+        visible={actionDialogVisible}
+        onClose={() => setActionDialogVisible(false)}
+        success={actionDialogSuccess}
+        message={actionDialogMessage}
+      />
     </>
   );
 }

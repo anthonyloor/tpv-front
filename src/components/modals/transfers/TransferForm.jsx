@@ -161,7 +161,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
     selectedOriginStore === selectedDestinationStore;
 
   const canEditProducts =
-    isNewMovement || movementStatus.toLowerCase() === "en creacion";
+    isNewMovement || movementStatus.toLowerCase() === "En creacion";
 
   // Nueva función para mostrar el código de barras combinado
   const barcodeBodyTemplate = (rowData) => {
@@ -404,6 +404,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
 
   // Nueva función para actualizar el campo revision_count al escanear por EAN13 en modo revisión
   const handleRevisionScan = (selectedProducts) => {
+    console.log("Escaneando productos para revisión:", selectedProducts);
     // Verificar que se encontró al menos un producto
     if (!selectedProducts || selectedProducts.length === 0) {
       toast.error("No se encontró el producto con el código especificado.");
@@ -417,11 +418,19 @@ const TransferForm = ({ type, onSave, movementData }) => {
     let found = false;
     setProductsToTransfer((prev) =>
       prev.map((p) => {
-        if (p && p.ean13 === prod.ean13) {
+        // Si se envía id_control_stock, se compara ean13 e id_control_stock.
+        // Caso contrario, se compara solo el ean13 y que no tenga id_control_stock.
+        if (
+          p &&
+          p.ean13 === prod.ean13 &&
+          ((prod.id_control_stock &&
+            p.id_control_stock === prod.id_control_stock) ||
+            (!prod.id_control_stock && !p.id_control_stock))
+        ) {
           found = true;
           const currentRev = p.revision_count || 0;
           if (currentRev >= p.quantity) {
-            toast.error("Cantidad máxima alcanzada.");
+            toast.error("Producto ya escaneado o cantidad máxima alcanzada.");
             return p;
           } else {
             return { ...p, revision_count: currentRev + 1 };
@@ -463,14 +472,30 @@ const TransferForm = ({ type, onSave, movementData }) => {
     ) {
       if (idProfile === 1) {
         return (
-          <Button
-            label="Ejecutar"
-            className="w-full p-button-primary"
-            disabled={
-              st === "en revision" ? !canExecute : isSameStore || noProducts
-            }
-            onClick={handleExecuteMovement}
-          />
+          <div className="flex gap-2 w-full">
+            {st === "enviado" && (
+              <Button
+                label="Marcar como Recibido"
+                className="w-1/2 p-button-warning"
+                onClick={() => handleUpdateMovementStatus("Recibido")}
+              />
+            )}
+            {st === "recibido" && (
+              <Button
+                label="Revisar"
+                className="w-1/2 p-button-help"
+                onClick={() => handleUpdateMovementStatus("En revision")}
+              />
+            )}
+            <Button
+              label="Ejecutar"
+              className="w-1/2 p-button-primary"
+              disabled={
+                st === "en revision" ? !canExecute : isSameStore || noProducts
+              }
+              onClick={handleExecuteMovement}
+            />
+          </div>
         );
       } else {
         if (st === "enviado") {
@@ -493,9 +518,10 @@ const TransferForm = ({ type, onSave, movementData }) => {
         } else if (st === "en revision") {
           return (
             <Button
-              label="Sin acciones"
-              className="w-full p-button-secondary"
-              disabled
+              label="Ejecutar"
+              className="w-full p-button-primary"
+              disabled={!canExecute}
+              onClick={handleExecuteMovement}
             />
           );
         }
@@ -504,47 +530,22 @@ const TransferForm = ({ type, onSave, movementData }) => {
 
     if (st === "en creacion") {
       if (type === "traspaso") {
-        if (idProfile === 1) {
-          return (
-            <div className="flex gap-2 w-full">
-              <Button
-                label="Guardar"
-                className="p-button-secondary w-1/3"
-                disabled={isSameStore || noProducts}
-                onClick={handleUpdateMovement}
-              />
-              <Button
-                label="Enviar"
-                className="p-button-success w-1/3"
-                disabled={isSameStore || noProducts}
-                onClick={() => handleUpdateMovementStatus("Enviado")}
-              />
-              <Button
-                label="Ejecutar"
-                className="p-button-primary w-1/3"
-                disabled={isSameStore || noProducts}
-                onClick={handleExecuteMovement}
-              />
-            </div>
-          );
-        } else {
-          return (
-            <div className="flex gap-2 w-full">
-              <Button
-                label="Guardar"
-                className="p-button-secondary w-1/2"
-                disabled={isSameStore || noProducts}
-                onClick={handleUpdateMovement}
-              />
-              <Button
-                label="Enviar"
-                className="p-button-success w-1/2"
-                disabled={isSameStore || noProducts}
-                onClick={() => handleUpdateMovementStatus("Enviado")}
-              />
-            </div>
-          );
-        }
+        return (
+          <div className="flex gap-2 w-full">
+            <Button
+              label="Guardar"
+              className="p-button-secondary w-1/2"
+              disabled={isSameStore || noProducts}
+              onClick={handleUpdateMovement}
+            />
+            <Button
+              label="Enviar"
+              className="p-button-success w-1/2"
+              disabled={isSameStore || noProducts}
+              onClick={() => handleUpdateMovementStatus("Enviado")}
+            />
+          </div>
+        );
       } else if (type === "entrada" || type === "salida") {
         return (
           <div className="flex gap-2 w-full">
@@ -554,12 +555,14 @@ const TransferForm = ({ type, onSave, movementData }) => {
               disabled={noProducts}
               onClick={handleUpdateMovement}
             />
-            <Button
-              label="Ejecutar"
-              className="p-button-primary w-1/2"
-              disabled={noProducts}
-              onClick={handleExecuteMovement}
-            />
+            {idProfile === 1 && (
+              <Button
+                label="Ejecutar"
+                className="p-button-primary w-1/2"
+                disabled={noProducts}
+                onClick={handleExecuteMovement}
+              />
+            )}
           </div>
         );
       }
@@ -649,7 +652,6 @@ const TransferForm = ({ type, onSave, movementData }) => {
     );
   }
 
-  // Si es traspaso y el estado es Recibido, insertar la columna Und. revisión
   if (type === "traspaso" && currentStatus.toLowerCase() === "en revision") {
     productTableColumns.splice(3, 0, {
       field: "revision",
@@ -800,7 +802,8 @@ const TransferForm = ({ type, onSave, movementData }) => {
             ? "Productos a Traspasar"
             : type === "entrada"
             ? "Productos a Ingresar"
-            : "Productos a Retirar"}{""}
+            : "Productos a Retirar"}
+          {""}
           {`: ${totalQuantity}`}
         </h3>
         <DataTable value={productsToTransfer} responsiveLayout="scroll">

@@ -7,7 +7,6 @@ import ReturnsExchangesModal from "../modals/returns/ReturnsExchangesModal";
 import ReprintModal from "../modals/reprint/ReprintModal";
 import PinValidationModal from "../modals/pin/PinValidationModal";
 import DiscountModal from "../modals/discount/DiscountModal";
-import TicketViewModal from "../modals/ticket/TicketViewModal";
 import ActionResultDialog from "../common/ActionResultDialog";
 import useFinalizeSale from "../../hooks/useFinalizeSale";
 import { AuthContext } from "../../contexts/AuthContext";
@@ -17,6 +16,11 @@ import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
 import { useIsCompact } from "../../utils/responsive";
 import OnlineOrdersModal from "../modals/online/OnlineOrdersModal";
+import generateTicket from "../..//utils/ticket";
+import { ConfigContext } from "../../contexts/ConfigContext";
+import { useEmployeesDictionary } from "../../hooks/useEmployeesDictionary";
+import getApiBaseUrl from "../../utils/getApiBaseUrl";
+import { useApiFetch } from "../../utils/useApiFetch";
 
 function SalesCardActions({
   cartItems,
@@ -46,6 +50,8 @@ function SalesCardActions({
   const { idProfile } = useContext(AuthContext);
   const { resetToDefaultClientAndAddress } = useContext(ClientContext);
   const { isLoading, finalizeSale } = useFinalizeSale();
+  const { configData } = useContext(ConfigContext);
+  const employeesDict = useEmployeesDictionary();
 
   // Modales
   const [isReturnsModalOpen, setIsReturnsModalOpen] = useState(false);
@@ -55,12 +61,14 @@ function SalesCardActions({
   const [isFinalSaleModalOpen, setFinalSaleModalOpen] = useState(false);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketOrderId, setTicketOrderId] = useState(null);
+  const [ticketOrderOrigin, setTicketOrderOrigin] = useState(null);
   const [printOnOpen, setPrintOnOpen] = useState(false);
   const [giftTicket, setGiftTicket] = useState(false);
   const [giftTicketTM, setGiftTicketTM] = useState(false);
   const [cartRuleModalOpen, setCartRuleModalOpen] = useState(false);
   const [newCartRuleCode, setNewCartRuleCode] = useState(null);
   const [isOnlineOrdersModalOpen, setIsOnlineOrdersModalOpen] = useState(false);
+  const apiFetch = useApiFetch();
 
   // Métodos de pago
   const [selectedMethods, setSelectedMethods] = useState([]);
@@ -220,9 +228,11 @@ function SalesCardActions({
           changeAmount,
           leftoverArray,
           newCartRuleCode,
+          orderOrigin = "mayret",
         }) => {
           showAlert("Venta finalizada correctamente", true);
           setTicketOrderId(orderId);
+          setTicketOrderOrigin(orderOrigin);
           setGiftTicketTM(giftTicket);
           setChangeAmount(changeAmount);
           setTicketModalOpen(true);
@@ -256,14 +266,6 @@ function SalesCardActions({
       true
     );
   };
-
-  const handleCloseTicketNormal = () => {
-    setTicketModalOpen(false);
-    if (newCartRuleCode) {
-      setCartRuleModalOpen(true);
-    }
-  };
-  const closeCartRuleModal = () => setCartRuleModalOpen(false);
 
   // Cantidad total introducida en los métodos de pago
   const totalEntered = Object.values(amounts).reduce(
@@ -564,6 +566,59 @@ function SalesCardActions({
     finalizar: "Finalizar Venta",
   };
 
+  useEffect(() => {
+    if (ticketOrderId) {
+      (async () => {
+        try {
+          const API_BASE_URL = getApiBaseUrl();
+          const orderData = await apiFetch(`${API_BASE_URL}/get_order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id_order: ticketOrderId,
+              origin: "mayret",
+            }),
+          });
+          if (!orderData || !orderData.order_details) {
+            console.error("Error: datos de la orden incompletos");
+          } else {
+            const response = await generateTicket(
+              "print",
+              orderData,
+              configData,
+              employeesDict
+            );
+            if (!response.success) {
+              console.error("Error al imprimir ticket:", response.message);
+            }
+          }
+        } catch (err) {
+          console.error("Error en la consulta get_order:", err);
+        } finally {
+          setTicketModalOpen(false);
+        }
+      })();
+    }
+  }, [ticketOrderId, configData, employeesDict, apiFetch]);
+
+  useEffect(() => {
+    if (cartRuleModalOpen && newCartRuleCode) {
+      (async () => {
+        const ticketData = { cartRuleCode: newCartRuleCode };
+        const response = await generateTicket(
+          "print",
+          ticketData,
+          configData,
+          employeesDict
+        );
+        if (!response.success) {
+          console.error("Error al imprimir vale:", response.message);
+        }
+        setCartRuleModalOpen(false);
+      })();
+    }
+  }, [cartRuleModalOpen, newCartRuleCode, configData, employeesDict]);
+
   return (
     <div
       className="h-full flex flex-col p-3 relative"
@@ -773,32 +828,6 @@ function SalesCardActions({
         success={alertSuccess}
         message={alertMessage}
       />
-      {/* TicketViewModal para ticket normal */}
-      {ticketOrderId && (
-        <TicketViewModal
-          isOpen={ticketModalOpen}
-          onClose={handleCloseTicketNormal}
-          mode="ticket"
-          orderId={ticketOrderId}
-          printOnOpen={printOnOpen}
-          giftTicket={giftTicketTM}
-          changeAmount={changeAmount}
-          showCloseButton
-        />
-      )}
-      {/* TicketViewModal para cart rule */}
-      {cartRuleModalOpen && newCartRuleCode && (
-        <TicketViewModal
-          isOpen={cartRuleModalOpen}
-          onClose={closeCartRuleModal}
-          mode="cart_rule"
-          cartRuleCode={newCartRuleCode}
-          printOnOpen
-          showCloseButton
-          size="lg"
-          height="tall"
-        />
-      )}
       {/* Modales varios */}
       <ReturnsExchangesModal
         isOpen={isReturnsModalOpen}

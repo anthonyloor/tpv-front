@@ -211,10 +211,12 @@ const TicketViewModal = ({
   const loadOrder = useCallback(async () => {
     try {
       setError(null);
-      const data = await apiFetch(
-        `${API_BASE_URL}/get_order?id_order=${orderId}`,
-        { method: "GET" }
-      );
+      const data = await apiFetch(`${API_BASE_URL}/get_order`, {
+        method: "POST",
+        body: JSON.stringify({
+          id_order: orderId,
+        }),
+      });
       setFetchedData(data);
       buildPreviewHtmlForTicket(data, giftTicket);
     } catch (err) {
@@ -258,7 +260,12 @@ const TicketViewModal = ({
   useEffect(() => {
     if (printOnOpen && fetchedData && configData) {
       (async () => {
-        const response = await generateTicket("print", fetchedData, configData, employeesDict);
+        const response = await generateTicket(
+          "print",
+          fetchedData,
+          configData,
+          employeesDict
+        );
         if (!response.success) {
           console.error("Error al imprimir ticket:", response.message);
         }

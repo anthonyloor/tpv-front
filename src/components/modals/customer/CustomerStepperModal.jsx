@@ -122,7 +122,7 @@ export default function CustomerStepperModal({
       },
       body: JSON.stringify({
         id_customer: client.id_customer,
-        origin: client.origin, // Se obtiene del cliente seleccionado
+        origin: client.origin,
       }),
     })
       .then((res) => {

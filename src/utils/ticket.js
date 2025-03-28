@@ -11,6 +11,30 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     };
   }
 
+  // Cargar logo desde /logo-fajas-maylu.png y convertirlo a DataURL (base64) con control de error
+  let logoDataUrl = "";
+  try {
+    const response = await fetch("/logo-fajas-maylu.png");
+    if (response.ok) {
+      const blob = await response.blob();
+      logoDataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      if (typeof logoDataUrl !== "string" || !logoDataUrl.startsWith("data:")) {
+        console.warn("Logo no válido, se omitirá en el ticket.");
+        logoDataUrl = "";
+      }
+    } else {
+      console.warn("No se pudo cargar el logo, status:", response.status);
+    }
+  } catch (err) {
+    console.warn("Error al cargar el logo:", err);
+    logoDataUrl = "";
+  }
+
   // Construir tabla de productos en una sola fila de cabecera
   const productTableBody = [
     [
@@ -95,16 +119,8 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     return sum;
   }, 0);
 
-  //const totalAfterDiscount = subtotal - totalDiscounts;
   const totalAfterDiscount = orderData.total_paid;
-
-  // Calculate IVA (VAT) from total_paid (tax included amount)
-  // Formula: IVA = total_paid - (total_paid / (1 + IVA_RATE))
   const iva = orderData.total_paid - orderData.total_paid / 1.21;
-
-  // Alternative calculation if total_paid_tax_excl is available and accurate
-  // const iva = orderData.total_paid - orderData.total_paid_tax_excl;
-
   const dateObj = new Date(orderData.date_add);
   const formattedDate = dateObj.toLocaleDateString("es-ES");
   const formattedTime = dateObj.toLocaleTimeString("es-ES");
@@ -121,6 +137,7 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     });
     return canvas.toDataURL("image/png");
   };
+
   const totalsBody = [
     [
       { text: "SUBTOTAL:", style: "tTotals" },
@@ -166,12 +183,14 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     ]
   );
 
+  // Al construir el contenido, incluir el logo solo si se obtuvo la dataURL válida
   const content = [
-    ...(config.ticket_logo_base64
+    ...(logoDataUrl
       ? [
           {
-            image: config.ticket_logo_base64,
-            fit: [141.73, 56.692],
+            image: logoDataUrl,
+            //fit: [141.73, 56.692],
+            fit: [170.07, 70.86],
             alignment: "center",
           },
         ]
@@ -244,14 +263,14 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     {
       margin: [0, 10, 15, 0],
       table: {
-        widths: ["45%", "14%", "22%", "19%"],
+        widths: ["42%", "14%", "22%", "22%"],
         headerRows: 1,
         body: productTableBody,
       },
       layout: {
         hLineWidth: () => 1,
         vLineWidth: () => 0,
-        hLineColor: () => "#f2f0f0",
+        hLineColor: () => "#000000",
         paddingTop: (i, node) => (i === 0 ? 10 : 5),
       },
     },

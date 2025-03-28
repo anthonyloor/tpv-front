@@ -8,6 +8,7 @@ import { useCartRuleCreator } from "../../../hooks/useCartRuleCreator";
 import { Dropdown } from "primereact/dropdown";
 import { Button } from "primereact/button";
 import { InputNumber } from "primereact/inputnumber";
+import { InputText } from "primereact/inputtext";
 
 const DiscountModal = ({
   isOpen,
@@ -16,10 +17,15 @@ const DiscountModal = ({
   onProductDiscountApplied,
   targetProduct,
   cartTotal = 0,
+  fromEtiquetas = false,
 }) => {
   const [discountType, setDiscountType] = useState("percentage");
   const [discountValue, setDiscountValue] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  // Estados nuevos para vale descuento
+  const [voucherName, setVoucherName] = useState("");
+  const [voucherDescription, setVoucherDescription] = useState("");
+  const [voucherQuantity, setVoucherQuantity] = useState(1);
   const { createCartRuleWithResponse } = useCartRuleCreator();
 
   // Verificar que el identificador se calcule correctamente utilizando ambas propiedades
@@ -46,8 +52,8 @@ const DiscountModal = ({
       setErrorMessage("El descuento porcentual no puede ser mayor a 100%.");
       return;
     }
-    // Validación para importe: calcular máximo permitido
-    if (discountType === "amount") {
+    // Validación para importe solo si no venimos de etiquetas
+    if (!fromEtiquetas && discountType === "amount") {
       let maxAllowed = 0;
       if (targetProduct) {
         maxAllowed =
@@ -64,8 +70,18 @@ const DiscountModal = ({
         return;
       }
     }
+    // Incluir datos adicionales cuando venga de Etiquetas, enviando en quantity la cantidad de vales.
+    const payload = {
+      discountType,
+      value,
+      ...(fromEtiquetas && {
+        voucherName,
+        voucherDescription,
+        quantity: voucherQuantity,
+      }),
+    };
     createCartRuleWithResponse(
-      { discountType, value },
+      payload,
       (discObj) => {
         console.log(
           "[DiscountModal] Resultado de la creación de descuento:",
@@ -90,8 +106,13 @@ const DiscountModal = ({
             );
           }
         }
+        // Si viene de etiquetas, ya discObj es un array, por lo tanto, no se envuelve
         if (onDiscountApplied) {
-          onDiscountApplied(discObj);
+          if (fromEtiquetas) {
+            onDiscountApplied(discObj);
+          } else {
+            onDiscountApplied(discObj);
+          }
         }
         setDiscountValue("");
         setErrorMessage("");
@@ -115,7 +136,9 @@ const DiscountModal = ({
       visible={isOpen}
       onHide={onClose}
       header={
-        targetProduct && targetProduct.id_product
+        fromEtiquetas
+          ? "Generar vale descuento"
+          : targetProduct && targetProduct.id_product
           ? `Descuento sobre producto: ${productName}`
           : "Descuento sobre venta"
       }
@@ -131,6 +154,38 @@ const DiscountModal = ({
           className="w-full"
         />
       </div>
+
+      {fromEtiquetas && (
+        <>
+          <div className="mb-4">
+            <label className="block font-medium mb-1">Nombre</label>
+            <InputText
+              value={voucherName}
+              onChange={(e) => setVoucherName(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block font-medium mb-1">Descripción</label>
+            <InputText
+              value={voucherDescription}
+              onChange={(e) => setVoucherDescription(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block font-medium mb-1">Cantidad de vales</label>
+            <InputNumber
+              value={voucherQuantity}
+              onValueChange={(e) => setVoucherQuantity(e.value)}
+              min={1}
+              showButtons={false}
+              className="w-full"
+              placeholder="Cantidad"
+            />
+          </div>
+        </>
+      )}
 
       <div className="mb-4">
         <label className="block font-medium mb-1">
@@ -160,7 +215,7 @@ const DiscountModal = ({
 
       <div className="flex justify-end space-x-2">
         <Button
-          label="Aplicar"
+          label={fromEtiquetas ? "Generar" : "Aplicar"}
           className="p-button-success"
           onClick={handleApplyDiscount}
         />

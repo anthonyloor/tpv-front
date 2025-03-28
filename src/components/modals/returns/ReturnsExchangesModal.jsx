@@ -6,11 +6,13 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
-import TicketViewModal from "../ticket/TicketViewModal";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import { toast } from "sonner";
 import { CartContext } from "../../../contexts/CartContext";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import generateTicket from "../../../utils/ticket";
+import { ConfigContext } from "../../../contexts/ConfigContext";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
 const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   const [orderId, setOrderId] = useState("");
@@ -38,6 +40,9 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     setOriginalPaymentMethods,
     setOriginalPaymentAmounts,
   } = useContext(CartContext);
+
+  const { configData } = useContext(ConfigContext);
+  const employeesDict = useEmployeesDictionary();
 
   // Skeleton
   const skeletonData = new Array(6).fill(null).map((_, idx) => ({
@@ -70,14 +75,13 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       setError(null);
       setIsLoading(true);
       setReturnedProductMap({});
-      const data = await apiFetch(
-        `${API_BASE_URL}/get_order?id_order=${encodeURIComponent(
-          orderId.trim()
-        )}`,
-        {
-          method: "GET",
-        }
-      );
+      const data = await apiFetch(`${API_BASE_URL}/get_order`, {
+        method: "POST",
+        body: JSON.stringify({
+          id_order: orderId.trim(),
+          origin: "mayret"
+        }),
+      });
       if (!data || !data.order_details) {
         setError("No se encontró la venta o no tiene detalles.");
         setOrderData(null);
@@ -333,6 +337,20 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
 
   const canProceed = !!orderData && selectedRows.length > 0;
   const displayData = isLoading ? skeletonData : orderData?.order_details || [];
+
+  // Agregamos useEffect para generar e imprimir el ticket cuando viewTicketId cambie
+  useEffect(() => {
+    if (viewTicketId) {
+      (async () => {
+        const orderData = { id_order: viewTicketId, origin: orderData?.origin || null };
+        const response = await generateTicket("print", orderData, configData, employeesDict);
+        if (!response.success) {
+          console.error("Error al imprimir ticket:", response.message);
+        }
+        setViewTicketId(null);
+      })();
+    }
+  }, [viewTicketId, configData, employeesDict]);
 
   // Render
   return (
@@ -594,20 +612,6 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
           </div>
         </div>
       </Dialog>
-
-      {/* Ver ticket devuelto => TicketViewModal */}
-      {viewTicketId && (
-        <TicketViewModal
-          isOpen
-          onClose={() => setViewTicketId(null)}
-          mode="ticket"
-          orderId={viewTicketId}
-          showCloseButton
-          showBackButton={false}
-          size="lg"
-          height="tall"
-        />
-      )}
     </>
   );
 };

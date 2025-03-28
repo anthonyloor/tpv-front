@@ -8,9 +8,9 @@ export function useCartRuleCreator() {
   const { employeeName, shopName } = useContext(AuthContext);
   const API_BASE_URL = getApiBaseUrl();
 
-  // Ahora se agrega el parámetro targetFullProductName (string vacío si no aplica)
+  // Se amplía el objeto de opciones para incluir voucherName, voucherDescription y quantity
   const createCartRuleWithResponse = async (
-    { discountType, value },
+    { discountType, value, voucherName, voucherDescription, quantity },
     onDiscountApplied,
     onClose,
     resetDiscountValue,
@@ -25,15 +25,21 @@ export function useCartRuleCreator() {
     const date_to = sixMonthsLater.toISOString().split("T")[0] + " 23:59:59";
 
     const client = JSON.parse(localStorage.getItem("selectedClient"));
-    // Se usa targetIdentifier para el producto (si existe) y se utiliza targetFullProductName para el name
-    const name = targetIdentifier
-      ? `Descuento sobre ${targetFullProductName}`
-      : discountType === "percentage"
-      ? `Descuento de ${value}%`
-      : `Descuento de ${value}€`;
-    const description = targetIdentifier
-      ? `Producto: ${targetIdentifier}`
-      : `Descuento sobre venta generado por ${employeeName} en ${shopName}`;
+    // Si existe targetIdentifier se sigue la lógica normal, sino, si se pasó voucherName se usa la información de vale descuento
+    let name, description;
+    if (targetIdentifier) {
+      name = `Descuento sobre ${targetFullProductName}`;
+      description = `Producto: ${targetIdentifier}`;
+    } else if (voucherName) {
+      name = voucherName;
+      description = voucherDescription || "";
+    } else {
+      name =
+        discountType === "percentage"
+          ? `Descuento de ${value}%`
+          : `Descuento de ${value}€`;
+      description = `Descuento sobre venta generado por ${employeeName} en ${shopName}`;
+    }
     const reduction_percent = discountType === "percentage" ? value : 0;
     const reduction_amount = discountType === "amount" ? value : 0;
 
@@ -45,6 +51,8 @@ export function useCartRuleCreator() {
       id_customer: client ? client.id_customer : null,
       reduction_percent,
       reduction_amount,
+      // Si se envía voucherName se añade la cantidad de vales
+      ...(voucherName && { quantity }),
     };
 
     try {
@@ -56,18 +64,27 @@ export function useCartRuleCreator() {
       console.log("createCartRuleWithResponse result:", result);
 
       if (result[0]) {
-        const discObj = {
-          name: name || "",
-          description: description || "",
-          code: result[0].code,
-          reduction_amount: result[0].reduction_amount || 0,
-          reduction_percent: result[0].reduction_percent || 0,
-        };
-        if (onDiscountApplied) onDiscountApplied(discObj);
-        if (resetDiscountValue) resetDiscountValue("");
-        if (setErrorMessage) setErrorMessage("");
-        if (onClose) onClose();
-        return result[0]; // Devolvemos el resultado exitoso
+        // Si se generó un vale descuento, devolver todo el array
+        if (voucherName) {
+          if (onDiscountApplied) onDiscountApplied(result);
+          if (resetDiscountValue) resetDiscountValue("");
+          if (setErrorMessage) setErrorMessage("");
+          if (onClose) onClose();
+          return result;
+        } else {
+          const discObj = {
+            name: name || "",
+            description: description || "",
+            code: result[0].code,
+            reduction_amount: result[0].reduction_amount || 0,
+            reduction_percent: result[0].reduction_percent || 0,
+          };
+          if (onDiscountApplied) onDiscountApplied(discObj);
+          if (resetDiscountValue) resetDiscountValue("");
+          if (setErrorMessage) setErrorMessage("");
+          if (onClose) onClose();
+          return result[0];
+        }
       } else {
         if (setErrorMessage)
           setErrorMessage(result.message || "Error al crear el descuento.");
