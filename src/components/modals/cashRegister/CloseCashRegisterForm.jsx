@@ -475,40 +475,24 @@ const CloseCashRegisterForm = ({ onClose }) => {
 
       finalY = doc.lastAutoTable.finalY + 20;
 
-      // Tabla de totales generales; se añade la fila de descuentos si corresponde
+      const totalPaid = data.reduce(
+        (acc, order) => acc + (order.total_paid || 0),
+        0
+      );
+
+      // Tabla de totales generales; se añade la fila de descuentos si corresponde.
       const totalsTableBody = [];
       if (discountSum > 0) {
         totalsTableBody.push([
           "TOTAL SIN DESCUENTOS:",
-          data
-            .reduce((sum, order) => {
-              // Se asume que el total de cada producto está en total_price_tax_incl * cantidad
-              return (
-                sum +
-                order.order_details.reduce(
-                  (s, d) =>
-                    s + parseFloat(d.total_price_tax_incl) * d.product_quantity,
-                  0
-                )
-              );
-            }, 0)
-            .toFixed(2) + "€",
+          (totalPaid + discountSum).toFixed(2) + "€",
         ]);
         totalsTableBody.push([
           "TOTAL DESCUENTOS:",
           discountSum.toFixed(2) + "€",
         ]);
       }
-      // Se calcula el IVA y Total general a partir de data.total_paid (similar a lo que ya se usa en otros reportes)
-      const totalPaid = data.reduce(
-        (acc, order) => acc + (order.total_paid || 0),
-        0
-      );
-      //const iva = totalPaid - totalPaid / 1.21;
-      totalsTableBody.push(
-        // ["I.V.A (21%):", iva.toFixed(2) + "€"],
-        ["TOTAL:", totalPaid.toFixed(2) + "€"]
-      );
+      totalsTableBody.push(["TOTAL:", totalPaid.toFixed(2) + "€"]);
       doc.autoTable({
         head: [],
         body: totalsTableBody,

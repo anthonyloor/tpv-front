@@ -32,6 +32,9 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   // Para mostrar ticket devuelto
   const [viewTicketId, setViewTicketId] = useState(null);
 
+  // Nueva variable de estado para origin con valor por defecto "mayret"
+  const [selectedOrigin, setSelectedOrigin] = useState("mayret");
+
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
 
@@ -79,7 +82,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         method: "POST",
         body: JSON.stringify({
           id_order: orderId.trim(),
-          origin: "mayret"
+          origin: selectedOrigin,
         }),
       });
       if (!data || !data.order_details) {
@@ -342,8 +345,16 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   useEffect(() => {
     if (viewTicketId) {
       (async () => {
-        const orderData = { id_order: viewTicketId, origin: orderData?.origin || null };
-        const response = await generateTicket("print", orderData, configData, employeesDict);
+        const orderData = {
+          id_order: viewTicketId,
+          origin: orderData?.origin || null,
+        };
+        const response = await generateTicket(
+          "print",
+          orderData,
+          configData,
+          employeesDict
+        );
         if (!response.success) {
           console.error("Error al imprimir ticket:", response.message);
         }
@@ -389,6 +400,29 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                   disabled={isLoading}
                 />
               </span>
+            </div>
+            {/* Radio buttons para seleccionar origin */}
+            <div className="flex flex-col gap-1">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="origin"
+                  value="mayret"
+                  checked={selectedOrigin === "mayret"}
+                  onChange={(e) => setSelectedOrigin(e.target.value)}
+                />
+                <span className="ml-1">Mayret</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="origin"
+                  value="fajasmaylu"
+                  checked={selectedOrigin === "fajasmaylu"}
+                  onChange={(e) => setSelectedOrigin(e.target.value)}
+                />
+                <span className="ml-1">Fajasmaylu</span>
+              </label>
             </div>
             <Button
               label="Buscar"
