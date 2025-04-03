@@ -322,22 +322,96 @@ const TransfersModal = ({ isOpen, onClose }) => {
     setCurrentView("list");
   };
 
-  const exportPdf = () => {
-    import("jspdf").then(({ default: JsPDF }) => {
-      import("jspdf-autotable").then(() => {
+  // Modificar exportPdf para usar los diccionarios y mostrar nombres en vez de IDs
+  const exportPdf = async () => {
+    for (const mov of selectedMovements) {
+      try {
+        const data = await apiFetch(
+          `${API_BASE_URL}/get_warehouse_movement?id_warehouse_movement=${mov.id_warehouse_movement}`,
+          { method: "GET" }
+        );
+        const { default: JsPDF } = await import("jspdf");
+        await import("jspdf-autotable");
         const doc = new JsPDF("p", "pt");
-        const head = [["ID", "Fecha", "Título", "Tipo", "Estado"]];
-        const body = selectedMovements.map((mov) => [
+
+        // Utilizar los diccionarios para obtener los nombres
+        const employeeName = employeesDict[data.employee] || data.employee;
+        const shopOriginName =
+          shopsDict[data.id_shop_origin] || data.id_shop_origin;
+        const shopDestinyName =
+          shopsDict[data.id_shop_destiny] || data.id_shop_destiny;
+
+        doc.setFontSize(14);
+        doc.text(
+          `Movimiento ${
+            data.type.charAt(0).toUpperCase() + data.type.slice(1)
+          } #${data.id_warehouse_movement}`,
+          40,
+          40
+        );
+        doc.setFontSize(12);
+        doc.text(`${data.description || "N/A"}`, 40, 60);
+        doc.setFontSize(10);
+        doc.text(`Empleado: ${employeeName}`, 40, 75);
+        doc.text(`Fecha creación: ${data.date_add}`, 40, 85);
+        doc.text(`Fecha ejecución: ${data.date_excute}`, 40, 95);
+        doc.text(`Estado: ${data.status}`, 40, 110);
+
+        // Construir tabla de detalles según el tipo
+        let head, body;
+        if (data.type === "traspaso") {
+          doc.text(
+            `Origen: ${shopOriginName} - Destino: ${shopDestinyName}`,
+            40,
+            125
+          );
+          head = [
+            ["Producto", "Cod. Barras", "ID Control Stock", "Cant. Enviada"],
+          ];
+          body = (data.movement_details || []).map((detail) => [
+            detail.product_name,
+            detail.ean13,
+            detail.id_control_stock,
+            detail.sent_quantity,
+          ]);
+        } else if (data.type === "entrada") {
+          doc.text(`Tienda: ${shopDestinyName}`, 40, 125);
+          head = [
+            ["Producto", "Cod. Barras", "ID Control Stock", "Cant. Recibida"],
+          ];
+          body = (data.movement_details || []).map((detail) => [
+            detail.product_name,
+            detail.ean13,
+            detail.id_control_stock,
+            detail.recived_quantity,
+          ]);
+        } else if (data.type === "salida") {
+          doc.text(`Tienda: ${shopOriginName}`, 40, 125);
+          head = [
+            ["Producto", "Cod. Barras", "ID Control Stock", "Cant. Enviada"],
+          ];
+          body = (data.movement_details || []).map((detail) => [
+            detail.product_name,
+            detail.ean13,
+            detail.id_control_stock,
+            detail.sent_quantity,
+          ]);
+        }
+        doc.autoTable({
+          startY: 140,
+          head,
+          body,
+          theme: "grid",
+        });
+        doc.save(`Movimiento_${data.id_warehouse_movement}.pdf`);
+      } catch (error) {
+        console.error(
+          "Error generando PDF para el movimiento",
           mov.id_warehouse_movement,
-          mov.date_add,
-          mov.description,
-          mov.type,
-          mov.status,
-        ]);
-        doc.autoTable({ head, body });
-        doc.save("movimientos.pdf");
-      });
-    });
+          error
+        );
+      }
+    }
   };
 
   // Toolbar => parte izquierda

@@ -2,22 +2,36 @@ import React, { useState, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
-import { PinContext } from "../../../contexts/PinContext";
+import { AuthContext } from "../../../contexts/AuthContext";
+import { useApiFetch } from "../../../utils/useApiFetch";
+import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const PinValidationModal = ({ isOpen, onClose, onSuccess }) => {
-  const { dailyPin, regeneratePin } = useContext(PinContext);
+  const { employeeId } = useContext(AuthContext);
+  const apiFetch = useApiFetch();
   const [enteredPin, setEnteredPin] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleVerifyPin = () => {
-    if (enteredPin === dailyPin) {
-      setErrorMessage("");
-      regeneratePin();
-      setEnteredPin("");
-      onSuccess();
-      onClose();
-    } else {
-      setErrorMessage("PIN incorrecto. Intenta nuevamente.");
+  const handleVerifyPin = async () => {
+    try {
+      const API_BASE_URL = getApiBaseUrl();
+      const response = await apiFetch(`${API_BASE_URL}/check_pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pin: enteredPin,
+          id_employee_used: employeeId,
+          reason: "descuento",
+        }),
+      });
+      if (response && response.usable) {
+        setErrorMessage("");
+        setEnteredPin("");
+        onSuccess();
+        onClose();
+      }
+    } catch (error) {
+      setErrorMessage("PIN incorrecto.");
     }
   };
 
