@@ -11,9 +11,11 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import useProductSearch from "../../hooks/useProductSearch";
 import { CartContext } from "../../contexts/CartContext";
+import { ClientContext } from "../../contexts/ClientContext";
 
 const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const { setIsDevolution } = useContext(CartContext);
+  const { selectedClient } = useContext(ClientContext);
   const [searchTerm, setSearchTerm] = useState("");
   const searchInputRef = useRef(null);
 
@@ -63,7 +65,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     allowOutOfStockSales,
     onAddProduct: handleAddProductWrapper,
     onAddDiscount,
-    idProfile,  
+    idProfile,
+    selectedClient,
   });
 
   useEffect(() => {

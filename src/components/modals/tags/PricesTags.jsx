@@ -16,6 +16,7 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { Checkbox } from "primereact/checkbox";
 import DiscountModal from "../discount/DiscountModal";
 import ActionResultDialog from "../../common/ActionResultDialog";
+import { ClientContext } from "../../../contexts/ClientContext";
 
 export default function PricesTags({ isOpen, onHide }) {
   const { shopId, idProfile } = useContext(AuthContext);
@@ -43,6 +44,7 @@ export default function PricesTags({ isOpen, onHide }) {
     "Generando descuento..."
   );
   const [actionDialogSuccess, setActionDialogSuccess] = useState(true);
+  const { selectedClient } = useContext(ClientContext);
 
   const handleDiscountPriceChange = (key, value) => {
     setDiscountPrices((prev) => ({ ...prev, [key]: value }));
@@ -70,6 +72,7 @@ export default function PricesTags({ isOpen, onHide }) {
     },
     onAddDiscount: () => {},
     idProfile,
+    selectedClient,
   });
 
   // Al abrir el diálogo, reiniciar estados y enfocar el input

@@ -14,12 +14,7 @@ import getApiBaseUrl from "../utils/getApiBaseUrl";
 export const ClientContext = createContext();
 
 export const ClientProvider = ({ children }) => {
-  const [selectedClient, setSelectedClient] = useState({
-    id_customer: 0,
-    firstname: "",
-    lastname: "",
-    full_name: "Cliente genérico",
-  });
+  const [selectedClient, setSelectedClient] = useState({});
   const [selectedAddress, setSelectedAddress] = useState(null);
   const { configData } = useContext(ConfigContext);
   const apiFetch = useApiFetch();
@@ -48,6 +43,7 @@ export const ClientProvider = ({ children }) => {
       const clientResponse = clientsResponse[0];
       const clientData = {
         id_customer: clientResponse.id_customer,
+        id_default_group: clientResponse.id_default_group,
         firstname: clientResponse.firstname,
         lastname: clientResponse.lastname,
         full_name: `${clientResponse.firstname} ${clientResponse.lastname}`,

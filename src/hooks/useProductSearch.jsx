@@ -23,6 +23,7 @@ const useProductSearch = ({
   onAddProduct,
   onAddDiscount,
   idProfile,
+  selectedClient,
 }) => {
   const [groupedProducts, setGroupedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -232,10 +233,16 @@ const useProductSearch = ({
     if (ean13Regex.test(searchTerm)) {
       setIsLoading(true);
       try {
-        let results = await apiFetch(
-          `${API_BASE_URL}/product_search?b=${encodeURIComponent(searchTerm)}`,
-          { method: "GET" }
-        );
+        // Cambiado: enviar JSON en lugar de query param
+        const payload = {
+          search_term: searchTerm,
+          id_default_group: selectedClient.id_default_group,
+        };
+        let results = await apiFetch(`${API_BASE_URL}/product_search`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
         let validResults = results
           .filter(
             (product) =>
@@ -286,15 +293,21 @@ const useProductSearch = ({
       return;
     }
 
-    // Caso búsqueda por EAN13
+    // Caso búsqueda por EAN13 con apóstrofe
     if (ean13ApostropheRegex.test(searchTerm)) {
       setIsLoading(true);
       try {
         const [, eanCode, controlId] = searchTerm.match(ean13ApostropheRegex);
-        let results = await apiFetch(
-          `${API_BASE_URL}/product_search?b=${encodeURIComponent(eanCode)}`,
-          { method: "GET" }
-        );
+        // Cambiado: enviar JSON en lugar de query param
+        const payload = {
+          search_term: eanCode,
+          id_default_group: selectedClient.id_default_group,
+        };
+        let results = await apiFetch(`${API_BASE_URL}/product_search`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
         if (results.length === 0) {
           toast.error("Producto no encontrado.");
           return;
@@ -366,10 +379,16 @@ const useProductSearch = ({
     // Búsqueda normal
     setIsLoading(true);
     try {
-      let results = await apiFetch(
-        `${API_BASE_URL}/product_search?b=${encodeURIComponent(searchTerm)}`,
-        { method: "GET" }
-      );
+      // Cambiado: enviar JSON en lugar de query param
+      const payload = {
+        search_term: searchTerm,
+        id_default_group: selectedClient.id_default_group,
+      };
+      let results = await apiFetch(`${API_BASE_URL}/product_search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       let validResults = results.filter(isValidProduct);
       console.log("Búsqueda normal - valid results filtrados:", validResults);
       if (forEan13) {
@@ -388,7 +407,10 @@ const useProductSearch = ({
           "):",
           filteredForCurrentShop
         );
-        const groups = groupProductsByProductName(filteredForCurrentShop, "ean");
+        const groups = groupProductsByProductName(
+          filteredForCurrentShop,
+          "ean"
+        );
         console.log("Búsqueda normal - grouped products:", groups);
         setGroupedProducts(groups);
         return groups;

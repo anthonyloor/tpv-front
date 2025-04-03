@@ -13,6 +13,7 @@ import ActionResultDialog from "../../common/ActionResultDialog";
 import generateTicket from "../../../utils/ticket";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import { ClientContext } from "../../../contexts/ClientContext";
 
 const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
@@ -34,6 +35,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const [viewTicketOrderId, setViewTicketOrderId] = useState(null);
   const { configData } = useContext(ConfigContext);
   const employeesDict = useEmployeesDictionary();
+  const { selectedClient } = useContext(ClientContext);
 
   const API_BASE_URL = getApiBaseUrl();
 
@@ -44,6 +46,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     onAddProduct: () => {},
     onAddDiscount: () => {},
     idProfile: null,
+    selectedClient,
   });
 
   const formatDate = (dateString) => {

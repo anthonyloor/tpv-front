@@ -92,6 +92,7 @@ function SalesCard({
   const handleStepperSelectClientAndAddress = (cli, addr) => {
     const newClient = {
       id_customer: cli.id_customer,
+      id_default_group: cli.id_default_group,
       firstname: cli.firstname,
       lastname: cli.lastname,
       full_name: `${cli.firstname} ${cli.lastname}`,

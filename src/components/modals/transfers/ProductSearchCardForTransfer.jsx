@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { InputText } from "primereact/inputtext";
@@ -6,6 +6,7 @@ import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 import ProductSelectionDialog from "./ProductSelectionDialog";
 import useProductSearch from "../../../hooks/useProductSearch";
+import { ClientContext } from "../../../contexts/ClientContext";
 
 const ProductSearchCardForTransfer = ({
   onAddProduct,
@@ -22,6 +23,7 @@ const ProductSearchCardForTransfer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { selectedClient } = useContext(ClientContext);
 
   // Modo “Agregar Automático”
   const [autoAdd, setAutoAdd] = useState(false);
@@ -78,6 +80,7 @@ const ProductSearchCardForTransfer = ({
     onAddProduct: () => {},
     onAddDiscount: () => {},
     idProfile: null,
+    selectedClient,
   });
 
   // Manejar el cambio del input
