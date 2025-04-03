@@ -17,7 +17,11 @@ const attemptRemotePrint = async (pdfDefinition) => {
       });
       if (printResponse.ok) {
         // Se pudo imprimir remotamente
-        return { success: true, remote: true, message: "Impresión remota exitosa" };
+        return {
+          success: true,
+          remote: true,
+          message: "Impresión remota exitosa",
+        };
       }
     }
   } catch (err) {
@@ -27,8 +31,14 @@ const attemptRemotePrint = async (pdfDefinition) => {
   return null;
 };
 
-// Se actualiza la función para recibir orderData y config como parámetros
-const generateTicket = async (output, orderData, config, employeesDict) => {
+// Se actualiza la función para recibir orderData, config, employeesDict y ticketGift
+const generateTicket = async (
+  output,
+  orderData,
+  config,
+  employeesDict,
+  ticketGift = false
+) => {
   if (!orderData) {
     return {
       success: false,
@@ -61,15 +71,22 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     logoDataUrl = "";
   }
 
-  // Construir tabla de productos en una sola fila de cabecera
-  const productTableBody = [
-    [
+  // Construir tabla de productos según tipo de ticket
+  const productTableBody = [];
+  if (ticketGift) {
+    productTableBody.push([
+      { text: "PRODUCTO", style: "tProductsHeader" },
+      { text: "UND", style: "tProductsHeader", alignment: "center" },
+    ]);
+  } else {
+    productTableBody.push([
       { text: "PRODUCTO", style: "tProductsHeader" },
       { text: "UND", style: "tProductsHeader", alignment: "center" },
       { text: "PRECIO", style: "tProductsHeader", alignment: "right" },
       { text: "TOTAL", style: "tProductsHeader", alignment: "right" },
-    ],
-  ];
+    ]);
+  }
+
   orderData.order_details.forEach((item) => {
     let displayName = item.product_name;
     if (
@@ -80,73 +97,67 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
       displayName = item.product_name.substring(pos);
     }
 
-    // Calcular precios unitarios
-    const unitPrice = item.unit_price_tax_incl;
-    const hasDiscount = item.reduction_amount_tax_incl !== 0;
-    const finalUnitPrice = hasDiscount
-      ? item.reduction_amount_tax_incl
-      : unitPrice;
-
-    // Construir texto para precio unitario (condicional)
-    const unitPriceText = hasDiscount
-      ? [
-          { text: unitPrice.toFixed(2) + " €", decoration: "lineThrough" },
-          "\n",
-          {
-            text: finalUnitPrice.toFixed(2) + " €",
-            color: "var(--red-500)",
-            bold: true,
-          },
-        ]
-      : unitPrice.toFixed(2) + " €";
-
     const quantity = item.product_quantity;
-    const totalOriginal = unitPrice * quantity;
-    const totalFinal = finalUnitPrice * quantity;
+    if (ticketGift) {
+      // Para ticket regalo se ocultan columnas de precios y totales
+      productTableBody.push([
+        { text: displayName, style: "tProductsBody" },
+        {
+          text: quantity.toString(),
+          style: "tProductsBody",
+          alignment: "center",
+        },
+      ]);
+    } else {
+      // Calcular precios unitarios y formato condicional (ticket normal)
+      const unitPrice = item.unit_price_tax_incl;
+      const hasDiscount = item.reduction_amount_tax_incl !== 0;
+      const finalUnitPrice = hasDiscount
+        ? item.reduction_amount_tax_incl
+        : unitPrice;
 
-    // Construir texto para total del producto (condicional)
-    const totalText = hasDiscount
-      ? [
-          { text: totalOriginal.toFixed(2) + " €", decoration: "lineThrough" },
-          "\n",
-          {
-            text: totalFinal.toFixed(2) + " €",
-            color: "var(--red-500)",
-            bold: true,
-          },
-        ]
-      : totalOriginal.toFixed(2) + " €";
+      const unitPriceText = hasDiscount
+        ? [
+            { text: unitPrice.toFixed(2) + " €", decoration: "lineThrough" },
+            "\n",
+            {
+              text: finalUnitPrice.toFixed(2) + " €",
+              color: "var(--red-500)",
+              bold: true,
+            },
+          ]
+        : unitPrice.toFixed(2) + " €";
 
-    productTableBody.push([
-      { text: displayName, style: "tProductsBody" },
-      {
-        text: quantity.toString(),
-        style: "tProductsBody",
-        alignment: "center",
-      },
-      { text: unitPriceText, style: "tProductsBody", alignment: "right" },
-      { text: totalText, style: "tProductsBody", alignment: "right" },
-    ]);
+      const totalOriginal = unitPrice * quantity;
+      const totalText = hasDiscount
+        ? [
+            {
+              text: totalOriginal.toFixed(2) + " €",
+              decoration: "lineThrough",
+            },
+            "\n",
+            {
+              text: (finalUnitPrice * quantity).toFixed(2) + " €",
+              color: "var(--red-500)",
+              bold: true,
+            },
+          ]
+        : totalOriginal.toFixed(2) + " €";
+
+      productTableBody.push([
+        { text: displayName, style: "tProductsBody" },
+        {
+          text: quantity.toString(),
+          style: "tProductsBody",
+          alignment: "center",
+        },
+        { text: unitPriceText, style: "tProductsBody", alignment: "right" },
+        { text: totalText, style: "tProductsBody", alignment: "right" },
+      ]);
+    }
   });
 
-  // Calcular totales para la tabla final
-  const subtotal = orderData.order_details.reduce((sum, item) => {
-    return sum + item.unit_price_tax_incl * item.product_quantity;
-  }, 0);
-
-  const totalDiscounts = orderData.order_details.reduce((sum, item) => {
-    if (item.reduction_amount_tax_incl !== 0) {
-      return (
-        sum +
-        (item.unit_price_tax_incl - item.reduction_amount_tax_incl) *
-          item.product_quantity
-      );
-    }
-    return sum;
-  }, 0);
-
-  const totalAfterDiscount = orderData.total_paid;
-  const iva = orderData.total_paid - orderData.total_paid / 1.21;
+  // Calcular totales (ticket normal)
   const dateObj = new Date(orderData.date_add);
   const formattedDate = dateObj.toLocaleDateString("es-ES");
   const formattedTime = dateObj.toLocaleTimeString("es-ES");
@@ -163,53 +174,71 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     });
     return canvas.toDataURL("image/png");
   };
+  let totalsBody = [];
+  if (!ticketGift) {
+    const subtotal = orderData.order_details.reduce((sum, item) => {
+      return sum + item.unit_price_tax_incl * item.product_quantity;
+    }, 0);
 
-  const totalsBody = [
-    [
+    const totalDiscounts = orderData.order_details.reduce((sum, item) => {
+      if (item.reduction_amount_tax_incl !== 0) {
+        return (
+          sum +
+          (item.unit_price_tax_incl - item.reduction_amount_tax_incl) *
+            item.product_quantity
+        );
+      }
+      return sum;
+    }, 0);
+
+    const totalAfterDiscount = orderData.total_paid;
+    const iva = orderData.total_paid - orderData.total_paid / 1.21;
+
+    totalsBody.push([
       { text: "SUBTOTAL:", style: "tTotals" },
       {
         text: subtotal.toFixed(2) + " €",
         style: "tTotals",
         alignment: "right",
       },
-    ],
-  ];
-  if (totalDiscounts !== 0) {
-    totalsBody.push([
-      { text: "TOTAL DESCUENTOS:", style: "tTotals" },
-      {
-        text: totalDiscounts.toFixed(2) + " €",
-        style: "tTotals",
-        alignment: "right",
-      },
     ]);
+    if (totalDiscounts !== 0) {
+      totalsBody.push([
+        { text: "TOTAL DESCUENTOS:", style: "tTotals" },
+        {
+          text: totalDiscounts.toFixed(2) + " €",
+          style: "tTotals",
+          alignment: "right",
+        },
+      ]);
+    }
+    if (orderData.id_shop === 1 || orderData.id_shop === 13) {
+      totalsBody.push([
+        { text: "ENVIO:", style: "tTotals" },
+        {
+          text: (orderData.total_shipping || 0).toFixed(2) + " €",
+          style: "tTotals",
+          alignment: "right",
+        },
+      ]);
+    }
+    totalsBody.push(
+      [
+        { text: "I.V.A (21%):", style: "tTotals" },
+        { text: iva.toFixed(2) + " €", style: "tTotals", alignment: "right" },
+      ],
+      [
+        { text: "TOTAL:", style: "tTotals" },
+        {
+          text: totalAfterDiscount.toFixed(2) + " €",
+          style: "tTotals",
+          alignment: "right",
+        },
+      ]
+    );
   }
-  if (orderData.id_shop === 1 || orderData.id_shop === 13) {
-    totalsBody.push([
-      { text: "ENVIO:", style: "tTotals" },
-      {
-        text: (orderData.total_shipping || 0).toFixed(2) + " €",
-        style: "tTotals",
-        alignment: "right",
-      },
-    ]);
-  }
-  totalsBody.push(
-    [
-      { text: "I.V.A (21%):", style: "tTotals" },
-      { text: iva.toFixed(2) + " €", style: "tTotals", alignment: "right" },
-    ],
-    [
-      { text: "TOTAL:", style: "tTotals" },
-      {
-        text: totalAfterDiscount.toFixed(2) + " €",
-        style: "tTotals",
-        alignment: "right",
-      },
-    ]
-  );
 
-  // Al construir el contenido, incluir el logo solo si se obtuvo la dataURL válida
+  // Construir el contenido del ticket
   const content = [
     ...(logoDataUrl
       ? [
@@ -289,7 +318,11 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     {
       margin: [0, 10, 15, 0],
       table: {
-        widths: ["42%", "14%", "22%", "22%"],
+        widths: [
+          "42%",
+          ticketGift ? "58%" : "14%",
+          ...(ticketGift ? [] : ["22%", "22%"]),
+        ],
         headerRows: 1,
         body: productTableBody,
       },
@@ -300,15 +333,19 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
         paddingTop: (i, node) => (i === 0 ? 10 : 5),
       },
     },
-    // Tabla de totales
-    {
-      margin: [0, 10, 20, 0],
-      table: {
-        widths: ["50%", "50%"],
-        body: totalsBody,
-      },
-      layout: "noBorders",
-    },
+    // Incluir tabla de totales solo para ticket normal
+    ...(!ticketGift
+      ? [
+          {
+            margin: [0, 10, 20, 0],
+            table: {
+              widths: ["50%", "50%"],
+              body: totalsBody,
+            },
+            layout: "noBorders",
+          },
+        ]
+      : []),
     // Forma de pago
     ...(orderData.id_shop === 1 || orderData.id_shop === 13
       ? [
@@ -574,10 +611,15 @@ export const generateClosureTicket = async (
   return await createPdf(pdfDefinition, output);
 };
 
-export const generateDiscountVoucherTicket = async (output, voucherData, config, employeesDict) => {
+export const generateDiscountVoucherTicket = async (
+  output,
+  voucherData,
+  config,
+  employeesDict
+) => {
   // voucherData debe incluir: reduction_amount, date_add, date_from, date_to, code,
   // y opcionalmente: customer_name, address_delivery, employee_name.
-  
+
   // Cargar logo desde /logo-fajas-maylu.png y convertirlo a DataURL (base64)
   let logoDataUrl = "";
   try {
@@ -620,18 +662,22 @@ export const generateDiscountVoucherTicket = async (output, voucherData, config,
   // Construir contenido del ticket
   const content = [
     // Logo
-    ...(logoDataUrl ? [{
-      image: logoDataUrl,
-      fit: [170.07, 70.86],
-      alignment: "center"
-    }] : []),
+    ...(logoDataUrl
+      ? [
+          {
+            image: logoDataUrl,
+            fit: [170.07, 70.86],
+            alignment: "center",
+          },
+        ]
+      : []),
     // Cabeceras con fecha, cliente, dirección y empleado
     {
       text: "VALE DESCUENTO",
       style: "header",
       alignment: "center",
       margin: [0, 10, 0, 5],
-      bold: true
+      bold: true,
     },
     {
       margin: [0, 5, 0, 5],
@@ -640,26 +686,33 @@ export const generateDiscountVoucherTicket = async (output, voucherData, config,
         body: [
           [
             { text: "FECHA:", style: "tHeaderLabel" },
-            { text: dateAdd, style: "tHeaderValue" }
+            { text: dateAdd, style: "tHeaderValue" },
           ],
           [
             { text: "CLIENTE:", style: "tHeaderLabel" },
-            { text: voucherData.customer_name || "TPV", style: "tHeaderValue" }
+            { text: voucherData.customer_name || "TPV", style: "tHeaderValue" },
           ],
           [
             { text: "DIRECCIÓN:", style: "tHeaderLabel" },
-            { text: voucherData.address_delivery || "N/A", style: "tHeaderValue" }
+            {
+              text: voucherData.address_delivery || "N/A",
+              style: "tHeaderValue",
+            },
           ],
           [
             { text: "EMPLEADO:", style: "tHeaderLabel" },
-            { text: voucherData.employee_name || "TPV", style: "tHeaderValue" }
-          ]
-        ]
+            { text: voucherData.employee_name || "TPV", style: "tHeaderValue" },
+          ],
+        ],
       },
-      layout: "noBorders"
+      layout: "noBorders",
     },
     // Línea separadora
-    { text: "------------------------------", alignment: "center", margin: [0, 5, 0, 5] },
+    {
+      text: "------------------------------",
+      alignment: "center",
+      margin: [0, 5, 0, 5],
+    },
     // Datos del vale
     {
       margin: [0, 5, 0, 5],
@@ -668,33 +721,45 @@ export const generateDiscountVoucherTicket = async (output, voucherData, config,
         body: [
           [
             { text: "IMPORTE VALE:", style: "tTotals" },
-            { text: voucherData.reduction_amount.toFixed(2) + " €", style: "tTotals", alignment: "right" }
+            {
+              text: voucherData.reduction_amount.toFixed(2) + " €",
+              style: "tTotals",
+              alignment: "right",
+            },
           ],
           [
             { text: "CREACIÓN VALE:", style: "tTotals" },
-            { text: dateAdd, style: "tTotals", alignment: "right" }
+            { text: dateAdd, style: "tTotals", alignment: "right" },
           ],
           [
             { text: "VALIDEZ:", style: "tTotals" },
-            { text: `Desde ${dateFrom} hasta ${dateTo}`, style: "tTotals", alignment: "right" }
-          ]
-        ]
+            {
+              text: `Desde ${dateFrom} hasta ${dateTo}`,
+              style: "tTotals",
+              alignment: "right",
+            },
+          ],
+        ],
       },
-      layout: "noBorders"
+      layout: "noBorders",
     },
     // Línea separadora
-    { text: "------------------------------", alignment: "center", margin: [0, 5, 0, 5] },
+    {
+      text: "------------------------------",
+      alignment: "center",
+      margin: [0, 5, 0, 5],
+    },
     // Código de barras con formato code126
     {
       stack: [
         {
           image: generateBarcodeDataUrlCode126(voucherData.code),
           alignment: "center",
-          margin: [0, 5, 0, 5]
+          margin: [0, 5, 0, 5],
         },
-        { text: voucherData.code, style: "text", alignment: "center" }
-      ]
-    }
+        { text: voucherData.code, style: "text", alignment: "center" },
+      ],
+    },
   ];
 
   const pdfDefinition = {
@@ -711,7 +776,7 @@ export const generateDiscountVoucherTicket = async (output, voucherData, config,
       tTotals: { fontSize: 8, bold: true, alignment: "right" },
       text: { fontSize: 8, alignment: "center" },
     },
-    pageMargins: [5.66, 5.66, 5.66, 5.66]
+    pageMargins: [5.66, 5.66, 5.66, 5.66],
   };
   if (output === "print") {
     const remoteResult = await attemptRemotePrint(pdfDefinition);
@@ -723,7 +788,7 @@ export const generateDiscountVoucherTicket = async (output, voucherData, config,
 
 export const openCashRegister = async (output, config, employeesDict) => {
   const content = [
-    { text: "Open Cash Register", alignment: "center", fontSize: 10 }
+    { text: "Open Cash Register", alignment: "center", fontSize: 10 },
   ];
   const pdfDefinition = {
     content,

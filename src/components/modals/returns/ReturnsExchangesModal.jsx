@@ -345,23 +345,43 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   useEffect(() => {
     if (viewTicketId) {
       (async () => {
-        const orderDataPrint = {
-          id_order: viewTicketId,
-          origin: orderData?.origin || "mayret",
-        };
-        const response = await generateTicket(
-          "print",
-          orderDataPrint,
-          configData,
-          employeesDict
-        );
-        if (!response.success) {
-          console.error("Error al imprimir ticket:", response.message);
+        try {
+          // Se consulta la orden usando id y origin "mayret"
+          const data = await apiFetch(`${API_BASE_URL}/get_order`, {
+            method: "POST",
+            body: JSON.stringify({
+              id_order: viewTicketId,
+              origin: "mayret",
+            }),
+          });
+          if (!data || !data.order_details) {
+            console.error("Error al recuperar datos del ticket");
+          } else {
+            const response = await generateTicket(
+              "print",
+              data,
+              configData,
+              employeesDict
+            );
+            if (!response.success) {
+              console.error("Error al imprimir ticket:", response.message);
+            }
+          }
+        } catch (err) {
+          console.error("Error en la consulta get_order para ticket:", err);
+        } finally {
+          setViewTicketId(false);
         }
-        setViewTicketId(null);
       })();
     }
-  }, [viewTicketId, configData, employeesDict, orderData]);
+  }, [
+    viewTicketId,
+    configData,
+    employeesDict,
+    orderData,
+    API_BASE_URL,
+    apiFetch,
+  ]);
 
   // Render
   return (

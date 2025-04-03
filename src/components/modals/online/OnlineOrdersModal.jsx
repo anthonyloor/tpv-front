@@ -26,7 +26,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const [stockData, setStockData] = useState([]);
   const [shops, setShops] = useState([]);
   const [selectedCells, setSelectedCells] = useState([]);
-  const { employeeId } = useContext(AuthContext);
+  const { employeeId, shopId } = useContext(AuthContext);
   const [resultDialogVisible, setResultDialogVisible] = useState(false);
   const [resultDialogMessage, setResultDialogMessage] = useState("");
   const [resultDialogSuccess, setResultDialogSuccess] = useState(false);
@@ -153,8 +153,25 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
         product_name: row.product_name,
       });
     });
+    const paymentMethod = selectedOrderForStock.payment.toLowerCase();
+    const total_cash = paymentMethod.includes("contra reembolso")
+      ? selectedOrderForStock.total_paid
+      : 0;
+    const total_card = paymentMethod.includes("tarjeta")
+      ? selectedOrderForStock.total_paid
+      : 0;
+    const total_bizum = paymentMethod.includes("bizum")
+      ? selectedOrderForStock.total_paid
+      : 0;
+
     const payload = {
       id_order: selectedOrderForStock.id_order,
+      id_shop: shopId,
+      license: configData.license,
+      total_paid: selectedOrderForStock.total_paid,
+      total_cash,
+      total_card,
+      total_bizum,
       status: 4,
       origin: selectedOrderForStock.origin,
       id_employee: employeeId,
@@ -583,7 +600,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       </Dialog>
 
       <Dialog
-        header="Stock de Productos"
+        header="Gestión de pedido online"
         visible={stockModalVisible}
         onHide={() => setStockModalVisible(false)}
         modal

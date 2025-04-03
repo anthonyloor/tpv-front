@@ -283,7 +283,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
               }
             }
           }
-
+          console.log("order:", order);
           // Calcular texto de pago usando los amounts en la orden según reglas:
           const payments = order.payment
             .split(",")
@@ -292,15 +292,35 @@ const CloseCashRegisterForm = ({ onClose }) => {
           const cardAmount = order.total_card || 0;
           const bizumAmount = order.total_bizum || 0;
           const includedMethods = [];
+          console.log("Payments:", payments);
           if (payments.includes("efectivo")) {
             includedMethods.push({ method: "efectivo", amount: cashAmount });
+          }
+          if (payments.includes("contra reembolso")) {
+            includedMethods.push({
+              method: "contra reembolso",
+              amount: cashAmount,
+            });
           }
           if (payments.includes("tarjeta")) {
             includedMethods.push({ method: "tarjeta", amount: cardAmount });
           }
+          if (payments.includes("redsys - tarjeta")) {
+            includedMethods.push({
+              method: "redsys - tarjeta",
+              amount: cardAmount,
+            });
+          }
           if (payments.includes("bizum")) {
             includedMethods.push({ method: "bizum", amount: bizumAmount });
           }
+          if (payments.includes("redsys - bizum")) {
+            includedMethods.push({
+              method: "redsys - bizum",
+              amount: bizumAmount,
+            });
+          }
+          console.log("Included methods:", includedMethods);
           const nonZeroCount = includedMethods.filter(
             (m) => m.amount > 0
           ).length;
@@ -502,7 +522,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
         tableLineWidth: 0,
       });
 
-      doc.save("reporte_ventas.pdf");
+      doc.save(`Reporte_Ventas_${shopName}.pdf`);
       setPdfReportGenerated(true);
     } catch (error) {
       console.error("Error generando PDF:", error);

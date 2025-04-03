@@ -1,6 +1,6 @@
 // src/components/Sales/SalesCard.jsx
 
-import React, { useState, useContext, useEffect, useCallback } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { Divider } from "primereact/divider";

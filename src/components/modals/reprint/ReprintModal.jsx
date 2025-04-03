@@ -249,7 +249,8 @@ const ReprintModal = ({ isOpen, onClose }) => {
               "print",
               data,
               configData,
-              employeesDict
+              employeesDict,
+              ticketGift
             );
             if (!response.success) {
               console.error("Error al imprimir ticket:", response.message);
@@ -269,6 +270,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
     employeesDict,
     apiFetch,
     API_BASE_URL,
+    ticketGift,
   ]);
 
   return (
