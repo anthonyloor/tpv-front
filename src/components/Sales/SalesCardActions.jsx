@@ -21,6 +21,7 @@ import { ConfigContext } from "../../contexts/ConfigContext";
 import { useEmployeesDictionary } from "../../hooks/useEmployeesDictionary";
 import getApiBaseUrl from "../../utils/getApiBaseUrl";
 import { useApiFetch } from "../../utils/useApiFetch";
+import { openCashRegister } from "../../utils/ticket";
 
 function SalesCardActions({
   cartItems,
@@ -619,6 +620,15 @@ function SalesCardActions({
     }
   }, [cartRuleModalOpen, newCartRuleCode, configData, employeesDict]);
 
+  // Nueva función para abrir caja (ticket vacío)
+  const handleOpenCashRegister = async () => {
+    try {
+      await openCashRegister("print", configData, employeesDict);
+    } catch (error) {
+      console.error("Error en openCashRegister:", error);
+    }
+  };
+
   return (
     <div
       className="h-full flex flex-col p-3 relative"
@@ -679,6 +689,13 @@ function SalesCardActions({
           style={{ fontSize: "1.25rem" }}
           disabled={cartItems.length === 0 || isLoading}
           onClick={handleFinalSale}
+        />
+        <Button
+          icon="pi pi-inbox"
+          className="p-button-icon-only p-button-sm"
+          style={{ width: "40px" }}
+          disabled={isLoading}
+          onClick={handleOpenCashRegister}
         />
       </div>
       {/* Dialog: Finalizar Venta */}

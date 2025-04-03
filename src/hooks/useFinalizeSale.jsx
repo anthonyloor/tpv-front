@@ -4,6 +4,7 @@ import { useState, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useApiFetch } from "../utils/useApiFetch";
 import getApiBaseUrl from "../utils/getApiBaseUrl";
+import { generateDiscountVoucherTicket } from "../utils/ticket";
 
 export default function useFinalizeSale() {
   const { employeeId, shopId, defaultClient, defaultAddress } =
@@ -185,10 +186,13 @@ export default function useFinalizeSale() {
             body: JSON.stringify(cartRulePayload),
           }
         );
-        if (cartRuleResponse && cartRuleResponse.code) {
-          newCartRuleCode = cartRuleResponse.code;
+        console.log("Respuesta create_cart_rule: ", cartRuleResponse);
+        if (cartRuleResponse && cartRuleResponse[0].code) {
+          newCartRuleCode = cartRuleResponse[0].code;
           // Se asigna voucher_amount a la orden solo si se crea el vale
           saleData.voucher_amount = parseFloat(voucherAmount.toFixed(2));
+          console.log("Vale descuento creado:", newCartRuleCode);
+          console.log(saleData);
         }
       }
       // Si se selecciona al menos un método de pago, no se crea vale descuento.
@@ -214,17 +218,20 @@ export default function useFinalizeSale() {
         });
       }
 
-      // Imprimir vale descuento si se generó (new_cart_rule_code)
-      if (response.new_cart_rule_code) {
-        try {
-          const leftoverResp = await apiFetch(
-            `${API_BASE_URL}/get_cart_rule?code=${response.new_cart_rule_code}`,
-            { method: "GET" }
-          );
-          console.log("Respuesta get_cart_rule:", leftoverResp);
-        } catch (error) {
-          console.error("Error al obtener el nuevo cart rule sobrante:", error);
-        }
+      // Si se generó un nuevo vale descuento, imprimirlo después de un breve retraso (e.g. 3 segundos)
+      if (newCartRuleCode) {
+        setTimeout(async () => {
+          try {
+            const voucherResp = await apiFetch(
+              `${API_BASE_URL}/get_cart_rule?code=${newCartRuleCode}`,
+              { method: "GET" }
+            );
+            console.log("Respuesta get_cart_rule:", voucherResp);
+            await generateDiscountVoucherTicket("print", voucherResp, {}, {});
+          } catch (error) {
+            console.error("Error al imprimir vale descuento:", error);
+          }
+        }, 3000);
       }
     } catch (error) {
       console.error("Error al crear la orden:", error);

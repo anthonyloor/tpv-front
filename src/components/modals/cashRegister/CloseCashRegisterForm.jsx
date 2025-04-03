@@ -267,7 +267,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
       const productLines = data.flatMap((order) =>
         order.order_details.map((detail) => {
           // Extract combination from product_name
-          let combination = "";
+          let combination = detail.product_name;
           if (detail.product_name && detail.product_reference) {
             const refIndex = detail.product_name.indexOf(
               detail.product_reference

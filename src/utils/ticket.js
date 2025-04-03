@@ -1,6 +1,32 @@
 import createPdf from "./createPdf.js";
 import JsBarcode from "jsbarcode";
 
+// Agregamos un helper común para impresión remota:
+const attemptRemotePrint = async (pdfDefinition) => {
+  // Intentar generar PDF en base64
+  try {
+    const ticketResponse = await createPdf(pdfDefinition, "b64");
+    if (ticketResponse.success && ticketResponse.content) {
+      const printResponse = await fetch("http://localhost:3001/imprimir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          base64pdf: ticketResponse.content,
+          printerName: "POS-80C",
+        }),
+      });
+      if (printResponse.ok) {
+        // Se pudo imprimir remotamente
+        return { success: true, remote: true, message: "Impresión remota exitosa" };
+      }
+    }
+  } catch (err) {
+    console.warn("Error en impresión remota:", err);
+  }
+  // Si falla, se retorna null para proceder con la previsualización normal.
+  return null;
+};
+
 // Se actualiza la función para recibir orderData y config como parámetros
 const generateTicket = async (output, orderData, config, employeesDict) => {
   if (!orderData) {
@@ -373,6 +399,11 @@ const generateTicket = async (output, orderData, config, employeesDict) => {
     content,
     defaultStyle: { font: "Arial", fontSize: 14 },
   };
+  // Si se está llamando en modo “print”, intentar impresión remota
+  if (output === "print") {
+    const remoteResult = await attemptRemotePrint(pdfDefinition);
+    if (remoteResult) return remoteResult;
+  }
   const response = await createPdf(pdfDefinition, output);
   return response;
 };
@@ -536,6 +567,173 @@ export const generateClosureTicket = async (
     },
     pageMargins: [5.66, 5.66, 5.66, 5.66],
   };
-
+  if (output === "print") {
+    const remoteResult = await attemptRemotePrint(pdfDefinition);
+    if (remoteResult) return remoteResult;
+  }
   return await createPdf(pdfDefinition, output);
+};
+
+export const generateDiscountVoucherTicket = async (output, voucherData, config, employeesDict) => {
+  // voucherData debe incluir: reduction_amount, date_add, date_from, date_to, code,
+  // y opcionalmente: customer_name, address_delivery, employee_name.
+  
+  // Cargar logo desde /logo-fajas-maylu.png y convertirlo a DataURL (base64)
+  let logoDataUrl = "";
+  try {
+    const response = await fetch("/logo-fajas-maylu.png");
+    if (response.ok) {
+      const blob = await response.blob();
+      logoDataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      if (typeof logoDataUrl !== "string" || !logoDataUrl.startsWith("data:")) {
+        logoDataUrl = "";
+      }
+    }
+  } catch (err) {
+    logoDataUrl = "";
+  }
+
+  // Función interna para generar código de barras con formato code128 en lugar de code126
+  const generateBarcodeDataUrlCode126 = (text) => {
+    const canvas = document.createElement("canvas");
+    JsBarcode(canvas, text, {
+      format: "code128", // se cambió de "code126" a "code128"
+      width: 1,
+      height: 30,
+      displayValue: false,
+      margin: 2,
+      rotation: 0,
+    });
+    return canvas.toDataURL("image/png");
+  };
+
+  // Formatear fechas
+  const dateAdd = new Date(voucherData.date_add).toLocaleString("es-ES");
+  const dateFrom = new Date(voucherData.date_from).toLocaleDateString("es-ES");
+  const dateTo = new Date(voucherData.date_to).toLocaleDateString("es-ES");
+
+  // Construir contenido del ticket
+  const content = [
+    // Logo
+    ...(logoDataUrl ? [{
+      image: logoDataUrl,
+      fit: [170.07, 70.86],
+      alignment: "center"
+    }] : []),
+    // Cabeceras con fecha, cliente, dirección y empleado
+    {
+      text: "VALE DESCUENTO",
+      style: "header",
+      alignment: "center",
+      margin: [0, 10, 0, 5],
+      bold: true
+    },
+    {
+      margin: [0, 5, 0, 5],
+      table: {
+        widths: ["50%", "50%"],
+        body: [
+          [
+            { text: "FECHA:", style: "tHeaderLabel" },
+            { text: dateAdd, style: "tHeaderValue" }
+          ],
+          [
+            { text: "CLIENTE:", style: "tHeaderLabel" },
+            { text: voucherData.customer_name || "TPV", style: "tHeaderValue" }
+          ],
+          [
+            { text: "DIRECCIÓN:", style: "tHeaderLabel" },
+            { text: voucherData.address_delivery || "N/A", style: "tHeaderValue" }
+          ],
+          [
+            { text: "EMPLEADO:", style: "tHeaderLabel" },
+            { text: voucherData.employee_name || "TPV", style: "tHeaderValue" }
+          ]
+        ]
+      },
+      layout: "noBorders"
+    },
+    // Línea separadora
+    { text: "------------------------------", alignment: "center", margin: [0, 5, 0, 5] },
+    // Datos del vale
+    {
+      margin: [0, 5, 0, 5],
+      table: {
+        widths: ["50%", "50%"],
+        body: [
+          [
+            { text: "IMPORTE VALE:", style: "tTotals" },
+            { text: voucherData.reduction_amount.toFixed(2) + " €", style: "tTotals", alignment: "right" }
+          ],
+          [
+            { text: "CREACIÓN VALE:", style: "tTotals" },
+            { text: dateAdd, style: "tTotals", alignment: "right" }
+          ],
+          [
+            { text: "VALIDEZ:", style: "tTotals" },
+            { text: `Desde ${dateFrom} hasta ${dateTo}`, style: "tTotals", alignment: "right" }
+          ]
+        ]
+      },
+      layout: "noBorders"
+    },
+    // Línea separadora
+    { text: "------------------------------", alignment: "center", margin: [0, 5, 0, 5] },
+    // Código de barras con formato code126
+    {
+      stack: [
+        {
+          image: generateBarcodeDataUrlCode126(voucherData.code),
+          alignment: "center",
+          margin: [0, 5, 0, 5]
+        },
+        { text: voucherData.code, style: "text", alignment: "center" }
+      ]
+    }
+  ];
+
+  const pdfDefinition = {
+    content,
+    info: {
+      title: "Ticket Vale Descuento",
+      author: config.author || "TPV",
+      subject: "ticket vale",
+    },
+    styles: {
+      header: { fontSize: 10, bold: true, alignment: "center" },
+      tHeaderLabel: { fontSize: 8, alignment: "right" },
+      tHeaderValue: { fontSize: 8, bold: true },
+      tTotals: { fontSize: 8, bold: true, alignment: "right" },
+      text: { fontSize: 8, alignment: "center" },
+    },
+    pageMargins: [5.66, 5.66, 5.66, 5.66]
+  };
+  if (output === "print") {
+    const remoteResult = await attemptRemotePrint(pdfDefinition);
+    if (remoteResult) return remoteResult;
+  }
+  const response = await createPdf(pdfDefinition, output);
+  return response;
+};
+
+export const openCashRegister = async (output, config, employeesDict) => {
+  const content = [
+    { text: "Open Cash Register", alignment: "center", fontSize: 10 }
+  ];
+  const pdfDefinition = {
+    content,
+    defaultStyle: { font: "Arial", fontSize: 10 },
+  };
+  // Si se llama en modo "print", se intenta la impresión remota
+  if (output === "print") {
+    const remoteResult = await attemptRemotePrint(pdfDefinition);
+    if (remoteResult) return remoteResult;
+  }
+  const response = await createPdf(pdfDefinition, output);
+  return response;
 };

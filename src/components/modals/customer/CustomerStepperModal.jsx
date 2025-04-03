@@ -134,18 +134,6 @@ export default function CustomerStepperModal({
           .filter((addr) => !addr.deleted && addr.active)
           .sort((a, b) => new Date(b.date_upd) - new Date(a.date_upd));
         setAddresses(valid);
-
-        // Address “tienda”
-        const shop = JSON.parse(localStorage.getItem("shop"));
-        setStoreAddress({
-          id_address: 0,
-          alias: "Vender en tienda",
-          address1: `Calle ${shop?.name}`,
-          address2: "",
-          postcode: "",
-          city: "",
-          phone: "",
-        });
       })
       .catch((err) => {
         console.error(err);

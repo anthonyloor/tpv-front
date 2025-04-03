@@ -345,13 +345,13 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   useEffect(() => {
     if (viewTicketId) {
       (async () => {
-        const orderData = {
+        const orderDataPrint = {
           id_order: viewTicketId,
-          origin: orderData?.origin || null,
+          origin: orderData?.origin || "mayret",
         };
         const response = await generateTicket(
           "print",
-          orderData,
+          orderDataPrint,
           configData,
           employeesDict
         );
@@ -361,7 +361,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         setViewTicketId(null);
       })();
     }
-  }, [viewTicketId, configData, employeesDict]);
+  }, [viewTicketId, configData, employeesDict, orderData]);
 
   // Render
   return (

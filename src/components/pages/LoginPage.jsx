@@ -475,7 +475,7 @@ function LoginPage({ shopRoute }) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-800">
-      <img src="/logo-marca.png" alt="Logo de la Marca" className="mb-8" />
+      <img src="/logo-fajas-maylu.png" width={500} alt="Logo de la Marca" className="mb-8" />
       <Card
         className="w-full max-w-3xl"
         style={{

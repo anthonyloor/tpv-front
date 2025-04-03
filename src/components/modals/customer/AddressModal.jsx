@@ -63,17 +63,6 @@ const AddressModal = ({
         setErrorMessage("No se pudo cargar la lista de direcciones.");
         setAddresses([]);
       });
-
-    // Dirección "tienda"
-    setStoreAddress({
-      id_address: 0,
-      alias: "Vender en tienda",
-      address1: `Calle ${shop?.name}`,
-      address2: "",
-      postcode: "",
-      city: "",
-      phone: "",
-    });
   };
 
   // Seleccionar
