@@ -106,8 +106,64 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const handleOpenStock = async (order) => {
     console.log("handleOpenStock", order);
     setSelectedOrderForStock(order);
+
+    // Obtener movimientos desde el almacén y filtrar por el id de orden
+    const movements = await apiFetch(
+      `${API_BASE_URL}/get_warehouse_movements`,
+      {
+        method: "POST",
+        body: JSON.stringify({}), // Ajustar el body si es necesario
+      }
+    );
+    const relevantMovements = Array.isArray(movements)
+      ? movements.filter(
+          (mov) =>
+            mov.description && mov.description.includes(`#${order.id_order}`)
+        )
+      : [];
+    console.log("Movimientos relevantes:", relevantMovements);
+
+    // Crear un mapping ean13 => id_shop_origin
+    let managedMapping = {};
+    if (relevantMovements.length > 0) {
+      const movementDetailsResponses = await Promise.all(
+        relevantMovements.map((mov) =>
+          apiFetch(
+            `${API_BASE_URL}/get_warehouse_movement?id_warehouse_movement=${mov.id_warehouse_movement}`,
+            {
+              method: "GET",
+            }
+          )
+        )
+      );
+      // Asumimos que el orden de respuestas coincide con el de relevantMovements
+      movementDetailsResponses.forEach((movDetail, index) => {
+        const movement = relevantMovements[index];
+        if (movDetail && movDetail.movement_details) {
+          movDetail.movement_details.forEach((detail) => {
+            managedMapping[detail.ean13] = movement.id_shop_origin;
+          });
+        }
+      });
+      console.log("Mapping de EANs gestionados:", managedMapping);
+    }
+
     const productsStockData = await Promise.all(
       order.order_details.map(async (detail) => {
+        console.log("detail", detail);
+        // Si el ean13 ya está gestionado, agregar managedShop
+        if (managedMapping[detail.product_ean13]) {
+          return {
+            product_name: detail.product_name,
+            id_product: detail.product_id,
+            id_product_attribute: detail.product_attribute_id,
+            product_quantity: detail.product_quantity,
+            product_ean13: detail.product_ean13,
+            alreadyManaged: true,
+            managedShop: managedMapping[detail.product_ean13],
+          };
+        }
+        // Consulta normal de stock si no está gestionado
         let ean = detail.product_ean13;
         const groups = await stockSearch.handleSearch(ean, true);
         let stockByShop = {};
@@ -234,12 +290,15 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
 
   const ordersToDisplay = searchedOrder ? [searchedOrder] : orders;
 
-  const pendingOrders = ordersToDisplay.filter((order) =>
-    [1, 2, 3, 4, 9, 10, 11, 13].includes(Number(order.current_state))
-  );
-  const completedOrders = ordersToDisplay.filter((order) =>
-    [5, 43].includes(Number(order.current_state))
-  );
+  const pendingOrders = ordersToDisplay
+    .filter((order) =>
+      [1, 2, 3, 4, 9, 10, 11, 13].includes(Number(order.current_state))
+    )
+    .sort((a, b) => new Date(b.date_add) - new Date(a.date_add));
+
+  const completedOrders = ordersToDisplay
+    .filter((order) => [5, 43].includes(Number(order.current_state)))
+    .sort((a, b) => new Date(b.date_add) - new Date(a.date_add));
 
   const [pendingExpandedRows, setPendingExpandedRows] = useState(null);
   const [completedExpandedRows, setCompletedExpandedRows] = useState(null);
@@ -291,14 +350,22 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     }
   }, [ticketModalVisible, viewTicketOrderId, configData, employeesDict]);
 
-  // Agregar footer para el Dialog de gestión de pedido online
+  // Añadir la comprobación: si todos los productos están gestionados
+  const allProductsManaged =
+    stockData.length > 0 && stockData.every((prod) => prod.alreadyManaged);
+
+  // Actualizar el footer del Dialog de gestión de pedido online
   const stockDialogFooter = (
     <div className="flex justify-end w-full">
-      <Button
-        label="Guardar y marcar como gestionado"
-        icon="pi pi-check"
-        onClick={handleUpdateOnlineOrder}
-      />
+      {allProductsManaged ? (
+        <Button label="Pedido Gestionado" disabled />
+      ) : (
+        <Button
+          label="Guardar y marcar como gestionado"
+          icon="pi pi-check"
+          onClick={handleUpdateOnlineOrder}
+        />
+      )}
     </div>
   );
 
@@ -608,6 +675,11 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                         onClick={() => handleOpenOrder(rowData)}
                       />
                       <Button
+                        icon="pi pi-cog"
+                        className="p-button-rounded p-button-text"
+                        onClick={() => handleOpenStock(rowData)}
+                      />
+                      <Button
                         icon="pi pi-receipt"
                         className="p-button-rounded p-button-text"
                         onClick={() => handlePrintTicket(rowData)}
@@ -653,11 +725,19 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
             selection={selectedCells}
             metaKeySelection={false}
             dragSelection
+            rowClassName={(rowData) =>
+              rowData.alreadyManaged ? "p-disabled" : ""
+            }
             onSelectionChange={(e) => {
               const cells = Array.isArray(e.value) ? e.value : [e.value];
               const uniqueCells = [];
               const seenRows = new Set();
               cells.forEach((cell) => {
+                if (
+                  stockData[cell.rowIndex] &&
+                  stockData[cell.rowIndex].alreadyManaged
+                )
+                  return;
                 if (
                   cell.field === "product_name" ||
                   cell.field === "product_quantity"
@@ -675,12 +755,28 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
             <Column header="Producto" field="product_name" />
             <Column header="Cantidad" field="product_quantity" />
             {shops.map((shop) => (
-              // Agregamos field para que cell.field sea el id_shop y se convierta correctamente a número
               <Column
                 key={shop.id_shop}
                 header={shop.name}
                 field={`${shop.id_shop}`}
-                body={(row) => row[shop.id_shop] || 0}
+                body={(row) => {
+                  const value = row[shop.id_shop] || row.product_quantity
+                  if (row.alreadyManaged && row.managedShop === shop.id_shop) {
+                    return (
+                      <span
+                        className="p-tag p-tag-info"
+                        style={{
+                          fontWeight: "bold",
+                          padding: "0.5rem 1rem",
+                          borderRadius: "0.5rem",
+                        }}
+                      >
+                        {value}
+                      </span>
+                    );
+                  }
+                  return '-';
+                }}
               />
             ))}
           </DataTable>

@@ -4,9 +4,7 @@ import getApiBaseUrl from "../utils/getApiBaseUrl";
 
 // Funciones helper agregadas para refactorizar el filtrado
 const isValidProduct = (product) =>
-  (product.ean13_combination !== null ||
-    product.ean13_combination_0 !== null) &&
-  product.id_product_attribute !== null;
+  product.ean13_combination !== null || product.ean13_combination_0 !== null;
 
 const filterProductsForShop = (products, shopId) => {
   console.log("Filtrando productos para la tienda:", shopId);
@@ -71,7 +69,10 @@ const useProductSearch = ({
             });
           }
         } else {
-          group.combinations[0].stocks.push(productStock);
+          let combination = group.combinations.find(
+            (comb) => comb.id_product === product.id_product
+          );
+          combination.stocks.push(productStock);
         }
       } else {
         acc.push({
