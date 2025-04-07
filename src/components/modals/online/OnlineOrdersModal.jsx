@@ -175,7 +175,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       total_cash,
       total_card,
       total_bizum,
-      status: 4,
+      status: 43,
       origin: selectedOrderForStock.origin,
       id_employee: employeeId,
       shops: Object.values(shopsMap),
@@ -190,6 +190,8 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       if (res.status === "OK") {
         setResultDialogSuccess(true);
         setResultDialogMessage("Actualización realizada con éxito");
+        setStockModalVisible(false);
+        loadOnlineOrders();
       } else {
         setResultDialogSuccess(false);
         setResultDialogMessage(
@@ -236,7 +238,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     [1, 2, 3, 4, 9, 10, 11, 13].includes(Number(order.current_state))
   );
   const completedOrders = ordersToDisplay.filter((order) =>
-    [5].includes(Number(order.current_state))
+    [5, 43].includes(Number(order.current_state))
   );
 
   const [pendingExpandedRows, setPendingExpandedRows] = useState(null);
@@ -288,6 +290,17 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       })();
     }
   }, [ticketModalVisible, viewTicketOrderId, configData, employeesDict]);
+
+  // Agregar footer para el Dialog de gestión de pedido online
+  const stockDialogFooter = (
+    <div className="flex justify-end w-full">
+      <Button
+        label="Guardar y marcar como gestionado"
+        icon="pi pi-check"
+        onClick={handleUpdateOnlineOrder}
+      />
+    </div>
+  );
 
   return (
     <>
@@ -587,8 +600,20 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                   alignHeader={"center"}
                 />
                 <Column
-                  body={actionBodyTemplate}
-                  header="Acción"
+                  body={(rowData) => (
+                    <>
+                      <Button
+                        icon="pi pi-eye"
+                        className="p-button-rounded p-button-text"
+                        onClick={() => handleOpenOrder(rowData)}
+                      />
+                      <Button
+                        icon="pi pi-receipt"
+                        className="p-button-rounded p-button-text"
+                        onClick={() => handlePrintTicket(rowData)}
+                      />
+                    </>
+                  )}
                   style={{
                     width: "80px",
                     textAlign: "center",
@@ -609,6 +634,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
         modal
         draggable={false}
         resizable={false}
+        footer={stockDialogFooter}
         style={{
           maxWidth: "900px",
           maxHeight: "600px",
@@ -658,13 +684,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
               />
             ))}
           </DataTable>
-        </div>
-        <div className="mt-2 flex justify-end">
-          <Button
-            label="Actualizar Pedido Online"
-            icon="pi pi-check"
-            onClick={handleUpdateOnlineOrder}
-          />
         </div>
       </Dialog>
 

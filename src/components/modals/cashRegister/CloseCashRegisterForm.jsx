@@ -130,7 +130,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            license,
+            licenses: [license],
             date1: reportDateAdd,
             date2: dateToWithTime,
           }),
@@ -253,7 +253,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          license,
+          licenses: [license],
           date1: reportDateAdd,
           date2: dateToWithTime,
         }),

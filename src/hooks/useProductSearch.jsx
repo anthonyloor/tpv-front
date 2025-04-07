@@ -50,9 +50,11 @@ const useProductSearch = ({
       };
       let groupKey;
       if (strategy === "idcontrolstock") {
-        groupKey = `${product.id_product_attribute}_${product.id_control_stock}`;
+        groupKey = `${product.id_product_attribute || product.id_product}_${
+          product.id_control_stock
+        }`;
       } else {
-        groupKey = `${product.id_product_attribute}`;
+        groupKey = `${product.id_product_attribute || product.id_product}`;
       }
       let group = acc.find((grp) => grp.groupKey === groupKey);
       if (group) {

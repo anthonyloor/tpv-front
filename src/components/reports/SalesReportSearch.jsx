@@ -137,7 +137,7 @@ const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          license,
+          licenses: [license],
           date1: dateFromWithTime,
           date2: dateToWithTime,
         }),

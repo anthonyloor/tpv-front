@@ -29,7 +29,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
   const { employeeId, shopId } = useContext(AuthContext);
   const [description, setDescription] = useState("");
   const [createDate, setCreateDate] = useState("");
-  const [movementStatus, setMovementStatus] = useState("En creacion");
+  const [movementStatus, setMovementStatus] = useState("en creacion");
   const [employeeIdV, setEmployeeId] = useState(null);
   const API_BASE_URL = getApiBaseUrl();
 
@@ -37,7 +37,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
   const { idProfile } = useContext(AuthContext);
 
   const isNewMovement = !movementData;
-  const currentStatus = movementData?.status || "En creacion";
+  const currentStatus = movementData?.status || "en creacion";
 
   const stepItems =
     type && type.toLowerCase() === "traspaso"
@@ -132,7 +132,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
         const onlyDate = movementData.date_add.split(" ")[0];
         setCreateDate(onlyDate);
       }
-      setMovementStatus(movementData?.status || "En creacion");
+      setMovementStatus(movementData?.status || "en creacion");
       setEmployeeId(movementData?.employee);
 
       if (Array.isArray(movementData.movement_details)) {
@@ -161,7 +161,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
     selectedOriginStore === selectedDestinationStore;
 
   const canEditProducts =
-    isNewMovement || movementStatus.toLowerCase() === "En creacion";
+    isNewMovement || movementStatus.toLowerCase() === "en creacion";
 
   // Nueva función para mostrar el código de barras combinado
   const barcodeBodyTemplate = (rowData) => {
@@ -530,22 +530,41 @@ const TransferForm = ({ type, onSave, movementData }) => {
 
     if (st === "en creacion") {
       if (type === "traspaso") {
-        return (
-          <div className="flex gap-2 w-full">
-            <Button
-              label="Guardar"
-              className="p-button-secondary w-1/2"
-              disabled={isSameStore || noProducts}
-              onClick={handleUpdateMovement}
-            />
-            <Button
-              label="Enviar"
-              className="p-button-success w-1/2"
-              disabled={isSameStore || noProducts}
-              onClick={() => handleUpdateMovementStatus("Enviado")}
-            />
-          </div>
-        );
+        if (idProfile === 1) {
+          return (
+            <div className="flex gap-2 w-full">
+              <Button
+                label="Guardar"
+                className="p-button-secondary w-1/2"
+                disabled={noProducts}
+                onClick={handleUpdateMovement}
+              />
+              <Button
+                label="Enviar"
+                className="p-button-success w-1/2"
+                disabled={noProducts}
+                onClick={() => handleUpdateMovementStatus("Enviado")}
+              />
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex gap-2 w-full">
+              <Button
+                label="Guardar"
+                className="p-button-secondary w-1/2"
+                disabled={isSameStore || noProducts}
+                onClick={handleUpdateMovement}
+              />
+              <Button
+                label="Enviar"
+                className="p-button-success w-1/2"
+                disabled={isSameStore || noProducts}
+                onClick={() => handleUpdateMovementStatus("Enviado")}
+              />
+            </div>
+          );
+        }
       } else if (type === "entrada" || type === "salida") {
         return (
           <div className="flex gap-2 w-full">

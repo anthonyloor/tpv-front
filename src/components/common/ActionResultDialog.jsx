@@ -7,7 +7,7 @@ const ActionResultDialog = ({ visible, onClose, success, message }) => {
     if (visible && success) {
       const timer = setTimeout(() => {
         onClose();
-      }, 3000);
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [visible, success, onClose]);
