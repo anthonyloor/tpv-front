@@ -27,7 +27,6 @@ function ConfigLoader() {
           setShowConfigConfirmDialog(true);
         } else {
           setConfigData(data);
-          console.log("Config Data:", data);
         }
       })
       .catch((error) => {
@@ -52,7 +51,6 @@ function ConfigLoader() {
         ) {
           setConfigData(configToSend);
           setShowConfigDialog(false);
-          console.log("Config Data:", configToSend);
         } else {
           setConfigError(
             data.message || data.error || "Error al crear la configuración"

@@ -189,7 +189,6 @@ function SalesCard({
   }, 0);
 
   const total = cartItems.reduce((sum, item) => {
-    console.log("item", item);
     const price =
       item.discountApplied &&
       item.reduction_amount_tax_incl < item.final_price_incl_tax
@@ -329,6 +328,18 @@ function SalesCard({
     }
   }, [selectedProductForDiscount]);
 
+  // Efecto para resaltar el producto recién añadido
+  useEffect(() => {
+    if (recentlyAddedId) {
+      const newProd = cartItems.find(
+        (item) => item.id_stock_available === recentlyAddedId
+      );
+      if (newProd) {
+        setSelectedProduct(newProd);
+      }
+    }
+  }, [recentlyAddedId, cartItems]);
+
   // Función para definir clase en la fila seleccionada
   const rowClassName = (data) =>
     selectedProduct &&
@@ -448,12 +459,26 @@ function SalesCard({
                 style={{ width: "1%", textAlign: "center" }}
               />
               <Column
-                body={(rowData) =>
-                  rowData.product_name +
-                  (rowData.combination_name
-                    ? " " + rowData.combination_name
-                    : "")
-                }
+                body={(rowData) => {
+                  const hasCombination =
+                    rowData.product_name.includes("Talla") &&
+                    rowData.product_name.includes("Color");
+                  if (
+                    hasCombination &&
+                    rowData.reference_combination &&
+                    (!rowData.combination_name ||
+                      rowData.combination_name === null)
+                  ) {
+                    const colorMatch =
+                      rowData.product_name.match(/Color:\s*([^\s,()]+)/);
+                    const sizeMatch =
+                      rowData.product_name.match(/Talla:\s*([^\s,()]+)/);
+                    const color = colorMatch ? colorMatch[1] : "";
+                    const size = sizeMatch ? sizeMatch[1] : "";
+                    return `${rowData.reference_combination} - ${color} - ${size}`;
+                  }
+                  return rowData.product_name;
+                }}
                 header="Producto"
                 style={{ width: "50%" }}
               />

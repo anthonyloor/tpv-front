@@ -1,34 +1,50 @@
 import createPdf from "./createPdf.js";
 import JsBarcode from "jsbarcode";
 
-// Agregamos un helper común para impresión remota:
+// Nueva versión de attemptRemotePrint que centraliza la lógica remota
 const attemptRemotePrint = async (pdfDefinition) => {
-  // Intentar generar PDF en base64
+  console.log("Intentando impresión remota...");
+  let pdfResponse;
   try {
-    const ticketResponse = await createPdf(pdfDefinition, "b64");
-    if (ticketResponse.success && ticketResponse.content) {
-      const printResponse = await fetch("http://localhost:3001/imprimir", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          base64pdf: ticketResponse.content,
-          printerName: "POS-80C",
-        }),
-      });
-      if (printResponse.ok) {
-        // Se pudo imprimir remotamente
-        return {
-          success: true,
-          remote: true,
-          message: "Impresión remota exitosa",
-        };
-      }
+    pdfResponse = await createPdf(pdfDefinition, "b64");
+  } catch (e) {
+    console.warn("Error generando PDF para impresión remota:", e);
+    return { success: false, message: "Error al generar el PDF." };
+  }
+  if (!pdfResponse?.success || !pdfResponse.content) {
+    return { success: false, message: "PDF generado con errores." };
+  }
+  try {
+    const printResponse = await fetch("http://localhost:3001/imprimir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        base64pdf: pdfResponse.content,
+        printerName: "POS-80C",
+      }),
+    });
+    if (printResponse.ok) {
+      console.log("Impresión remota exitosa");
+      return {
+        success: true,
+        remote: true,
+        message: "Impresión remota exitosa",
+      };
+    } else {
+      console.warn("Error en impresión remota, status:", printResponse.status);
     }
   } catch (err) {
-    console.warn("Error en impresión remota:", err);
+    console.warn("Error en la llamada al endpoint imprimir:", err);
   }
-  // Si falla, se retorna null para proceder con la previsualización normal.
-  return null;
+  // Si llegamos aquí, se considera que se debe imprimir de forma manual
+  const pdfDataUrl = "data:application/pdf;base64," + pdfResponse.content;
+  return {
+    success: false,
+    manual: true,
+    message:
+      "Impresión remota fallida. ¿Deseas imprimir manualmente o reintentar?",
+    pdfDataUrl,
+  };
 };
 
 // Se actualiza la función para recibir orderData, config, employeesDict y ticketGift
@@ -239,7 +255,7 @@ const generateTicket = async (
   }
 
   // Construir el contenido del ticket
-  const content = [
+  const pdfContent = [
     ...(logoDataUrl
       ? [
           {
@@ -433,13 +449,17 @@ const generateTicket = async (
   ];
 
   const pdfDefinition = {
-    content,
+    content: pdfContent,
     defaultStyle: { font: "Arial", fontSize: 14 },
   };
-  // Si se está llamando en modo “print”, intentar impresión remota
   if (output === "print") {
     const remoteResult = await attemptRemotePrint(pdfDefinition);
-    if (remoteResult) return remoteResult;
+    if (remoteResult) {
+      if (remoteResult.remote) {
+        return remoteResult;
+      }
+      return remoteResult;
+    }
   }
   const response = await createPdf(pdfDefinition, output);
   return response;
@@ -463,7 +483,7 @@ export const generateClosureTicket = async (
     "es-ES"
   );
 
-  const content = [
+  const pdfContent = [
     // Encabezados de config en mayúsculas y negrita
     ...(config.ticket_text_header_1
       ? [
@@ -589,7 +609,7 @@ export const generateClosureTicket = async (
   ];
 
   const pdfDefinition = {
-    content,
+    content: pdfContent,
     info: {
       title: "Ticket Cierre de Caja",
       author: config.author || "TPV",
@@ -602,11 +622,15 @@ export const generateClosureTicket = async (
       tTotals: { fontSize: 8, bold: true, alignment: "right" },
       text: { fontSize: 8, alignment: "center" },
     },
-    pageMargins: [5.66, 5.66, 5.66, 5.66],
   };
   if (output === "print") {
     const remoteResult = await attemptRemotePrint(pdfDefinition);
-    if (remoteResult) return remoteResult;
+    if (remoteResult) {
+      if (remoteResult.remote) {
+        return remoteResult;
+      }
+      return remoteResult;
+    }
   }
   return await createPdf(pdfDefinition, output);
 };
@@ -660,7 +684,7 @@ export const generateDiscountVoucherTicket = async (
   const dateTo = new Date(voucherData.date_to).toLocaleDateString("es-ES");
 
   // Construir contenido del ticket
-  const content = [
+  const pdfContent = [
     // Logo
     ...(logoDataUrl
       ? [
@@ -763,7 +787,7 @@ export const generateDiscountVoucherTicket = async (
   ];
 
   const pdfDefinition = {
-    content,
+    content: pdfContent,
     info: {
       title: "Ticket Vale Descuento",
       author: config.author || "TPV",
@@ -776,28 +800,35 @@ export const generateDiscountVoucherTicket = async (
       tTotals: { fontSize: 8, bold: true, alignment: "right" },
       text: { fontSize: 8, alignment: "center" },
     },
-    pageMargins: [5.66, 5.66, 5.66, 5.66],
   };
   if (output === "print") {
     const remoteResult = await attemptRemotePrint(pdfDefinition);
-    if (remoteResult) return remoteResult;
+    if (remoteResult) {
+      if (remoteResult.remote) {
+        return remoteResult;
+      }
+      return remoteResult;
+    }
   }
   const response = await createPdf(pdfDefinition, output);
   return response;
 };
 
 export const openCashRegister = async (output, config, employeesDict) => {
-  const content = [
-    { text: "Open Cash Register", alignment: "center", fontSize: 10 },
-  ];
+  const content = [{ text: "", alignment: "center", fontSize: 1 }];
   const pdfDefinition = {
     content,
-    defaultStyle: { font: "Arial", fontSize: 10 },
+    defaultStyle: { font: "Arial", fontSize: 1 },
   };
-  // Si se llama en modo "print", se intenta la impresión remota
+  // Si se llama en modo "print", se intenta la impresión remota usando la salida "b64"
   if (output === "print") {
     const remoteResult = await attemptRemotePrint(pdfDefinition);
-    if (remoteResult) return remoteResult;
+    if (remoteResult) {
+      if (remoteResult.remote) {
+        return remoteResult;
+      }
+      return remoteResult;
+    }
   }
   const response = await createPdf(pdfDefinition, output);
   return response;

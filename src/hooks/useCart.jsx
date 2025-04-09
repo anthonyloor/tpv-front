@@ -119,6 +119,15 @@ export default function useCart(allowOutOfStockSales) {
     const existingProduct = cartItems.find(
       (item) => item.id_stock_available === product.id_stock_available
     );
+
+    // Si tiene id_control_stock, solo se permite añadirlo una vez
+    if (product.id_control_stock) {
+      if (existingProduct) {
+        toast.error("Producto con control de stock ya añadido.");
+        return;
+      }
+    }
+
     const maxQuantity = stockQuantity ?? Infinity;
     const newQuantity = existingProduct
       ? existingProduct.quantity + quantity
@@ -135,11 +144,11 @@ export default function useCart(allowOutOfStockSales) {
     }
 
     setCartItems((prevItems) => {
-      if (existingProduct) {
+      if (existingProduct && !product.id_control_stock) {
         const newQty = existingProduct.quantity + quantity;
         // Si ya existe un descuento aplicado, mantener el precio descontado proporcionalmente
         const updatedDiscountedPrice =
-          existingProduct.reduction_amount_tax_incl; // O recalcúlalo según la regla de negocio
+          existingProduct.reduction_amount_tax_incl;
         return prevItems.map((item) =>
           item.id_stock_available === product.id_stock_available
             ? {
@@ -164,16 +173,11 @@ export default function useCart(allowOutOfStockSales) {
       }
     });
 
-    // Avisar callback que no se superó stock
     if (exceedsStockCallback) exceedsStockCallback(false);
-
-    // Marcar el producto como recién añadido, para la animación
     setRecentlyAddedId(product.id_stock_available);
     setTimeout(() => {
       setRecentlyAddedId(null);
     }, 2000);
-
-    // Registrar la acción
     setLastAction({
       id: product.id_stock_available,
       action: "add",

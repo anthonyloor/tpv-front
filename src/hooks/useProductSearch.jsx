@@ -116,7 +116,9 @@ const useProductSearch = ({
       id_product: product.id_product,
       id_product_attribute: product.id_product_attribute,
       id_stock_available: currentShopStock.id_stock_available,
-      product_name: product.product_name,
+      product_name: product.combination_name
+        ? `${product.reference_combination} - ${product.combination_name}`
+        : product.product_name,
       combination_name: product.combination_name,
       reference_combination: product.reference_combination,
       ean13_combination: product.id_product_attribute

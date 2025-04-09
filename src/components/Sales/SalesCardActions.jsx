@@ -22,6 +22,7 @@ import { useEmployeesDictionary } from "../../hooks/useEmployeesDictionary";
 import getApiBaseUrl from "../../utils/getApiBaseUrl";
 import { useApiFetch } from "../../utils/useApiFetch";
 import { openCashRegister } from "../../utils/ticket";
+import { generateDiscountVoucherTicket } from "../..//utils/ticket";
 
 function SalesCardActions({
   cartItems,
@@ -79,6 +80,16 @@ function SalesCardActions({
     bizum: "",
   });
   const [changeAmount, setChangeAmount] = useState(0);
+
+  // NUEVOS ESTADOS para control de impresión fallida
+  const [printOptionModalVisible, setPrintOptionModalVisible] = useState(false);
+  const [manualPdfDataUrl, setManualPdfDataUrl] = useState(null);
+  const [orderDataForPrint, setOrderDataForPrint] = useState(null);
+
+  // NUEVOS estados para impresión del vale
+  const [voucherPrintOptionModalVisible, setVoucherPrintOptionModalVisible] =
+    useState(false);
+  const [voucherManualPdfDataUrl, setVoucherManualPdfDataUrl] = useState(null);
 
   useEffect(() => {
     // Leer datos de pago actualizados al dispararse el evento personalizado
@@ -239,10 +250,11 @@ function SalesCardActions({
           setTicketModalOpen(true);
           setPrintOnOpen(print);
 
-          // Nuevo cart rule
-          if (newCartRuleCode) setNewCartRuleCode(newCartRuleCode);
-          // setLeftoverInfo(leftoverArray);
-
+          // Si se generó un vale descuento, activar el modal (no mostrar botón en el layout principal)
+          if (newCartRuleCode) {
+            setNewCartRuleCode(newCartRuleCode);
+            setVoucherPrintOptionModalVisible(true);
+          }
           // Limpiar carrito y descuentos y asignar el cliente por defecto
           setCartItems([]);
           clearDiscounts();
@@ -583,24 +595,135 @@ function SalesCardActions({
           if (!orderData || !orderData.order_details) {
             console.error("Error: datos de la orden incompletos");
           } else {
+            setOrderDataForPrint(orderData);
             const response = await generateTicket(
               "print",
               orderData,
               configData,
-              employeesDict
+              employeesDict,
+              giftTicket
             );
-            if (!response.success) {
+            if (response.success) {
+              console.log("Ticket impreso remotamente correctamente");
+            } else if (response.manual) {
+              setManualPdfDataUrl(response.pdfDataUrl);
+              setPrintOptionModalVisible(true);
+            } else {
               console.error("Error al imprimir ticket:", response.message);
             }
           }
         } catch (err) {
           console.error("Error en la consulta get_order:", err);
         } finally {
-          setTicketModalOpen(false);
+          setTicketOrderId(null);
         }
       })();
     }
-  }, [ticketOrderId, configData, employeesDict, apiFetch]);
+  }, [ticketOrderId, configData, employeesDict, apiFetch, giftTicket]);
+
+  // Función para imprimir de forma manual
+  const handleManualPrint = () => {
+    if (manualPdfDataUrl) {
+      const printWindow = window.open("", "_blank"); // abrir ventana vacía
+      if (printWindow) {
+        printWindow.document.write(
+          `<html><head><title>Vista Previa del PDF</title></head>
+           <body style="margin:0">
+             <iframe width="100%" height="100%" src="${manualPdfDataUrl}" frameborder="0"></iframe>
+           </body></html>`
+        );
+        printWindow.document.close();
+        printWindow.focus();
+        setPrintOptionModalVisible(false);
+      } else {
+        console.warn("No se pudo abrir la ventana de previsualización");
+      }
+    }
+  };
+
+  // Función para reintentar impresión remota
+  const handleRetryPrint = async () => {
+    if (orderDataForPrint) {
+      try {
+        const response = await generateTicket(
+          "print",
+          orderDataForPrint,
+          configData,
+          employeesDict,
+          giftTicket
+        );
+        if (response.success) {
+          console.log("Reimpresión remota exitosa");
+          setPrintOptionModalVisible(false);
+        } else if (response.manual) {
+          setManualPdfDataUrl(response.pdfDataUrl);
+          // El modal permanece abierto para nueva elección
+        } else {
+          console.error(
+            "Error al reintentar imprimir ticket:",
+            response.message
+          );
+        }
+      } catch (err) {
+        console.error("Error al reintentar impresión:", err);
+      }
+    }
+  };
+
+  // NUEVAS funciones para imprimir vale de forma manual y reintentar
+  const handleVoucherManualPrint = () => {
+    if (voucherManualPdfDataUrl) {
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(
+          `<html><head><title>Vista Previa del PDF - Vale</title></head>
+           <body style="margin:0">
+             <iframe width="100%" height="100%" src="${voucherManualPdfDataUrl}" frameborder="0"></iframe>
+           </body></html>`
+        );
+        printWindow.document.close();
+        printWindow.focus();
+        setVoucherPrintOptionModalVisible(false);
+      } else {
+        console.warn(
+          "No se pudo abrir la ventana de previsualización para el vale"
+        );
+      }
+    }
+  };
+
+  const handleVoucherRetryPrint = async () => {
+    if (newCartRuleCode) {
+      try {
+        const API_BASE_URL = getApiBaseUrl();
+        const voucherResp = await apiFetch(
+          `${API_BASE_URL}/get_cart_rule?code=${newCartRuleCode}`,
+          { method: "GET" }
+        );
+        const voucherResponse = await generateDiscountVoucherTicket(
+          "print",
+          voucherResp,
+          {},
+          {}
+        );
+        if (voucherResponse.success) {
+          toast.success("Vale impreso correctamente");
+          setNewCartRuleCode(null);
+          setVoucherPrintOptionModalVisible(false);
+        } else if (voucherResponse.manual) {
+          setVoucherManualPdfDataUrl(voucherResponse.pdfDataUrl);
+          setVoucherPrintOptionModalVisible(true);
+        } else {
+          console.error(
+            "Error al reintentar impresión del vale:",
+            voucherResponse.message
+          );
+        }
+      } catch (err) {
+        console.error("Error al reintentar impresión del vale:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     if (cartRuleModalOpen && newCartRuleCode) {
@@ -872,6 +995,63 @@ function SalesCardActions({
           onClose={() => setIsOnlineOrdersModalOpen(false)}
         />
       )}
+      <Dialog
+        header="Error de impresión"
+        visible={printOptionModalVisible}
+        onHide={() => setPrintOptionModalVisible(false)}
+        modal
+        draggable={false}
+        resizable={false}
+        style={{ marginBottom: "150px" }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <span>
+            La impresión del ticket ha fallado. ¿Deseas imprimirlo manualmente o
+            reintentar?
+          </span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "start",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
+            <Button label="Imprimir manual" onClick={handleManualPrint} />
+            <Button label="Reintentar" onClick={handleRetryPrint} />
+          </div>
+        </div>
+      </Dialog>
+      {/* NUEVO modal para vale descuento */}
+      <Dialog
+        header="Error de impresión del vale"
+        visible={voucherPrintOptionModalVisible}
+        onHide={() => setVoucherPrintOptionModalVisible(false)}
+        modal
+        draggable={false}
+        resizable={false}
+        style={{ marginBottom: "500px" }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <span>
+            La impresión del vale ha fallado. ¿Deseas imprimirlo manualmente o
+            reintentar?
+          </span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
+            <Button
+              label="Imprimir manual"
+              onClick={handleVoucherManualPrint}
+            />
+            <Button label="Reintentar" onClick={handleVoucherRetryPrint} />
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

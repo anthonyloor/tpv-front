@@ -4,7 +4,6 @@ import { useState, useContext } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { useApiFetch } from "../utils/useApiFetch";
 import getApiBaseUrl from "../utils/getApiBaseUrl";
-import { generateDiscountVoucherTicket } from "../utils/ticket";
 
 export default function useFinalizeSale() {
   const { employeeId, shopId, defaultClient, defaultAddress } =
@@ -59,7 +58,7 @@ export default function useFinalizeSale() {
         product_attribute_id: item.id_product_attribute,
         stock_available_id: item.id_stock_available,
         id_control_stock: item.id_control_stock,
-        product_name: `${item.product_name} - ${item.combination_name}`,
+        product_name: item.product_name,
         product_quantity: item.quantity,
         product_price: parseFloat(
           (item.final_price_incl_tax / factorTax).toFixed(2)
@@ -206,6 +205,12 @@ export default function useFinalizeSale() {
       const orderIdMatch = message.match(/id (\d+)/);
       const newOrderId = orderIdMatch ? orderIdMatch[1] : null;
 
+      // Check if the response contains new_cart_rule_code and update newCartRuleCode
+      if (response.new_cart_rule_code) {
+        newCartRuleCode = response.new_cart_rule_code;
+        console.log("Nuevo código de vale descuento recibido:", newCartRuleCode);
+      }
+
       setIsLoading(false);
 
       if (onSuccess && newOrderId) {
@@ -216,22 +221,6 @@ export default function useFinalizeSale() {
           changeAmount,
           newCartRuleCode,
         });
-      }
-
-      // Si se generó un nuevo vale descuento, imprimirlo después de un breve retraso (e.g. 3 segundos)
-      if (newCartRuleCode) {
-        setTimeout(async () => {
-          try {
-            const voucherResp = await apiFetch(
-              `${API_BASE_URL}/get_cart_rule?code=${newCartRuleCode}`,
-              { method: "GET" }
-            );
-            console.log("Respuesta get_cart_rule:", voucherResp);
-            await generateDiscountVoucherTicket("print", voucherResp, {}, {});
-          } catch (error) {
-            console.error("Error al imprimir vale descuento:", error);
-          }
-        }, 3000);
       }
     } catch (error) {
       console.error("Error al crear la orden:", error);

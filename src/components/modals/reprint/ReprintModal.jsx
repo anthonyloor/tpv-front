@@ -45,6 +45,9 @@ const ReprintModal = ({ isOpen, onClose }) => {
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketGift, setTicketGift] = useState(false);
   const [viewTicketOrderId, setViewTicketOrderId] = useState(null);
+  const [printOptionModalVisible, setPrintOptionModalVisible] = useState(false);
+  const [manualPdfDataUrl, setManualPdfDataUrl] = useState(null);
+  const [orderDataForPrint, setOrderDataForPrint] = useState(null);
 
   const rows = 4;
 
@@ -234,7 +237,6 @@ const ReprintModal = ({ isOpen, onClose }) => {
     if (ticketModalOpen && viewTicketOrderId) {
       (async () => {
         try {
-          // Se consulta la orden usando id y origin "mayret"
           const data = await apiFetch(`${API_BASE_URL}/get_order`, {
             method: "POST",
             body: JSON.stringify({
@@ -245,6 +247,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
           if (!data || !data.order_details) {
             console.error("Error al recuperar datos del ticket");
           } else {
+            setOrderDataForPrint(data);
             const response = await generateTicket(
               "print",
               data,
@@ -252,7 +255,12 @@ const ReprintModal = ({ isOpen, onClose }) => {
               employeesDict,
               ticketGift
             );
-            if (!response.success) {
+            if (response.success) {
+              console.log("Ticket impreso remotamente correctamente");
+            } else if (response.manual) {
+              setManualPdfDataUrl(response.pdfDataUrl);
+              setPrintOptionModalVisible(true);
+            } else {
               console.error("Error al imprimir ticket:", response.message);
             }
           }
@@ -272,6 +280,53 @@ const ReprintModal = ({ isOpen, onClose }) => {
     API_BASE_URL,
     ticketGift,
   ]);
+
+  const handleManualPrint = () => {
+    if (manualPdfDataUrl) {
+      const printWindow = window.open("", "_blank"); // abrir ventana vacía
+      if (printWindow) {
+        printWindow.document.write(
+          `<html><head><title>Vista Previa del PDF</title></head>
+           <body style="margin:0">
+             <iframe width="100%" height="100%" src="${manualPdfDataUrl}" frameborder="0"></iframe>
+           </body></html>`
+        );
+        printWindow.document.close();
+        printWindow.focus();
+        setPrintOptionModalVisible(false);
+      } else {
+        console.warn("No se pudo abrir la ventana de previsualización");
+      }
+    }
+  };
+
+  const handleRetryPrint = async () => {
+    if (orderDataForPrint) {
+      try {
+        const response = await generateTicket(
+          "print",
+          orderDataForPrint,
+          configData,
+          employeesDict,
+          ticketGift
+        );
+        if (response.success) {
+          console.log("Reimpresión remota exitosa");
+          setPrintOptionModalVisible(false);
+        } else if (response.manual) {
+          setManualPdfDataUrl(response.pdfDataUrl);
+          // El modal permanece abierto para nueva elección
+        } else {
+          console.error(
+            "Error al reintentar imprimir ticket:",
+            response.message
+          );
+        }
+      } catch (err) {
+        console.error("Error al reintentar impresión:", err);
+      }
+    }
+  };
 
   return (
     <>
@@ -449,6 +504,38 @@ const ReprintModal = ({ isOpen, onClose }) => {
               onClick={() => handleReprintClick(true)}
               className="p-button-help"
             />
+          </div>
+        </div>
+      </Dialog>
+      <Dialog
+        header="Error de impresión"
+        visible={printOptionModalVisible}
+        onHide={() => setPrintOptionModalVisible(false)}
+        modal
+        draggable={false}
+        resizable={false}
+        style={{ marginBottom: "150px" }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+          }}
+        >
+          <span>
+            La impresión del ticket ha fallado. ¿Deseas imprimirlo manualmente o
+            reintentar?
+          </span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
+            <Button label="Imprimir manual" onClick={handleManualPrint} />
+            <Button label="Reintentar" onClick={handleRetryPrint} />
           </div>
         </div>
       </Dialog>

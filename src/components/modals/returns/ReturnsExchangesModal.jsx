@@ -139,9 +139,14 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
 
   // Manejar selección de filas (ver si algún producto ya devuelto => no se puede)
   const handleSelectionChange = (e) => {
-    // Filtrar los que no estén "ya devueltos"
+    // Filtrar los que no estén "ya devueltos" y que no tengan product_reference prohibido
     const filtered = e.value.filter(
-      (prod) => !returnedProductMap[prod.uniqueLineId]
+      (prod) =>
+        !returnedProductMap[prod.uniqueLineId] &&
+        prod.product_reference !== "ENVIO" &&
+        prod.product_reference !== "CONTRARELBOLSO" &&
+        prod.product_reference !== "CAMBIO" &&
+        prod.product_reference !== "rectificacion"
     );
     setSelectedRows(filtered);
 
@@ -176,6 +181,17 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     const alreadyReturned = rp ? rp.totalReturned : 0;
     const availableQty = rowData.product_quantity - alreadyReturned;
     const isSelected = selectedRows.some((p) => p.uniqueLineId === key);
+
+    // Si el producto tiene product_reference prohibido
+    if (
+      rowData.product_reference === "ENVIO" ||
+      rowData.product_reference === "CONTRARELBOLSO" ||
+      rowData.product_reference === "rectificacion" ||
+      rowData.product_reference === "CAMBIO" ||
+      rowData.product_reference === "rectificacion"
+    ) {
+      return <span className="text-gray-400">X</span>;
+    }
 
     // Si existen devoluciones definidas para el producto
     if (rp && rp.returns.length > 0) {

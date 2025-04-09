@@ -13,6 +13,7 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { generateClosureTicket } from "../../../utils/ticket";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { ConfigContext } from "../../../contexts/ConfigContext";
+import { Dialog } from "primereact/dialog";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
@@ -36,6 +37,10 @@ const CloseCashRegisterForm = ({ onClose }) => {
   const [reportDateAdd, setReportDateAdd] = useState(null);
   const [pdfReportGenerated, setPdfReportGenerated] = useState(false);
   const [salesSummaryGenerated, setSalesSummaryGenerated] = useState(false);
+  const [closurePrintOptionModalVisible, setClosurePrintOptionModalVisible] =
+    useState(false);
+  const [closureManualPdfDataUrl, setClosureManualPdfDataUrl] = useState(null);
+  const [closureDataForRetry, setClosureDataForRetry] = useState(null);
   const employeesDict = useEmployeesDictionary();
   const { configData } = useContext(ConfigContext);
 
@@ -218,18 +223,68 @@ const CloseCashRegisterForm = ({ onClose }) => {
       total,
       iva,
     };
+    setClosureDataForRetry(closureData);
     try {
-      await generateClosureTicket(
+      const result = await generateClosureTicket(
         "print",
         closureData,
         configData,
         employeesDict,
         employeeName
       );
-      setSalesSummaryGenerated(true);
+      if (result.success) {
+        setSalesSummaryGenerated(true);
+        showAlert(
+          "Resumen del reporte de ventas generado e impreso correctamente.",
+          true
+        );
+      } else if (result.manual) {
+        setClosureManualPdfDataUrl(result.pdfDataUrl);
+        setClosurePrintOptionModalVisible(true);
+      } else {
+        showAlert(
+          result.message ||
+            "Error al generar el resumen del reporte de ventas.",
+          false
+        );
+      }
     } catch (error) {
       console.error("Error generando el resumen:", error);
       alert("Error al generar el resumen del reporte de ventas.");
+    }
+  };
+
+  const handleClosureRetry = async () => {
+    if (closureDataForRetry) {
+      try {
+        const result = await generateClosureTicket(
+          "print",
+          closureDataForRetry,
+          configData,
+          employeesDict,
+          employeeName
+        );
+        if (result.success) {
+          setSalesSummaryGenerated(true);
+          showAlert(
+            "Resumen del reporte de ventas generado e impreso correctamente.",
+            true
+          );
+          setClosurePrintOptionModalVisible(false);
+        } else if (result.manual) {
+          setClosureManualPdfDataUrl(result.pdfDataUrl);
+          // El modal permanece abierto para nueva elección
+        } else {
+          showAlert(
+            result.message ||
+              "Error al generar el resumen del reporte de ventas.",
+            false
+          );
+        }
+      } catch (err) {
+        console.error("Error en reintento de impresión:", err);
+        showAlert("Error al reintentar la impresión: " + err.message, false);
+      }
     }
   };
 
@@ -266,24 +321,45 @@ const CloseCashRegisterForm = ({ onClose }) => {
 
       const productLines = data.flatMap((order) =>
         order.order_details.map((detail) => {
-          // Extract combination from product_name
+          // Extracción de la combinación usando product_reference
           let combination = detail.product_name;
           if (detail.product_name && detail.product_reference) {
             const refIndex = detail.product_name.indexOf(
               detail.product_reference
             );
             if (refIndex !== -1) {
-              const afterRef = detail.product_name.substring(
+              let afterRef = detail.product_name.substring(
                 refIndex + detail.product_reference.length
               );
-              // Get text after the dash (and trim whitespace)
-              const dashIndex = afterRef.indexOf("-");
-              if (dashIndex !== -1) {
-                combination = afterRef.substring(dashIndex + 1).trim();
+              let cleaned = afterRef.trim();
+              // Quitar guion inicial y 'undefined' final si existen.
+              if (cleaned.startsWith("-")) {
+                cleaned = cleaned.slice(1).trim();
+              }
+              if (cleaned.endsWith("undefined")) {
+                cleaned = cleaned.slice(0, -"undefined".length).trim();
+              }
+              // Extraer Color y Talla utilizando expresiones regulares.
+              const colorMatch = cleaned.match(/Color\s*[:\-]?\s*([\w\s]+)/i);
+              const tallaMatch = cleaned.match(/Talla\s*[:\-]?\s*([\w\s]+)/i);
+              if (colorMatch || tallaMatch) {
+                const color = colorMatch ? colorMatch[1].trim() : "";
+                const talla = tallaMatch ? tallaMatch[1].trim() : "";
+                combination = [color, talla].filter(Boolean).join(" - ");
+              } else {
+                // Si no se encontraron coincidencias, se intenta dividir por guion.
+                const parts = cleaned
+                  .split("-")
+                  .map((p) => p.trim())
+                  .filter(Boolean);
+                if (parts.length >= 2) {
+                  combination = `${parts[0]} - ${parts[1]}`;
+                } else {
+                  combination = cleaned;
+                }
               }
             }
           }
-          console.log("order:", order);
           // Calcular texto de pago usando los amounts en la orden según reglas:
           const payments = order.payment
             .split(",")
@@ -292,7 +368,6 @@ const CloseCashRegisterForm = ({ onClose }) => {
           const cardAmount = order.total_card || 0;
           const bizumAmount = order.total_bizum || 0;
           const includedMethods = [];
-          console.log("Payments:", payments);
           if (payments.includes("efectivo")) {
             includedMethods.push({ method: "efectivo", amount: cashAmount });
           }
@@ -320,7 +395,6 @@ const CloseCashRegisterForm = ({ onClose }) => {
               amount: bizumAmount,
             });
           }
-          console.log("Included methods:", includedMethods);
           const nonZeroCount = includedMethods.filter(
             (m) => m.amount > 0
           ).length;
@@ -425,6 +499,12 @@ const CloseCashRegisterForm = ({ onClose }) => {
         "Pago",
         "Importe",
       ];
+
+      // Definir variables para alternar el fondo por id_order
+      let rowColors = {};
+      let lastOrder = null;
+      let useGray = false;
+
       doc.autoTable({
         head: [tableColumn],
         body: tableRows,
@@ -432,8 +512,22 @@ const CloseCashRegisterForm = ({ onClose }) => {
         margin: { left: margin, right: margin },
         styles: { fontSize: 12 },
         theme: "grid",
-        // Nuevo hook para evitar que se imprima el objeto por defecto
         didParseCell: function (data) {
+          // Aplicar colores solo a las filas de productos (excluyendo la cabecera)
+          if (data.row.section === "body") {
+            const rowIndex = data.row.index;
+            if (rowColors[rowIndex] === undefined && data.column.index === 0) {
+              const currentOrder = data.cell.text[0];
+              if (currentOrder !== lastOrder) {
+                useGray = !useGray;
+                lastOrder = currentOrder;
+              }
+              rowColors[rowIndex] = useGray ? [240, 240, 240] : [255, 255, 255];
+            }
+            data.cell.styles.fillColor = rowColors[rowIndex];
+          }
+
+          // Manejo existente para celdas de descuento en la columna "Importe"
           if (
             data.column.index === 6 &&
             data.cell.raw &&
@@ -443,29 +537,25 @@ const CloseCashRegisterForm = ({ onClose }) => {
           }
         },
         didDrawCell: function (data) {
-          // Verificar si es la columna de "Importe" y si el valor es un objeto de descuento
-          if (
-            data.column.index === 6 &&
-            data.cell.raw &&
-            data.cell.raw.discount
-          ) {
-            const originalText = data.cell.raw.original;
-            const discountedText = data.cell.raw.discounted;
-            const { x, y } = data.cell;
-            // Dibujar importe original mas pequeño y con tachado
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(8);
-            const origX = x + 2;
-            const origY = y + 10;
-            doc.text(originalText, origX, origY);
-            const origTextWidth = doc.getTextWidth(originalText);
-            doc.setDrawColor(255, 0, 0);
-            doc.setLineWidth(0.5);
-            doc.line(origX, origY - 2, origX + origTextWidth, origY - 2);
-            // Dibujar importe con descuento en rojo mas grande
-            doc.setTextColor(255, 0, 0);
-            doc.setFontSize(12);
-            doc.text(discountedText, origX, origY + 10);
+          // Aplicar lógica de descuento solo a las filas de productos
+          if (data.row.section === "body" && data.column.index === 6) {
+            if (data.cell.raw && data.cell.raw.discount) {
+              const originalText = data.cell.raw.original;
+              const discountedText = data.cell.raw.discounted;
+              const { x, y } = data.cell;
+              doc.setTextColor(0, 0, 0);
+              doc.setFontSize(8);
+              const origX = x + 2;
+              const origY = y + 10;
+              doc.text(originalText, origX, origY);
+              const origTextWidth = doc.getTextWidth(originalText);
+              doc.setDrawColor(255, 0, 0);
+              doc.setLineWidth(0.5);
+              doc.line(origX, origY - 2, origX + origTextWidth, origY - 2);
+              doc.setTextColor(255, 0, 0);
+              doc.setFontSize(12);
+              doc.text(discountedText, origX, origY + 10);
+            }
           }
         },
       });
@@ -527,6 +617,26 @@ const CloseCashRegisterForm = ({ onClose }) => {
     } catch (error) {
       console.error("Error generando PDF:", error);
       alert("Error al generar el PDF.");
+    }
+  };
+
+  // Función para imprimir manualmente el resumen (abre una nueva ventana)
+  const handleClosureManualPrint = () => {
+    if (closureManualPdfDataUrl) {
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(
+          `<html><head><title>Vista Previa del Resumen Cierre</title></head>
+           <body style="margin:0">
+             <iframe width="100%" height="100%" src="${closureManualPdfDataUrl}" frameborder="0"></iframe>
+           </body></html>`
+        );
+        printWindow.document.close();
+        printWindow.focus();
+        setClosurePrintOptionModalVisible(false);
+      } else {
+        console.warn("No se pudo abrir la ventana de previsualización.");
+      }
     }
   };
 
@@ -711,6 +821,37 @@ const CloseCashRegisterForm = ({ onClose }) => {
         success={closingModalSuccess}
         message={closingModalMessage}
       />
+
+      {/* Dialog para impresión manual del resumen de cierre */}
+      <Dialog
+        header="Error de impresión del resumen"
+        visible={closurePrintOptionModalVisible}
+        onHide={() => setClosurePrintOptionModalVisible(false)}
+        modal
+        draggable={false}
+        resizable={false}
+        style={{ marginBottom: "150px" }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <span>
+            La impresión remota del resumen falló. ¿Deseas imprimirlo
+            manualmente o reintentar?
+          </span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
+            <Button
+              label="Imprimir manual"
+              onClick={handleClosureManualPrint}
+            />
+            <Button label="Reintentar" onClick={handleClosureRetry} />
+          </div>
+        </div>
+      </Dialog>
     </>
   );
 };

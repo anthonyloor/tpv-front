@@ -83,10 +83,6 @@ const DiscountModal = ({
     createCartRuleWithResponse(
       payload,
       (discObj) => {
-        console.log(
-          "[DiscountModal] Resultado de la creación de descuento:",
-          discObj
-        );
         if (newTargetIdentifier) {
           let newPrice;
           if (discountType === "amount") {
