@@ -40,6 +40,9 @@ const NavbarCard = () => {
 
   const [configModalView] = useState("config");
 
+  // Agregamos un estado para la versión
+  const [version, setVersion] = useState("");
+
   const closeAllModals = () => {
     setTransfersModalOpen(false);
     setConfigurationModalOpen(false);
@@ -76,6 +79,19 @@ const NavbarCard = () => {
       setOpenCloseCashModal(false);
     }
   }, [openCloseCashModal, setOpenCloseCashModal]);
+
+  useEffect(() => {
+    const fetchVersion = async () => {
+      try {
+        const response = await fetch("/version-lp.json", { cache: "no-store" });
+        const data = await response.json();
+        setVersion(data.version);
+      } catch (err) {
+        console.error("Error obteniendo versión:", err);
+      }
+    };
+    fetchVersion();
+  }, []);
 
   const handleLogoutClick = () => {
     handleLogout();
@@ -167,6 +183,10 @@ const NavbarCard = () => {
           <InputSwitch checked={isDarkTheme} onChange={toggleTheme} />
         </div>
       ),
+    },
+    {
+      // Nuevo item de versión (sin acción)
+      label: <span>Versión TPV: {version || "N/A"}</span>,
     },
     {
       label: "Cerrar sesión",

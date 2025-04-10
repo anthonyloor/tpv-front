@@ -95,32 +95,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     if (onClickProduct) onClickProduct(e.data);
   };
 
-  // Plantillas para las columnas del DataTable
-  const combinationBodyTemplate = (rowData) => rowData.combination_name;
-  const referenceBodyTemplate = (rowData) => rowData.reference_combination;
-  const priceBodyTemplate = (rowData) => rowData.price.toFixed(2) + " €";
-  const quantityBodyTemplate = (rowData) => {
-    const currentStock = rowData.stocks
-      ? rowData.stocks.find((stock) => stock.id_shop === shopId)
-      : null;
-    return currentStock ? currentStock.quantity : rowData.quantity;
-  };
-
-  const customEanBodyTemplate = (rowData) => {
-    const ean = rowData.ean13_combination || "";
-    if (rowData.id_control_stock) {
-      return (
-        <div className="flex items-center">
-          <span className="mr-2">
-            {ean}-{rowData.id_control_stock}
-          </span>
-          <i className="pi pi-link"></i>
-        </div>
-      );
-    }
-    return ean;
-  };
-
   // Aplanamos y ordenamos los grupos para el DataTable
   const flatProducts = groupedProducts
     .reduce((acc, group) => {
@@ -132,6 +106,37 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     }, [])
     .sort((a, b) => a.product_name.localeCompare(b.product_name));
 
+  // Nuevo mapeo para definir el grupo (sin seguimiento vs con seguimiento)
+  const productsWithGroup = flatProducts
+    .map((product) => ({
+      ...product,
+      group: product.id_control_stock
+        ? "Productos con seguimiento"
+        : "Productos sin seguimiento",
+    }))
+    .sort((a, b) => a.group.localeCompare(b.group));
+
+  // Agrupar TODOS los productos (con y sin seguimiento) por clave única
+  const finalProducts = productsWithGroup
+    .reduce((unique, item) => {
+      const key = `${item.id_product}_${item.id_product_attribute}_${
+        item.id_stock_available || ""
+      }`;
+      if (!unique.some((u) => u.uniqueKey === key)) {
+        // Contar los registros con id_control_stock para la misma clave
+        const trackingCount = productsWithGroup.filter((p) => {
+          const pKey = `${p.id_product}_${p.id_product_attribute}_${
+            p.id_stock_available || ""
+          }`;
+          return pKey === key && p.id_control_stock;
+        }).length;
+        const { id_control_stock, active_control_stock, ...rest } = item;
+        unique.push({ ...rest, uniqueKey: key, trackingCount });
+      }
+      return unique;
+    }, [])
+    .map(({ uniqueKey, ...rest }) => rest);
+
   const handleKeyDown = async (event) => {
     if (event.key !== "Enter") return;
     await handleSearch(searchTerm);
@@ -141,22 +146,6 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         searchInputRef.current.focus();
       }
     }, 100);
-  };
-
-  // Nueva plantilla para el ícono en la primera columna
-  const selectionBodyTemplate = (rowData) => {
-    const isSelected =
-      selectedProduct &&
-      selectedProduct.id_product_attribute === rowData.id_product_attribute;
-    return (
-      <span
-        className={
-          isSelected
-            ? "pi pi-check-circle text-green-500"
-            : "pi pi-circle text-gray-500"
-        }
-      ></span>
-    );
   };
 
   return (
@@ -196,12 +185,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         </span>
       </div>
 
-      {/* Tabla de productos agrupados */}
+      {/* Tabla de productos */}
       <div className="flex-1 overflow-auto">
         <DataTable
-          value={flatProducts}
-          groupField="product_name"
+          value={finalProducts}
           selectionMode="single"
+          selection={selectedProduct}
           onSelectionChange={(e) => {
             setSelectedProduct(e.value);
             if (onClickProduct) onClickProduct(e.value);
@@ -209,32 +198,84 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           onRowSelect={onRowSelect}
           dataKey="id_product_attribute"
           scrollable
+          tableStyle={{ width: "100%" }}
         >
           <Column
-            header=""
-            body={selectionBodyTemplate}
-            style={{ width: "2rem", textAlign: "center" }}
+            selectionMode="single"
+            style={{
+              width: "1px",
+              textAlign: "center",
+              padding: "1rem 0.3rem",
+            }}
+            alignHeader={"center"}
           />
           <Column
-            field="reference_combination"
             header="Referencia"
-            body={referenceBodyTemplate}
+            body={(rowData) => rowData.reference_combination}
+            style={{
+              width: "100px",
+              textAlign: "center",
+              padding: "1rem 0.3rem",
+            }}
+            alignHeader={"center"}
           />
           <Column
-            field="combination_name"
             header="Combinación"
-            body={combinationBodyTemplate}
+            body={(rowData) =>
+              rowData.combination_name && rowData.combination_name !== ""
+                ? rowData.combination_name
+                : rowData.product_name
+            }
+            style={{
+              width: "100px",
+              textAlign: "center",
+              padding: "1rem 0.3rem",
+            }}
+            alignHeader={"center"}
           />
           <Column
-            field="ean13_combination"
-            header="EAN13"
-            body={customEanBodyTemplate}
+            header="Precio"
+            body={(rowData) =>
+              rowData.price ? rowData.price.toFixed(2) + " €" : ""
+            }
+            style={{
+              width: "50px",
+              textAlign: "center",
+              padding: "1rem 0.3rem",
+            }}
+            alignHeader={"center"}
           />
-          <Column field="price" header="Precio" body={priceBodyTemplate} />
           <Column
-            field="quantity"
-            header="Und. en tienda"
-            body={quantityBodyTemplate}
+            header="Cod. Barras"
+            body={(rowData) =>
+              rowData.ean13_combination || rowData.ean13_combination_0 || ""
+            }
+            style={{
+              width: "100px",
+              textAlign: "center",
+              padding: "1rem 0.3rem",
+            }}
+            alignHeader={"center"}
+          />
+          <Column
+            header="Cantidad"
+            body={(rowData) => (
+              <>
+                {rowData.quantity}
+                {Number(rowData.trackingCount) > 0
+                  ? ` | ${rowData.trackingCount} `
+                  : ""}
+                {Number(rowData.trackingCount) > 0 && (
+                  <i className="pi pi-link"></i>
+                )}
+              </>
+            )}
+            style={{
+              width: "50px",
+              textAlign: "center",
+              padding: "1rem 0.3rem",
+            }}
+            alignHeader={"center"}
           />
         </DataTable>
       </div>

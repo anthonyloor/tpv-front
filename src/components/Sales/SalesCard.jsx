@@ -470,11 +470,16 @@ function SalesCard({
                       rowData.combination_name === null)
                   ) {
                     const colorMatch =
-                      rowData.product_name.match(/Color:\s*([^\s,()]+)/);
+                      rowData.product_name.match(/Color\s*:\s*([^-]+)/);
                     const sizeMatch =
-                      rowData.product_name.match(/Talla:\s*([^\s,()]+)/);
-                    const color = colorMatch ? colorMatch[1] : "";
-                    const size = sizeMatch ? sizeMatch[1] : "";
+                      rowData.product_name.match(/Talla\s*:\s*(\S+)/);
+                    // Eliminar coma final en cada campo
+                    const color = colorMatch
+                      ? colorMatch[1].trim().replace(/,$/, "")
+                      : "";
+                    const size = sizeMatch
+                      ? sizeMatch[1].trim().replace(/,$/, "")
+                      : "";
                     return `${rowData.reference_combination} - ${color} - ${size}`;
                   }
                   return rowData.product_name;

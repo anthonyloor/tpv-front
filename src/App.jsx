@@ -1,6 +1,6 @@
 // src/App.jsx
 
-import React, { useEffect, useContext, useState } from "react";
+import React, { useEffect, useContext, useState, useRef } from "react";
 import { Toaster } from "sonner";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import PinPage from "./components/pages/PinPage";
@@ -9,6 +9,7 @@ import { AuthContext } from "./contexts/AuthContext";
 import PrivateRoute from "./components/base/PrivateRoute";
 import ConfigLoader from "./components/ConfigLoader";
 import SessionExpiredDialog from "./components/modals/session/SessionExpiredDialog";
+import VersionUpdateDialog from "./components/modals/session/VersionUpdateDialog";
 import { isMobile } from "react-device-detect";
 import MobileDashboard from "./MobileDashboard";
 import DesktopTPV from "./DesktopTPV";
@@ -27,6 +28,8 @@ function App() {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const [isShopLoaded, setIsShopLoaded] = useState(false);
+  const [showVersionUpdate, setShowVersionUpdate] = useState(false);
+  const currentVersion = useRef(null);
 
   useEffect(() => {
     applyTheme(theme);
@@ -71,6 +74,30 @@ function App() {
     }
   }, [navigate, isShopLoaded]);
 
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        const response = await fetch("/version-lp.json", { cache: "no-store" });
+        const data = await response.json();
+
+        if (!currentVersion.current) {
+          currentVersion.current = data.version;
+        } else if (currentVersion.current !== data.version) {
+          setShowVersionUpdate(true);
+        }
+      } catch (err) {
+        console.error("Error comprobando versión:", err);
+      }
+    };
+
+    const interval = setInterval(checkVersion, 60 * 1000); // cada 60 segundos
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleUpdate = () => {
+    window.location.reload();
+  };
+
   if (!isShopLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -80,48 +107,56 @@ function App() {
   }
 
   return (
-    <div
-      className="flex flex-col min-h-screen"
-      style={{ backgroundColor: "var(--surface-200)" }}
-    >
-      <Toaster position="top-center" expand={true} />
-      <Routes>
-        {/* Rutas de login */}
-        <Route
-          path="/penaprieta8"
-          element={<LoginPage shopRoute="penaprieta8" />}
-        />
-        <Route
-          path="/bravomurillo205"
-          element={<LoginPage shopRoute="bravomurillo205" />}
-        />
-        <Route
-          path="/alcala397"
-          element={<LoginPage shopRoute="alcala397" />}
-        />
-        <Route path="/bodega" element={<LoginPage shopRoute="bodega" />} />
-        <Route
-          path="/mayretmodacolombiana"
-          element={<LoginPage shopRoute="mayretmodacolombiana" />}
-        />
-        <Route path="/pin" element={<PinPage />} />
+    <>
+      <div
+        className="flex flex-col min-h-screen"
+        style={{ backgroundColor: "var(--surface-200)" }}
+      >
+        <Toaster position="top-center" expand={true} />
+        <Routes>
+          {/* Rutas de login */}
+          <Route
+            path="/penaprieta8"
+            element={<LoginPage shopRoute="penaprieta8" />}
+          />
+          <Route
+            path="/bravomurillo205"
+            element={<LoginPage shopRoute="bravomurillo205" />}
+          />
+          <Route
+            path="/alcala397"
+            element={<LoginPage shopRoute="alcala397" />}
+          />
+          <Route path="/bodega" element={<LoginPage shopRoute="bodega" />} />
+          <Route
+            path="/mayretmodacolombiana"
+            element={<LoginPage shopRoute="mayretmodacolombiana" />}
+          />
+          <Route path="/pin" element={<PinPage />} />
 
-        {/* Ruta principal protegida */}
-        <Route
-          path="/:shopRoute/app"
-          element={
-            <PrivateRoute>
-              <SessionExpiredDialog />
-              <ConfigLoader />
-              {isMobile ? <MobileDashboard /> : <DesktopTPV />}
-            </PrivateRoute>
-          }
-        />
-        <Route path="/:shopRoute" element={<LoginPage />} />
+          {/* Ruta principal protegida */}
+          <Route
+            path="/:shopRoute/app"
+            element={
+              <PrivateRoute>
+                <SessionExpiredDialog />
+                <ConfigLoader />
+                {isMobile ? <MobileDashboard /> : <DesktopTPV />}
+              </PrivateRoute>
+            }
+          />
+          <Route path="/:shopRoute" element={<LoginPage />} />
 
-        <Route path="*" element={<LoginPage />} />
-      </Routes>
-    </div>
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+      </div>
+      {showVersionUpdate && (
+        <VersionUpdateDialog
+          visible={showVersionUpdate}
+          onUpdate={handleUpdate}
+        />
+      )}
+    </>
   );
 }
 
