@@ -26,7 +26,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const [selectedOrderForStock, setSelectedOrderForStock] = useState(null);
   const [stockData, setStockData] = useState([]);
   const [shops, setShops] = useState([]);
-  const [selectedCells, setSelectedCells] = useState([]);
   const { employeeId, shopId } = useContext(AuthContext);
   const [resultDialogVisible, setResultDialogVisible] = useState(false);
   const [resultDialogMessage, setResultDialogMessage] = useState("");
@@ -36,6 +35,14 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const { configData } = useContext(ConfigContext);
   const employeesDict = useEmployeesDictionary();
   const { selectedClient } = useContext(ClientContext);
+
+  const [controlStockModalVisible, setControlStockModalVisible] =
+    useState(false);
+  const [controlStockData, setControlStockData] = useState([]);
+  const [controlStockShopName, setControlStockShopName] = useState("");
+  const [selectedControlStock, setSelectedControlStock] = useState(null);
+  const [updatedStockSelections, setUpdatedStockSelections] = useState({});
+  const [currentCell, setCurrentCell] = useState(null);
 
   const API_BASE_URL = getApiBaseUrl();
 
@@ -103,16 +110,35 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     setOrderDetailsVisible(true);
   };
 
+  const handleOpenControlStock = (stockRecord, rowIndex, shopId) => {
+    setCurrentCell({ rowIndex, shopId, stockRecord });
+    setControlStockData(stockRecord.control_stock || []);
+    setControlStockShopName(stockRecord.shop_name);
+    setControlStockModalVisible(true);
+  };
+
+  const handleConfirmControlStock = () => {
+    if (currentCell && selectedControlStock) {
+      const key = `${currentCell.rowIndex}-${currentCell.shopId}`;
+      setUpdatedStockSelections((prev) => ({
+        ...prev,
+        [key]: selectedControlStock,
+      }));
+    }
+    setControlStockModalVisible(false);
+    setSelectedControlStock(null);
+    setCurrentCell(null);
+  };
+
   const handleOpenStock = async (order) => {
     console.log("handleOpenStock", order);
     setSelectedOrderForStock(order);
 
-    // Obtener movimientos desde el almacén y filtrar por el id de orden
     const movements = await apiFetch(
       `${API_BASE_URL}/get_warehouse_movements`,
       {
         method: "POST",
-        body: JSON.stringify({}), // Ajustar el body si es necesario
+        body: JSON.stringify({}),
       }
     );
     const relevantMovements = Array.isArray(movements)
@@ -123,7 +149,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       : [];
     console.log("Movimientos relevantes:", relevantMovements);
 
-    // Crear un mapping ean13 => id_shop_origin
     let managedMapping = {};
     if (relevantMovements.length > 0) {
       const movementDetailsResponses = await Promise.all(
@@ -136,7 +161,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
           )
         )
       );
-      // Asumimos que el orden de respuestas coincide con el de relevantMovements
       movementDetailsResponses.forEach((movDetail, index) => {
         const movement = relevantMovements[index];
         if (movDetail && movDetail.movement_details) {
@@ -150,12 +174,11 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
 
     const productsStockData = await Promise.all(
       order.order_details.map(async (detail) => {
-        console.log("detail", detail);
-        // Si el ean13 ya está gestionado, agregar managedShop
         if (managedMapping[detail.product_ean13]) {
           return {
             product_name: detail.product_name,
             id_product: detail.product_id,
+            id_order_detail: detail.id_order_detail,
             id_product_attribute: detail.product_attribute_id,
             product_quantity: detail.product_quantity,
             product_ean13: detail.product_ean13,
@@ -163,15 +186,11 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
             managedShop: managedMapping[detail.product_ean13],
           };
         }
-        // Consulta normal de stock si no está gestionado
         let ean = detail.product_ean13;
         const groups = await stockSearch.handleSearch(ean, true);
-        let stockByShop = {};
+        let stocks = [];
         if (groups && groups.length > 0) {
-          const stocks = groups[0].combinations[0]?.stocks || [];
-          stocks.forEach((s) => {
-            stockByShop[s.id_shop] = (stockByShop[s.id_shop] || 0) + s.quantity;
-          });
+          stocks = groups[0].combinations[0]?.stocks || [];
         }
         return {
           product_name: detail.product_name,
@@ -179,7 +198,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
           id_product_attribute: detail.product_attribute_id,
           product_quantity: detail.product_quantity,
           product_ean13: detail.product_ean13,
-          ...stockByShop,
+          stocks,
         };
       })
     );
@@ -194,23 +213,30 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     }
 
     const shopsMap = {};
-    selectedCells.forEach((cell) => {
-      console.log("cell", cell);
-      const shopId = Number(cell.field);
-      const row = stockData[cell.rowIndex];
+    Object.entries(updatedStockSelections).forEach(([key, controlStock]) => {
+      const [rowIndexStr, shopIdStr] = key.split("-");
+      const shopId = Number(shopIdStr);
+      const rowIndex = Number(rowIndexStr);
+      const row = stockData[rowIndex];
       if (!row) return;
       if (!shopsMap[shopId]) {
         shopsMap[shopId] = { id_shop: shopId, products: [] };
       }
-      // Se usa la cantidad original de la order en lugar de la cantidad de la tienda
       const qty = row.product_quantity;
-      shopsMap[shopId].products.push({
-        ean13: row.product_ean13,
-        quantity: qty,
-        id_product: row.id_product,
-        id_product_attribute: row.id_product_attribute,
-        product_name: row.product_name,
-      });
+      const detail = selectedOrderForStock.order_details.find(
+        (d) => d.product_ean13 === row.product_ean13
+      );
+      if (detail) {
+        shopsMap[shopId].products.push({
+          ean13: detail.product_ean13,
+          id_control_stock: controlStock.id_control_stock,
+          id_order_detail: detail.id_order_detail,
+          quantity: qty,
+          id_product: detail.product_id,
+          id_product_attribute: detail.product_attribute_id,
+          product_name: detail.product_name,
+        });
+      }
     });
     const paymentMethod = selectedOrderForStock.payment.toLowerCase();
     const total_cash = paymentMethod.includes("contra reembolso")
@@ -333,28 +359,119 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     );
   };
 
+  // Agregar nuevos estados para impresión manual
+  const [orderDataForPrint, setOrderDataForPrint] = useState(null);
+  const [manualPdfDataUrl, setManualPdfDataUrl] = useState(null);
+  const [printOptionModalVisible, setPrintOptionModalVisible] = useState(false);
+
+  // Modificar useEffect para imprimir ticket con opción manual
   useEffect(() => {
     if (ticketModalVisible && viewTicketOrderId) {
       (async () => {
+        try {
+          const data = await apiFetch(`${API_BASE_URL}/get_order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id_order: viewTicketOrderId.id_order,
+              origin: viewTicketOrderId.origin,
+            }),
+          });
+          if (!data || !data.order_details) {
+            console.error("Error al recuperar datos del ticket");
+          } else {
+            setOrderDataForPrint(data);
+            const response = await generateTicket(
+              "print",
+              data,
+              configData,
+              employeesDict
+            );
+            if (response.success) {
+              console.log("Ticket impreso remotamente correctamente");
+            } else if (response.manual) {
+              setManualPdfDataUrl(response.pdfDataUrl);
+              setPrintOptionModalVisible(true);
+            } else {
+              console.error("Error al imprimir ticket:", response.message);
+            }
+          }
+        } catch (error) {
+          console.error("Error en la consulta get_order para ticket:", error);
+        } finally {
+          setTicketModalVisible(false);
+          setViewTicketOrderId(null);
+        }
+      })();
+    }
+  }, [
+    ticketModalVisible,
+    viewTicketOrderId,
+    configData,
+    employeesDict,
+    apiFetch,
+    API_BASE_URL,
+  ]);
+
+  // Añadir funciones para impresión manual y reintento
+  const handleManualPrint = () => {
+    if (manualPdfDataUrl) {
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(
+          `<html><head><title>Vista Previa del PDF</title></head>
+           <body style="margin:0">
+             <iframe width="100%" height="100%" src="${manualPdfDataUrl}" frameborder="0"></iframe>
+           </body></html>`
+        );
+        printWindow.document.close();
+        printWindow.focus();
+        setPrintOptionModalVisible(false);
+      } else {
+        console.warn("No se pudo abrir la ventana de previsualización");
+      }
+    }
+  };
+
+  const handleRetryPrint = async () => {
+    if (orderDataForPrint) {
+      try {
         const response = await generateTicket(
           "print",
-          viewTicketOrderId,
+          orderDataForPrint,
           configData,
           employeesDict
         );
-        if (!response.success) {
-          console.error("Error al imprimir ticket:", response.message);
+        if (response.success) {
+          console.log("Reimpresión remota exitosa");
+          setPrintOptionModalVisible(false);
+        } else if (response.manual) {
+          setManualPdfDataUrl(response.pdfDataUrl);
+        } else {
+          console.error(
+            "Error al reintentar imprimir ticket:",
+            response.message
+          );
         }
-        setTicketModalVisible(false);
-      })();
+      } catch (err) {
+        console.error("Error al reintentar impresión:", err);
+      }
     }
-  }, [ticketModalVisible, viewTicketOrderId, configData, employeesDict]);
+  };
 
-  // Añadir la comprobación: si todos los productos están gestionados
   const allProductsManaged =
     stockData.length > 0 && stockData.every((prod) => prod.alreadyManaged);
 
-  // Actualizar el footer del Dialog de gestión de pedido online
+  const allProductsSelected =
+    stockData.length > 0 &&
+    stockData.every(
+      (product, index) =>
+        product.alreadyManaged ||
+        Object.keys(updatedStockSelections).some((key) =>
+          key.startsWith(`${index}-`)
+        )
+    );
+
   const stockDialogFooter = (
     <div className="flex justify-end w-full">
       {allProductsManaged ? (
@@ -364,6 +481,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
           label="Guardar y marcar como gestionado"
           icon="pi pi-check"
           onClick={handleUpdateOnlineOrder}
+          disabled={!allProductsSelected}
         />
       )}
     </div>
@@ -720,65 +838,153 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
           <DataTable
             value={stockData}
             emptyMessage="No hay productos"
-            cellSelection
-            selectionMode="multiple"
-            selection={selectedCells}
-            metaKeySelection={false}
-            dragSelection
             rowClassName={(rowData) =>
               rowData.alreadyManaged ? "p-disabled" : ""
             }
-            onSelectionChange={(e) => {
-              const cells = Array.isArray(e.value) ? e.value : [e.value];
-              const uniqueCells = [];
-              const seenRows = new Set();
-              cells.forEach((cell) => {
-                if (
-                  stockData[cell.rowIndex] &&
-                  stockData[cell.rowIndex].alreadyManaged
-                )
-                  return;
-                if (
-                  cell.field === "product_name" ||
-                  cell.field === "product_quantity"
-                )
-                  return;
-                const rowId = cell.rowIndex;
-                if (!seenRows.has(rowId)) {
-                  seenRows.add(rowId);
-                  uniqueCells.push(cell);
-                }
-              });
-              setSelectedCells(uniqueCells);
-            }}
           >
-            <Column header="Producto" field="product_name" />
-            <Column header="Cantidad" field="product_quantity" />
+            <Column
+              header="Producto"
+              field="product_name"
+              body={(row) => (
+                <span style={{ pointerEvents: "none" }}>
+                  {row.product_name}
+                </span>
+              )}
+            />
+            <Column
+              header="Cantidad"
+              field="product_quantity"
+              body={(row) => (
+                <span style={{ pointerEvents: "none" }}>
+                  {row.product_quantity}
+                </span>
+              )}
+            />
             {shops.map((shop) => (
               <Column
                 key={shop.id_shop}
                 header={shop.name}
                 field={`${shop.id_shop}`}
                 body={(row) => {
-                  const value = row[shop.id_shop] || row.product_quantity
+                  const rowIndex = stockData.indexOf(row);
+                  const cellKey = `${rowIndex}-${shop.id_shop}`;
+                  const rowSelected = Object.keys(updatedStockSelections).some(
+                    (key) => key.startsWith(`${rowIndex}-`)
+                  );
                   if (row.alreadyManaged && row.managedShop === shop.id_shop) {
                     return (
                       <span
-                        className="p-tag p-tag-info"
+                        className="p-tag p-tag-success"
                         style={{
                           fontWeight: "bold",
                           padding: "0.5rem 1rem",
                           borderRadius: "0.5rem",
                         }}
                       >
-                        {value}
+                        {row.product_quantity}
+                      </span>
+                    );
+                  } else if (row.alreadyManaged) {
+                    return "-";
+                  }
+                  const stockRecord = row.stocks
+                    ? row.stocks.find((s) => s.id_shop === shop.id_shop)
+                    : null;
+                  if (!stockRecord) {
+                    return "-";
+                  }
+                  if (updatedStockSelections[cellKey]) {
+                    return (
+                      <span
+                        className="p-tag p-tag-info"
+                        style={{
+                          fontWeight: "bold",
+                          cursor: "default",
+                        }}
+                      >
+                        {row.product_quantity}
                       </span>
                     );
                   }
-                  return '-';
+                  if (rowSelected) {
+                    return (
+                      <span style={{ color: "grey" }}>
+                        {stockRecord.quantity}
+                      </span>
+                    );
+                  }
+                  return (
+                    <span
+                      style={{
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                      }}
+                      onClick={() =>
+                        handleOpenControlStock(
+                          stockRecord,
+                          rowIndex,
+                          shop.id_shop
+                        )
+                      }
+                    >
+                      {stockRecord.quantity}
+                    </span>
+                  );
                 }}
               />
             ))}
+          </DataTable>
+        </div>
+      </Dialog>
+
+      <Dialog
+        header={`Control Stock de ${controlStockShopName}`}
+        visible={controlStockModalVisible}
+        onHide={() => setControlStockModalVisible(false)}
+        modal
+        footer={
+          <div className="flex justify-end w-full">
+            <Button
+              label="Aceptar"
+              onClick={handleConfirmControlStock}
+              disabled={!selectedControlStock}
+            />
+          </div>
+        }
+      >
+        <div>
+          <DataTable
+            value={[
+              ...(controlStockData && controlStockData.length > 0
+                ? controlStockData
+                : []),
+              { id_control_stock: null, active_control_stock: false },
+            ]}
+            selectionMode="single"
+            selection={selectedControlStock}
+            onSelectionChange={(e) => setSelectedControlStock(e.value)}
+            dataKey="id_control_stock"
+          >
+            <Column
+              field="id_control_stock"
+              header="ID Control Stock"
+              body={(row) =>
+                row.id_control_stock === null
+                  ? "Sin seguimiento"
+                  : row.id_control_stock
+              }
+            />
+            <Column
+              field="active_control_stock"
+              header="Activo"
+              body={(row) =>
+                row.id_control_stock === null
+                  ? "No"
+                  : row.active_control_stock
+                  ? "Sí"
+                  : "No"
+              }
+            />
           </DataTable>
         </div>
       </Dialog>
@@ -865,6 +1071,33 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
             </DataTable>
           </div>
         )}
+      </Dialog>
+
+      <Dialog
+        header="Error de impresión"
+        visible={printOptionModalVisible}
+        onHide={() => setPrintOptionModalVisible(false)}
+        modal
+        draggable={false}
+        resizable={false}
+        style={{ marginBottom: "150px" }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <span>
+            La impresión del ticket ha fallado. ¿Deseas imprimirlo manualmente o
+            reintentar?
+          </span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
+            <Button label="Imprimir manual" onClick={handleManualPrint} />
+            <Button label="Reintentar" onClick={handleRetryPrint} />
+          </div>
+        </div>
       </Dialog>
     </>
   );

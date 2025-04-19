@@ -17,6 +17,7 @@ import { Checkbox } from "primereact/checkbox";
 import DiscountModal from "../discount/DiscountModal";
 import ActionResultDialog from "../../common/ActionResultDialog";
 import { ClientContext } from "../../../contexts/ClientContext";
+import { OverlayPanel } from "primereact/overlaypanel";
 
 export default function PricesTags({ isOpen, onHide }) {
   const { shopId, idProfile } = useContext(AuthContext);
@@ -45,6 +46,9 @@ export default function PricesTags({ isOpen, onHide }) {
   );
   const [actionDialogSuccess, setActionDialogSuccess] = useState(true);
   const { selectedClient } = useContext(ClientContext);
+
+  const [nonTrackingOverlayData, setNonTrackingOverlayData] = useState([]);
+  const overlayPanelNonTrackingRef = useRef(null);
 
   const handleDiscountPriceChange = (key, value) => {
     setDiscountPrices((prev) => ({ ...prev, [key]: value }));
@@ -94,21 +98,18 @@ export default function PricesTags({ isOpen, onHide }) {
     }
   };
 
-  const flatProducts = groupedProducts
-    .reduce((acc, group) => {
-      const combos = group.combinations
-        .filter((combo) => Number(combo.id_shop) === Number(shopId))
-        .map((combo) => ({
-          ...combo,
-          fullName: `${group.product_name} ${
-            combo.combination_name || ""
-          }`.trim(),
-        }));
-      return acc.concat(combos);
-    }, [])
-    .sort((a, b) => a.product_name.localeCompare(b.product_name));
-
-  console.log("Productos planos:", flatProducts);
+  // Reemplazamos la construcción de flatProducts usando flatMap para adaptarse al nuevo formato:
+  const flatProducts = groupedProducts.flatMap((group) =>
+    // Sólo se consideran las combinaciones pertenecientes a la tienda actual
+    group.combinations
+      .filter((combo) => Number(combo.id_shop) === Number(shopId))
+      .map((combo) => ({
+        ...combo,
+        fullName: `${group.product_name} ${
+          combo.combination_name || ""
+        }`.trim(),
+      }))
+  );
 
   const productsWithGroup = flatProducts
     .map((product) => ({
@@ -140,11 +141,26 @@ export default function PricesTags({ isOpen, onHide }) {
     }, [])
     .map(({ uniqueKey, ...rest }) => rest);
 
-  const finalTracking = productsWithGroup.filter((p) => p.id_control_stock);
-
-  // Logs de depuración
-  console.log("finalNoTracking:", finalNoTracking);
-  console.log("finalTracking:", finalTracking);
+  const finalTrackingDetailed = productsWithGroup
+    .filter((p) => p.id_control_stock && p.active_control_stock)
+    .flatMap((product) => {
+      if (
+        product.stocks &&
+        product.stocks.length > 0 &&
+        product.stocks[0].control_stock &&
+        product.stocks[0].control_stock.length > 0
+      ) {
+        return product.stocks[0].control_stock
+          .filter((cs) => cs.active_control_stock)
+          .map((cs) => ({
+            ...product,
+            id_control_stock: cs.id_control_stock,
+            active_control_stock: cs.active_control_stock,
+          }));
+      } else {
+        return [product];
+      }
+    });
 
   // Función para abrir el diálogo o llamar directamente para imprimir según el tipo de producto
   const openQuantityDialog = () => {
@@ -625,6 +641,15 @@ export default function PricesTags({ isOpen, onHide }) {
     </div>
   );
 
+  const handleNonTrackingClick = (event, rowData) => {
+    // Aplanar todos los control_stock de cada stock disponible
+    const trackingArr = rowData.stocks
+      ? rowData.stocks.flatMap((stock) => stock.control_stock || [])
+      : [];
+    setNonTrackingOverlayData(trackingArr);
+    overlayPanelNonTrackingRef.current.toggle(event);
+  };
+
   return (
     <>
       <Dialog
@@ -763,17 +788,40 @@ export default function PricesTags({ isOpen, onHide }) {
                         />
                         <Column
                           header="Cantidad"
-                          body={(rowData) => (
-                            <>
-                              {rowData.quantity}
-                              {Number(rowData.trackingCount) > 0
-                                ? ` | ${rowData.trackingCount}`
-                                : ""}
-                              {Number(rowData.trackingCount) > 0 && (
-                                <i className="pi pi-link"></i>
-                              )}
-                            </>
-                          )}
+                          body={(rowData) => {
+                            // Calcular el total de control_stock activos en todas las entradas de stocks
+                            const controlCount = rowData.stocks
+                              ? rowData.stocks.reduce(
+                                  (acc, stock) =>
+                                    acc +
+                                    (stock.control_stock
+                                      ? stock.control_stock.filter(
+                                          (cs) => cs.active_control_stock
+                                        ).length
+                                      : 0),
+                                  0
+                                )
+                              : 0;
+                            return (
+                              <>
+                                {rowData.quantity}
+                                {controlCount > 0 ? ` | ${controlCount}` : ""}
+                                {controlCount > 0 && (
+                                  <i
+                                    className="pi pi-link"
+                                    style={{
+                                      cursor: "pointer",
+                                      marginLeft: "0.5rem",
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleNonTrackingClick(e, rowData);
+                                    }}
+                                  ></i>
+                                )}
+                              </>
+                            );
+                          }}
                           style={{
                             width: "25px",
                             textAlign: "center",
@@ -786,11 +834,11 @@ export default function PricesTags({ isOpen, onHide }) {
                     )}
                   </TabPanel>
                 )}
-                {finalTracking.length > 0 && (
+                {finalTrackingDetailed.length > 0 && (
                   <TabPanel header="Productos con seguimiento">
-                    {finalTracking.length > 0 ? (
+                    {finalTrackingDetailed.length > 0 ? (
                       <DataTable
-                        value={finalTracking}
+                        value={finalTrackingDetailed}
                         selectionMode="multiple"
                         selection={selectedTrackingProducts}
                         onSelectionChange={(e) =>
@@ -896,6 +944,25 @@ export default function PricesTags({ isOpen, onHide }) {
             </>
           )}
         </div>
+
+        <OverlayPanel ref={overlayPanelNonTrackingRef}>
+          {nonTrackingOverlayData.map((item, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="flex items-center">
+                {item.id_control_stock}
+                <i className="pi pi-link" style={{ marginLeft: "0.5rem" }}></i>
+              </span>
+              <i
+                className={`pi ${
+                  item.active_control_stock ? "pi-check" : "pi-times"
+                }`}
+                style={{
+                  color: item.active_control_stock ? "green" : "red",
+                }}
+              ></i>
+            </div>
+          ))}
+        </OverlayPanel>
       </Dialog>
 
       <Dialog

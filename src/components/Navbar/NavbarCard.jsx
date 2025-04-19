@@ -16,6 +16,9 @@ import { InputSwitch } from "primereact/inputswitch";
 import PriceTags from "../modals/tags/PricesTags";
 import PinPage from "../pages/PinPage";
 import { Dialog } from "primereact/dialog";
+import VersionInfoModal from "../modals/session/VersionInfoModal";
+import OnlineOrdersModal from "../modals/online/OnlineOrdersModal";
+import InventoryModal from "../modals/inventory/InventoryModal";
 
 const NavbarCard = () => {
   const navigate = useNavigate();
@@ -37,11 +40,11 @@ const NavbarCard = () => {
 
   const [showPricesTags, setShowPricesTags] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
-
   const [configModalView] = useState("config");
-
-  // Agregamos un estado para la versión
   const [version, setVersion] = useState("");
+  const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
+  const [isOnlineOrdersModalOpen, setOnlineOrdersModalOpen] = useState(false);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
 
   const closeAllModals = () => {
     setTransfersModalOpen(false);
@@ -70,6 +73,11 @@ const NavbarCard = () => {
   const openCashRegister = () => {
     closeAllModals();
     setIsCashRegisterModalOpen(true);
+  };
+
+  const openInventoryModal = () => {
+    closeAllModals();
+    setIsInventoryModalOpen(true);
   };
 
   useEffect(() => {
@@ -109,24 +117,23 @@ const NavbarCard = () => {
       icon: "pi pi-home",
       command: () => navigate(`/${shop.route}/app`),
     },
-
     {
       label: "Gestion stock",
       icon: "pi pi-warehouse",
       command: openTransfers,
     },
-    {
-      label: "Caja",
-      icon: "pi pi-desktop",
-      command: openCashRegister,
-    },
-    {
-      label: "Etiquetas",
-      icon: "pi pi-barcode",
-      command: () => setShowPricesTags(true),
-    },
     ...(idProfile === 1
       ? [
+          {
+            label: "Etiquetas",
+            icon: "pi pi-barcode",
+            command: () => setShowPricesTags(true),
+          },
+          {
+            label: "Pedidos Online",
+            icon: "pi pi-shopping-cart",
+            command: () => setOnlineOrdersModalOpen(true),
+          },
           {
             label: "Reportes",
             icon: "pi pi-chart-bar",
@@ -137,8 +144,18 @@ const NavbarCard = () => {
             icon: "pi pi-key",
             command: () => setIsPinDialogOpen(true),
           },
+          {
+            label: "Inventario",
+            icon: "pi pi-list",
+            command: openInventoryModal,
+          },
         ]
       : []),
+    {
+      label: "Caja",
+      icon: "pi pi-desktop",
+      command: openCashRegister,
+    },
     /*{
       label: "Configuración",
       icon: "pi pi-cog",
@@ -176,7 +193,6 @@ const NavbarCard = () => {
   // Opciones del SplitButton
   const menuItems = [
     {
-      // Opción personalizada con InputSwitch para el tema oscuro
       label: (
         <div className="flex items-center gap-2">
           <span>Tema Oscuro</span>
@@ -185,8 +201,8 @@ const NavbarCard = () => {
       ),
     },
     {
-      // Nuevo item de versión (sin acción)
-      label: <span>Versión TPV: {version || "N/A"}</span>,
+      label: `Versión TPV: ${version || "N/A"}`,
+      command: () => setIsVersionModalOpen(true),
     },
     {
       label: "Cerrar sesión",
@@ -265,6 +281,7 @@ const NavbarCard = () => {
           />
         </PortalOrNormal>
       )}
+
       {/* Modal de Etiquetas */}
       {showPricesTags && (
         <PriceTags
@@ -273,7 +290,7 @@ const NavbarCard = () => {
         />
       )}
 
-      {/* Nuevo Dialog para PinPage */}
+      {/* Modal para PIN */}
       <Dialog
         visible={isPinDialogOpen}
         onHide={() => setIsPinDialogOpen(false)}
@@ -281,15 +298,42 @@ const NavbarCard = () => {
         draggable={false}
         resizable={false}
         style={{
-          width: "20vw",
-          height: "30vh",
-          minWidth: "200px",
-          minHeight: "200px",
+          width: "25vw",
+          height: "35vh",
+          minWidth: "300px",
+          minHeight: "300px",
         }}
       >
-        {/* Se renderiza PinPage dentro del dialog */}
         <PinPage />
       </Dialog>
+
+      {/* Modal de Versión y Resolución */}
+      {isVersionModalOpen && (
+        <VersionInfoModal
+          isOpen={isVersionModalOpen}
+          version={version}
+          onClose={() => setIsVersionModalOpen(false)}
+        />
+      )}
+
+      {/* Modal de Pedidos Online */}
+      {isOnlineOrdersModalOpen && (
+        <PortalOrNormal isInlineMode={isMobile}>
+          <OnlineOrdersModal
+            isOpen
+            onClose={() => setOnlineOrdersModalOpen(false)}
+          />
+        </PortalOrNormal>
+      )}
+
+      {/* Nuevo Dialog para Inventario */}
+      {isInventoryModalOpen && (
+        <InventoryModal
+          isOpen={isInventoryModalOpen}
+          onClose={() => setIsInventoryModalOpen(false)}
+          shop={shop}
+        />
+      )}
     </>
   );
 };

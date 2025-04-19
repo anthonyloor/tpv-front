@@ -46,33 +46,39 @@ const useProductSearch = ({
         quantity: product.quantity,
         id_stock_available: product.id_stock_available,
       };
-      let groupKey;
-      if (strategy === "idcontrolstock") {
-        groupKey = `${product.id_product_attribute || product.id_product}_${
-          product.id_control_stock
-        }`;
-      } else {
-        groupKey = `${product.id_product_attribute || product.id_product}`;
+      if (product.id_control_stock) {
+        productStock.control_stock = productStock.control_stock || [];
+        productStock.control_stock.push({
+          id_control_stock: product.id_control_stock,
+          active_control_stock: product.active_control_stock,
+        });
       }
+      const groupKey = `${product.id_product_attribute || product.id_product}`;
       let group = acc.find((grp) => grp.groupKey === groupKey);
       if (group) {
-        if (strategy !== "idcontrolstock") {
-          let combination = group.combinations.find(
-            (comb) => comb.id_control_stock === product.id_control_stock
+        let combination = group.combinations.find(
+          (comb) =>
+            comb.id_product_attribute === product.id_product_attribute &&
+            comb.id_product === product.id_product
+        );
+        if (combination) {
+          let existingStock = combination.stocks.find(
+            (stock) =>
+              stock.id_stock_available === productStock.id_stock_available
           );
-          if (combination) {
-            combination.stocks.push(productStock);
+          if (existingStock) {
+            existingStock.control_stock = [
+              ...(existingStock.control_stock || []),
+              ...(productStock.control_stock || []),
+            ];
           } else {
-            group.combinations.push({
-              ...product,
-              stocks: [productStock],
-            });
+            combination.stocks.push(productStock);
           }
         } else {
-          let combination = group.combinations.find(
-            (comb) => comb.id_product === product.id_product
-          );
-          combination.stocks.push(productStock);
+          group.combinations.push({
+            ...product,
+            stocks: [productStock],
+          });
         }
       } else {
         acc.push({
@@ -89,6 +95,19 @@ const useProductSearch = ({
       }
       return acc;
     }, []);
+  };
+
+  // Nueva función auxiliar para obtener productos (evita código duplicado)
+  const fetchProducts = async (payload) => {
+    let results = await apiFetch(`${API_BASE_URL}/product_search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return results.map((product) => ({
+      ...product,
+      id_product_attribute: product.id_product_attribute || 0,
+    }));
   };
 
   // Función para agregar el producto al carrito
@@ -230,94 +249,65 @@ const useProductSearch = ({
       return;
     }
 
-    // Expresiones regulares para EAN13
-    const ean13Regex = /^\d{13}$/;
-    const ean13ApostropheRegex = /^(\d{13})(\d+)$/;
+    setIsLoading(true);
+    try {
+      // Expresiones regulares para EAN13 y EAN13 con apóstrofe
+      const ean13Regex = /^\d{13}$/;
+      const ean13ApostropheRegex = /^(\d{13})(\d+)$/;
 
-    // Caso búsqueda por EAN13
-    if (ean13Regex.test(searchTerm)) {
-      setIsLoading(true);
-      try {
-        // Cambiado: enviar JSON en lugar de query param
+      if (ean13Regex.test(searchTerm)) {
         const payload = {
           search_term: searchTerm,
           id_default_group: selectedClient.id_default_group,
         };
-        let results = await apiFetch(`${API_BASE_URL}/product_search`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        let validResults = results
-          .filter(
-            (product) =>
-              product.ean13_combination !== null ||
-              product.ean13_combination_0 !== null
-          )
-          .map((product) => {
-            const { id_control_stock, active_control_stock, ...rest } = product;
-            return rest;
-          });
+        let results = await fetchProducts(payload);
+        let validResults = results.filter(
+          (product) =>
+            product.ean13_combination !== null ||
+            product.ean13_combination_0 !== null
+        );
+        validResults = forStock
+          ? validResults
+          : validResults.map(
+              ({ id_control_stock, active_control_stock, ...rest }) => rest
+            );
+        // Eliminar duplicados
         const uniqueMap = new Map();
-        validResults = validResults.filter((product) => {
-          const key = `${product.id_product}_${product.id_product_attribute}_${product.id_stock_available}_${product.id_shop}`;
-          if (!uniqueMap.has(key)) {
-            uniqueMap.set(key, true);
-            return true;
-          }
-          return false;
-        });
+        validResults = forStock
+          ? validResults
+          : validResults.filter((product) => {
+              const key = `${product.id_product}_${product.id_product_attribute}_${product.id_stock_available}_${product.id_shop}`;
+              if (!uniqueMap.has(key)) {
+                uniqueMap.set(key, true);
+                return true;
+              }
+              return false;
+            });
 
-        console.log("EAN13 search - valid results filtrados:", validResults);
-        const filteredForCurrentShop = filterProductsForShop(
-          validResults,
-          shopId
-        );
-        console.log(
-          "EAN13 search - filtered for current shop (shopId:",
-          shopId,
-          "):",
-          filteredForCurrentShop
-        );
+        console.log("EAN13 search - resultados filtrados:", validResults);
+        const filtered = filterProductsForShop(validResults, shopId);
         const groups = groupProductsByProductName(
-          filteredForCurrentShop,
-          "ean"
+          filtered,
+          forStock ? "idcontrolstock" : "ean"
         );
         console.log("EAN13 search - grouped products:", groups);
-        if (filteredForCurrentShop.length === 1 && !forStock) {
-          addProductToCart(filteredForCurrentShop[0]);
+        if (filtered.length === 1 && !forStock) {
+          addProductToCart(filtered[0]);
           setGroupedProducts([]);
         }
         return groups;
-      } catch (error) {
-        console.error("Error en la búsqueda por EAN13:", error);
-        alert("Error al buscar producto por EAN13. Inténtalo de nuevo.");
-      } finally {
-        setIsLoading(false);
       }
-      return;
-    }
-
-    // Caso búsqueda por EAN13 con apóstrofe
-    if (ean13ApostropheRegex.test(searchTerm)) {
-      setIsLoading(true);
-      try {
+      if (ean13ApostropheRegex.test(searchTerm)) {
         const [, eanCode, controlId] = searchTerm.match(ean13ApostropheRegex);
-        // Cambiado: enviar JSON en lugar de query param
         const payload = {
           search_term: eanCode,
           id_default_group: selectedClient.id_default_group,
         };
-        let results = await apiFetch(`${API_BASE_URL}/product_search`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        let results = await fetchProducts(payload);
         if (results.length === 0) {
           toast.error("Producto no encontrado.");
           return;
         }
-        console.log("EAN13 apostrophe search - results:", results);
         let validResults = results.filter(
           (p) => Number(p.id_control_stock) === Number(controlId)
         );
@@ -325,97 +315,43 @@ const useProductSearch = ({
           toast.error("ID control stock no existe.");
           return;
         }
-        console.log(
-          "EAN13 apostrophe search - validResults tras filtrado:",
-          validResults
-        );
-        const filteredForCurrentShop = filterProductsForShop(
-          validResults,
-          shopId
-        );
-        console.log(
-          "EAN13 apostrophe - filtered for current shop:",
-          filteredForCurrentShop
-        );
-        const prod = groupProductsByProductName(
-          filteredForCurrentShop,
-          "idcontrolstock"
-        );
-        if (
-          filteredForCurrentShop.length === 1 &&
-          filteredForCurrentShop[0].active_control_stock
-        ) {
-          addProductToCart(filteredForCurrentShop[0]);
+        const filtered = filterProductsForShop(validResults, shopId);
+        const groups = groupProductsByProductName(filtered, "idcontrolstock");
+        if (filtered.length === 1 && filtered[0].active_control_stock) {
+          addProductToCart(filtered[0]);
           setGroupedProducts([]);
-          return prod;
+          return groups;
         } else if (validResults.length > 0) {
           if (validResults[0].active_control_stock) {
-            // Mostrar modal/dialog de venta de producto en tienda distinta (control stock activo)
             setForeignProductCandidate(validResults[0]);
             setForeignConfirmDialogOpen(true);
             setGroupedProducts([]);
           } else {
-            // Mostrar dialog de confirmación: "Producto con etiqueta ya vendida. ¿deseas venderlo?"
-            console.log(validResults[0]);
             setSoldLabelProductCandidate(validResults[0]);
             setSoldLabelConfirmDialogOpen(true);
             setGroupedProducts([]);
           }
         } else {
-          const groups = groupProductsByProductName(
-            filteredForCurrentShop,
-            "apostrophe"
-          );
-          console.log("EAN13 apostrophe search - grouped products:", groups);
           setGroupedProducts(groups);
           return groups;
         }
-      } catch (error) {
-        console.error("Error en la búsqueda por EAN13 con apóstrofe:", error);
-        alert(
-          "Error al buscar producto por EAN13 con apóstrofe. Inténtalo de nuevo."
-        );
-      } finally {
-        setIsLoading(false);
       }
-      return;
-    }
 
-    // Búsqueda normal
-    setIsLoading(true);
-    try {
-      // Cambiado: enviar JSON en lugar de query param
+      // Rama búsqueda normal
       const payload = {
         search_term: searchTerm,
         id_default_group: selectedClient.id_default_group,
       };
-      let results = await apiFetch(`${API_BASE_URL}/product_search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      let results = await fetchProducts(payload);
       let validResults = results.filter(isValidProduct);
-      console.log("Búsqueda normal - valid results filtrados:", validResults);
       if (forEan13) {
         const groups = groupProductsByProductName(validResults, "ean");
         console.log("Búsqueda normal - grouped products:", groups);
         setGroupedProducts(groups);
         return groups;
       } else {
-        const filteredForCurrentShop = filterProductsForShop(
-          validResults,
-          shopId
-        );
-        console.log(
-          "Búsqueda normal - filtered for current shop (shopId:",
-          shopId,
-          "):",
-          filteredForCurrentShop
-        );
-        const groups = groupProductsByProductName(
-          filteredForCurrentShop,
-          "ean"
-        );
+        const filtered = filterProductsForShop(validResults, shopId);
+        const groups = groupProductsByProductName(filtered, "ean");
         console.log("Búsqueda normal - grouped products:", groups);
         setGroupedProducts(groups);
         return groups;

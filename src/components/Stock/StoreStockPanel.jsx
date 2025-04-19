@@ -1,17 +1,20 @@
 // src/components/Stock/StoreStockPanel.jsx
 
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import { useApiFetch } from "../../utils/useApiFetch";
 import { AuthContext } from "../../contexts/AuthContext";
-import { Card } from "primereact/card";
 import getApiBaseUrl from "../../utils/getApiBaseUrl";
+import { OverlayPanel } from "primereact/overlaypanel";
 
 function StoreStockPanel({ product }) {
   const apiFetch = useApiFetch();
   const [shops, setShops] = useState([]);
   const [stocksByShop, setStocksByShop] = useState({});
-  const { idProfile } = useContext(AuthContext);
+  const { idProfile, shopId } = useContext(AuthContext);
   const API_BASE_URL = getApiBaseUrl();
+
+  const [trackingList, setTrackingList] = useState([]);
+  const overlayPanelRef = useRef(null);
 
   useEffect(() => {
     apiFetch(`${API_BASE_URL}/shops`, { method: "GET" })
@@ -21,14 +24,16 @@ function StoreStockPanel({ product }) {
           const filtered = data.filter((s) => s.id_shop !== 1);
           setShops(filtered);
         } else {
-          const filtered = data.filter((s) => s.id_shop !== 13 && s.id_shop !== 1);
+          const filtered = data.filter(
+            (s) => s.id_shop === shopId
+          );
           setShops(filtered);
         }
       })
       .catch((err) => console.error("Error al cargar tiendas:", err));
-  }, [apiFetch, idProfile, API_BASE_URL]);
+  }, [apiFetch, idProfile, API_BASE_URL, shopId]);
 
-  // Calcular stocksByShop en base al product.stocks
+  // Calcular stocksByShop según product.stocks
   useEffect(() => {
     if (!product || !product.stocks) {
       setStocksByShop({});
@@ -36,47 +41,78 @@ function StoreStockPanel({ product }) {
     }
     const map = {};
     product.stocks.forEach((s) => {
-      map[s.id_shop] = s.quantity;
+      map[s.id_shop] = s;
     });
     setStocksByShop(map);
   }, [product]);
 
-  // Construir el subtítulo (o parte final) con combination
-  const combinationLabel = product?.combination_name
-    ? ` - ${product.combination_name}`
-    : "";
-
-  // Título principal => si no hay product => Stock de: —
-  const mainTitle = product
-    ? `Stock de: ${product.product_name}${combinationLabel}`
-    : "Stock de: —";
+  // Función para abrir el overlay panel en cada tienda
+  const handleStoreTrackingClick = (event, shopId) => {
+    const stock = product.stocks.find(
+      (s) => Number(s.id_shop) === Number(shopId)
+    );
+    const details = stock && stock.control_stock ? stock.control_stock : [];
+    setTrackingList(details);
+    overlayPanelRef.current.toggle(event);
+  };
 
   return (
     <div
-      className="h-full flex flex-col p-3 relative"
+      className="h-full flex flex-col p-3"
       style={{
         backgroundColor: "var(--surface-0)",
         color: "var(--text-color)",
       }}
     >
-      <span className="font-bold text-lg m-2">{mainTitle}</span>
-      <div className="space-y-2">
-        <div className="flex flex-wrap gap-3">
-          {shops.map((shop) => {
-            const displayName = shop.name;
-            const qty = stocksByShop[shop.id_shop] ?? 0;
-            return (
-              <Card key={shop.id_shop} className="shadow-2 border-round">
-                <div className="flex flex-col gap-1">
-                  <div className="text-lg font-semibold">
-                    {displayName}: {qty}
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+      {/* Grid adaptado con estilo similar a SalesCardActions */}
+      <div className="flex flex-wrap gap-2">
+        {shops.map((shop) => {
+          const displayName = shop.name;
+          const stock = stocksByShop[shop.id_shop];
+          const qty = stock ? stock.quantity : 0;
+          const hasTracking =
+            stock && stock.control_stock && stock.control_stock.length > 0;
+          return (
+            <div
+              key={shop.id_shop}
+              className="justify-center p-3 shadow-2 border-round flex flex-col gap-1 align-items-center"
+              style={{
+                flex: 1,
+                width: "50px",
+                height: "100px",
+              }}
+            >
+              <span className="font-semibold text-lg">{displayName}</span>
+              <span className="mt-1 text-xl font-bold">{qty}</span>
+              {hasTracking && (
+                <i
+                  className="pi pi-link"
+                  style={{ cursor: "pointer" }}
+                  onClick={(e) => handleStoreTrackingClick(e, shop.id_shop)}
+                ></i>
+              )}
+            </div>
+          );
+        })}
       </div>
+      <OverlayPanel ref={overlayPanelRef}>
+              {trackingList.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <span className="flex items-center">
+                    {item.id_control_stock}
+                    <i className="pi pi-link" style={{ marginLeft: "0.5rem" }}></i>
+                  </span>
+                  <i
+                    className={`pi ${
+                      item.active_control_stock ? "pi-check" : "pi-times"
+                    }`}
+                    style={{
+                      color: item.active_control_stock ? "green" : "red",
+                    }}
+                  ></i>
+                </div>
+              ))}
+            </OverlayPanel>
     </div>
   );
 }

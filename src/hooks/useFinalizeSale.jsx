@@ -38,7 +38,9 @@ export default function useFinalizeSale() {
 
       const normalItems = cartItems.filter(
         (it) =>
-          it.id_product !== 0 || it.reference_combination === "rectificacion"
+          it.id_product !== 0 ||
+          it.reference_combination === "rectificacion" ||
+          it.reference_combination.match(/^manual-product-/)
       );
       const factorTax = 1.21;
       const subtotalInclTax = normalItems.reduce(
@@ -208,7 +210,6 @@ export default function useFinalizeSale() {
       // Check if the response contains new_cart_rule_code and update newCartRuleCode
       if (response.new_cart_rule_code) {
         newCartRuleCode = response.new_cart_rule_code;
-        console.log("Nuevo código de vale descuento recibido:", newCartRuleCode);
       }
 
       setIsLoading(false);

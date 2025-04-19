@@ -35,6 +35,11 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   // Nueva variable de estado para origin con valor por defecto "mayret"
   const [selectedOrigin, setSelectedOrigin] = useState("mayret");
 
+  // Nuevos estados para gestionar la impresión manual
+  const [manualPdfDataUrl, setManualPdfDataUrl] = useState(null);
+  const [printOptionModalVisible, setPrintOptionModalVisible] = useState(false);
+  const [orderDataForPrint, setOrderDataForPrint] = useState(null);
+
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
 
@@ -302,6 +307,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       shop_name: "",
       id_shop: 0,
     };
+    console.log("Producto de rectificación:", rectProduct);
     onAddProduct(rectProduct, null, null, false, 1);
 
     // 2) Añadir las líneas con cantidades negativas
@@ -314,6 +320,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
         id_product: prod.product_id,
         id_product_attribute: prod.product_attribute_id,
         id_stock_available: prod.stock_available_id,
+        id_control_stock: prod.id_control_stock,
         product_name: prod.product_name,
         combination_name: prod.combination_name,
         reference_combination: prod.product_reference,
@@ -362,7 +369,6 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     if (viewTicketId) {
       (async () => {
         try {
-          // Se consulta la orden usando id y origin "mayret"
           const data = await apiFetch(`${API_BASE_URL}/get_order`, {
             method: "POST",
             body: JSON.stringify({
@@ -373,20 +379,26 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
           if (!data || !data.order_details) {
             console.error("Error al recuperar datos del ticket");
           } else {
+            setOrderDataForPrint(data);
             const response = await generateTicket(
               "print",
               data,
               configData,
               employeesDict
             );
-            if (!response.success) {
+            if (response.success) {
+              console.log("Ticket impreso correctamente");
+            } else if (response.manual) {
+              setManualPdfDataUrl(response.pdfDataUrl);
+              setPrintOptionModalVisible(true);
+            } else {
               console.error("Error al imprimir ticket:", response.message);
             }
           }
         } catch (err) {
           console.error("Error en la consulta get_order para ticket:", err);
         } finally {
-          setViewTicketId(false);
+          setViewTicketId(null);
         }
       })();
     }
@@ -398,6 +410,53 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     API_BASE_URL,
     apiFetch,
   ]);
+
+  // Función para imprimir manualmente el ticket
+  const handleManualPrint = () => {
+    if (manualPdfDataUrl) {
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(
+          `<html><head><title>Vista Previa del PDF</title></head>
+           <body style="margin:0">
+             <iframe width="100%" height="100%" src="${manualPdfDataUrl}" frameborder="0"></iframe>
+           </body></html>`
+        );
+        printWindow.document.close();
+        printWindow.focus();
+        setPrintOptionModalVisible(false);
+      } else {
+        console.warn("No se pudo abrir la ventana de previsualización");
+      }
+    }
+  };
+
+  // Función para reintentar la impresión
+  const handleRetryPrint = async () => {
+    if (orderDataForPrint) {
+      try {
+        const response = await generateTicket(
+          "print",
+          orderDataForPrint,
+          configData,
+          employeesDict
+        );
+        if (response.success) {
+          console.log("Reimpresión remota exitosa");
+          setPrintOptionModalVisible(false);
+        } else if (response.manual) {
+          setManualPdfDataUrl(response.pdfDataUrl);
+        } else {
+          console.error(
+            "Error al reintentar imprimir ticket:",
+            response.message
+          );
+        }
+      } catch (err) {
+        console.error("Error al reintentar impresión:", err);
+      }
+    }
+  };
 
   // Render
   return (
@@ -500,6 +559,24 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                 selectionMode="multiple"
                 style={{ width: "3rem" }}
                 headerStyle={{ textAlign: "center" }}
+              />
+              <Column
+                field="id_control_stock"
+                headerClassName="pi pi-link"
+                style={{
+                  display: "table-cell",
+                  width: "1%",
+                  textAlign: "center",
+                }}
+                alignHeader={"center"}
+                body={(row) => {
+                  if (isLoading) {
+                    return (
+                      <div className="bg-gray-200 h-3 w-10 ml-auto rounded animate-pulse" />
+                    );
+                  }
+                  return row.id_control_stock;
+                }}
               />
               <Column
                 field="product_name"
@@ -679,6 +756,33 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               disabled={!canProceed}
               onClick={handleAceptar}
             />
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Nuevo Dialog: opciones para reimprimir en caso de error */}
+      <Dialog
+        header="Error de impresión"
+        visible={printOptionModalVisible}
+        onHide={() => setPrintOptionModalVisible(false)}
+        modal
+        draggable={false}
+        resizable={false}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <span>
+            La impresión del ticket ha fallado. ¿Deseas imprimirlo manualmente o
+            reintentar?
+          </span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
+            <Button label="Imprimir manual" onClick={handleManualPrint} />
+            <Button label="Reintentar" onClick={handleRetryPrint} />
           </div>
         </div>
       </Dialog>

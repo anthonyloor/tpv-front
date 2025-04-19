@@ -173,7 +173,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
     if (!canEditProducts) return;
 
     setProductsToTransfer((prev) => {
-      // Si el producto tiene id_control_stock, se impide volver a añadir el mismo
+      // Si el producto tiene id_control_stock, se permite añadir solo una vez
       if (product.id_control_stock) {
         const exists = prev.find(
           (p) =>
@@ -184,35 +184,14 @@ const TransferForm = ({ type, onSave, movementData }) => {
           toast.error("Producto con control de stock ya añadido.");
           return prev;
         }
-        // Para productos con control stock se añade sin combinar cantidades
         setRecentlyAddedId(product.id_product_attribute);
         return [...prev, product];
       }
-
-      // Para productos sin id_control_stock, combinar solo si ya existe otro sin id_control_stock
-      const maxStock = product.stockOrigin;
-      if (type === "entrada") {
-        setRecentlyAddedId(product.id_product_attribute);
-        return [...prev, product];
-      }
-      if (product.quantity > maxStock) {
-        if (idProfile === 1) {
-          toast.warning(
-            `[ADMIN] No hay suficiente stock (${maxStock}). Se ha añadido igualmente.`
-          );
-          setRecentlyAddedId(product.id_product_attribute);
-          return [...prev, product];
-        } else {
-          toast.error("No dispones de más stock para añadir.");
-          return prev;
-        }
-      }
-
+      // Para productos sin control stock, se fusionan usando uniqueId
       const existing = prev.find(
-        (p) =>
-          !p.id_control_stock &&
-          p.id_product_attribute === product.id_product_attribute
+        (p) => !p.id_control_stock && p.uniqueId === product.uniqueId
       );
+      const maxStock = product.stockOrigin;
       if (existing) {
         const newQty = existing.quantity + product.quantity;
         if (newQty > maxStock) {
@@ -222,10 +201,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
             );
             setRecentlyAddedId(product.id_product_attribute);
             return prev.map((p) =>
-              p.id_product_attribute === product.id_product_attribute &&
-              !p.id_control_stock
-                ? { ...p, quantity: newQty }
-                : p
+              p.uniqueId === product.uniqueId ? { ...p, quantity: newQty } : p
             );
           } else {
             toast.error("No dispones de más stock para añadir.");
@@ -234,10 +210,7 @@ const TransferForm = ({ type, onSave, movementData }) => {
         }
         setRecentlyAddedId(product.id_product_attribute);
         return prev.map((p) =>
-          p.id_product_attribute === product.id_product_attribute &&
-          !p.id_control_stock
-            ? { ...p, quantity: newQty }
-            : p
+          p.uniqueId === product.uniqueId ? { ...p, quantity: newQty } : p
         );
       } else {
         setRecentlyAddedId(product.id_product_attribute);
@@ -246,33 +219,33 @@ const TransferForm = ({ type, onSave, movementData }) => {
     });
   };
 
-  const handleQuantityChange = (id_product_attribute, newQty) => {
+  const handleQuantityChange = (uniqueId, newQty) => {
     if (!canEditProducts) return;
-
     setProductsToTransfer((prev) => {
       const found = prev.find(
-        (p) => p.id_product_attribute === id_product_attribute
+        (p) => (p.uniqueId ? p.uniqueId : p.id_product_attribute) === uniqueId
       );
       if (!found) return prev;
       const maxStock = found.stockOrigin;
-
       let val = parseInt(newQty, 10) || 1;
       if (val > maxStock) {
         toast.error("No dispones de más stock para añadir.");
         return prev;
       }
       return prev.map((p) =>
-        p.id_product_attribute === id_product_attribute
+        (p.uniqueId ? p.uniqueId : p.id_product_attribute) === uniqueId
           ? { ...p, quantity: val }
           : p
       );
     });
   };
 
-  const handleRemoveProduct = (id_product_attribute) => {
+  const handleRemoveProduct = (uniqueId) => {
     if (!canEditProducts) return;
     setProductsToTransfer((prev) =>
-      prev.filter((p) => p.id_product_attribute !== id_product_attribute)
+      prev.filter(
+        (p) => (p.uniqueId ? p.uniqueId : p.id_product_attribute) !== uniqueId
+      )
     );
   };
 
@@ -636,12 +609,39 @@ const TransferForm = ({ type, onSave, movementData }) => {
     { field: "action", header: "", body: actionBodyTemplate },
   ];
 
+  // Si es un traspaso nuevo y se han seleccionado ambas tiendas, cambiar el header de "Cantidad" y agregar "Cantidad Destino"
+  if (
+    isNewMovement &&
+    type === "traspaso" &&
+    selectedOriginStore &&
+    selectedDestinationStore
+  ) {
+    productTableColumns[2].header = "Cantidad Origen";
+    productTableColumns.splice(3, 0, {
+      field: "stockDestination",
+      header: "Cantidad Destino",
+      body: (rowData) => rowData.stockDestination ?? 0,
+    });
+  }
+
+  // Si está en estado "en revision" para traspaso se agrega la columna de revisión
+  if (type === "traspaso" && currentStatus.toLowerCase() === "en revision") {
+    productTableColumns.splice(3, 0, {
+      field: "revision",
+      header: "Cantidad revisión",
+      body: revisionBodyTemplate,
+    });
+  }
+
   function quantityBodyTemplate(rowData) {
     return (
       <InputNumber
         value={rowData.quantity}
         onValueChange={(e) =>
-          handleQuantityChange(rowData.id_product_attribute, e.value)
+          handleQuantityChange(
+            rowData.uniqueId ? rowData.uniqueId : rowData.id_product_attribute,
+            e.value
+          )
         }
         min={1}
         disabled={!canEditProducts}
@@ -654,29 +654,32 @@ const TransferForm = ({ type, onSave, movementData }) => {
       <Button
         icon="pi pi-trash"
         className="p-button-rounded p-button-danger"
-        onClick={() => handleRemoveProduct(rowData.id_product_attribute)}
+        onClick={() =>
+          handleRemoveProduct(
+            rowData.uniqueId ? rowData.uniqueId : rowData.id_product_attribute
+          )
+        }
         disabled={!canEditProducts}
       />
     );
   }
 
-  // Agregar nueva función revisionBodyTemplate para Und. revisión
+  // Función para obtener el color verde adaptado al modo claro y oscuro
+  function getAdaptiveGreenStyle(isDarkMode) {
+    return isDarkMode
+      ? { backgroundColor: "#14532d", color: "#d1fae5" } // Verde oscuro para modo oscuro
+      : { backgroundColor: "#d1fae5", color: "#14532d" }; // Verde claro para modo claro
+  }
+
+  // Modificar la función revisionBodyTemplate para usar el color adaptado
   function revisionBodyTemplate(rowData) {
     const revCount = rowData.revision_count || 0;
-    // Si revision_count es igual a la cantidad, se resalta con fondo verde claro
+    const isDarkMode = document.body.classList.contains("p-darkmode"); // Detectar modo oscuro
     const style =
-      revCount === rowData.quantity ? { backgroundColor: "#d1fae5" } : {};
+      revCount === rowData.quantity ? getAdaptiveGreenStyle(isDarkMode) : {};
     return (
       <InputText value={revCount} readOnly className="w-full" style={style} />
     );
-  }
-
-  if (type === "traspaso" && currentStatus.toLowerCase() === "en revision") {
-    productTableColumns.splice(3, 0, {
-      field: "revision",
-      header: "Cantidad revisión",
-      body: revisionBodyTemplate,
-    });
   }
 
   // Diccionario de empleados

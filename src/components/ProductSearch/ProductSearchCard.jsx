@@ -5,6 +5,7 @@ import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useApiFetch } from "../../utils/useApiFetch";
+import { Divider } from "primereact/divider";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
@@ -12,6 +13,7 @@ import { Column } from "primereact/column";
 import useProductSearch from "../../hooks/useProductSearch";
 import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
+import { OverlayPanel } from "primereact/overlaypanel";
 
 const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const { setIsDevolution } = useContext(CartContext);
@@ -20,6 +22,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const searchInputRef = useRef(null);
 
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [trackingList, setTrackingList] = useState([]);
+  const overlayPanelRef = useRef(null);
 
   const { configData } = useContext(ConfigContext);
   const { shopId, idProfile } = useContext(AuthContext);
@@ -43,6 +47,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     );
   };
 
+  const ean13Regex = /^\d{13}$/;
+
   const {
     groupedProducts,
     isLoading,
@@ -61,7 +67,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     handleSoldLabelCancelAdd,
   } = useProductSearch({
     apiFetch,
-    shopId,
+    shopId: ean13Regex.test(searchTerm) ? shopId : "all",
     allowOutOfStockSales,
     onAddProduct: handleAddProductWrapper,
     onAddDiscount,
@@ -98,44 +104,55 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   // Aplanamos y ordenamos los grupos para el DataTable
   const flatProducts = groupedProducts
     .reduce((acc, group) => {
-      const combos = group.combinations.map((combo) => ({
-        ...combo,
-        product_name: group.product_name,
-      }));
+      const combos = group.combinations.map((combo) => {
+        const {
+          active_control_stock,
+          id_control_stock,
+          id_shop,
+          id_stock_available,
+          quantity,
+          shop_name,
+          ...rest
+        } = combo;
+        return {
+          ...rest,
+          product_name: group.product_name,
+        };
+      });
       return acc.concat(combos);
     }, [])
     .sort((a, b) => a.product_name.localeCompare(b.product_name));
 
   // Nuevo mapeo para definir el grupo (sin seguimiento vs con seguimiento)
-  const productsWithGroup = flatProducts
-    .map((product) => ({
-      ...product,
-      group: product.id_control_stock
-        ? "Productos con seguimiento"
-        : "Productos sin seguimiento",
-    }))
+  const finalProducts = flatProducts
+    .map((product) => {
+      const currentStock = product.stocks
+        ? product.stocks.find(
+            (stock) => Number(stock.id_shop) === Number(shopId)
+          )
+        : null;
+      const hasTracking =
+        currentStock &&
+        currentStock.control_stock &&
+        currentStock.control_stock.length > 0;
+      const trackingCount = hasTracking
+        ? currentStock.control_stock.filter((cs) => cs.active_control_stock)
+            .length
+        : 0;
+      return {
+        ...product,
+        group: hasTracking
+          ? "Productos con seguimiento"
+          : "Productos sin seguimiento",
+        trackingCount,
+        // Usar el id_stock_available del stock actual y agregar la lista de control_stock
+        id_stock_available: currentStock
+          ? currentStock.id_stock_available
+          : product.id_stock_available,
+        controlStockList: hasTracking ? currentStock.control_stock : [],
+      };
+    })
     .sort((a, b) => a.group.localeCompare(b.group));
-
-  // Agrupar TODOS los productos (con y sin seguimiento) por clave única
-  const finalProducts = productsWithGroup
-    .reduce((unique, item) => {
-      const key = `${item.id_product}_${item.id_product_attribute}_${
-        item.id_stock_available || ""
-      }`;
-      if (!unique.some((u) => u.uniqueKey === key)) {
-        // Contar los registros con id_control_stock para la misma clave
-        const trackingCount = productsWithGroup.filter((p) => {
-          const pKey = `${p.id_product}_${p.id_product_attribute}_${
-            p.id_stock_available || ""
-          }`;
-          return pKey === key && p.id_control_stock;
-        }).length;
-        const { id_control_stock, active_control_stock, ...rest } = item;
-        unique.push({ ...rest, uniqueKey: key, trackingCount });
-      }
-      return unique;
-    }, [])
-    .map(({ uniqueKey, ...rest }) => rest);
 
   const handleKeyDown = async (event) => {
     if (event.key !== "Enter") return;
@@ -148,6 +165,12 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     }, 100);
   };
 
+  // Función para abrir el overlay panel con los seguimientos
+  const handleTrackingClick = (event, rowData) => {
+    setTrackingList(rowData.controlStockList || []);
+    overlayPanelRef.current.toggle(event);
+  };
+
   return (
     <div
       className="p-3 h-full flex flex-col"
@@ -158,7 +181,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       onClick={handleContainerClick}
     >
       {/* Fila de búsqueda */}
-      <div className="mb-4 flex items-center">
+      <div className="flex items-center">
         <span className="p-input-icon-left w-full">
           <div className="p-input-icon-left">
             <i
@@ -185,6 +208,8 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
         </span>
       </div>
 
+      <Divider style={{ borderColor: "var(--surface-border)" }} />
+
       {/* Tabla de productos */}
       <div className="flex-1 overflow-auto">
         <DataTable
@@ -198,6 +223,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           onRowSelect={onRowSelect}
           dataKey="id_product_attribute"
           scrollable
+          emptyMessage=" "
           tableStyle={{ width: "100%" }}
         >
           <Column
@@ -259,17 +285,32 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           />
           <Column
             header="Cantidad"
-            body={(rowData) => (
-              <>
-                {rowData.quantity}
-                {Number(rowData.trackingCount) > 0
-                  ? ` | ${rowData.trackingCount} `
-                  : ""}
-                {Number(rowData.trackingCount) > 0 && (
-                  <i className="pi pi-link"></i>
-                )}
-              </>
-            )}
+            body={(rowData) => {
+              // Buscar cantidad de la tienda actual. Se asume que shopId es numérico.
+              const currentStock = rowData.stocks
+                ? rowData.stocks.find(
+                    (stock) => stock.id_shop === Number(shopId)
+                  )
+                : null;
+              const displayedQuantity = currentStock
+                ? currentStock.quantity
+                : rowData.quantity;
+              return (
+                <>
+                  {displayedQuantity}
+                  {Number(rowData.trackingCount) > 0
+                    ? ` | ${rowData.trackingCount} `
+                    : ""}
+                  {Number(rowData.trackingCount) > 0 && (
+                    <i
+                      className="pi pi-link"
+                      style={{ cursor: "pointer" }}
+                      onClick={(e) => handleTrackingClick(e, rowData)}
+                    ></i>
+                  )}
+                </>
+              );
+            }}
             style={{
               width: "50px",
               textAlign: "center",
@@ -366,6 +407,25 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
           </div>
         </div>
       </Dialog>
+
+      <OverlayPanel ref={overlayPanelRef}>
+        {trackingList.map((item, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <span className="flex items-center">
+              {item.id_control_stock}
+              <i className="pi pi-link" style={{ marginLeft: "0.5rem" }}></i>
+            </span>
+            <i
+              className={`pi ${
+                item.active_control_stock ? "pi-check" : "pi-times"
+              }`}
+              style={{
+                color: item.active_control_stock ? "green" : "red",
+              }}
+            ></i>
+          </div>
+        ))}
+      </OverlayPanel>
     </div>
   );
 };

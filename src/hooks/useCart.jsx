@@ -116,9 +116,30 @@ export default function useCart(allowOutOfStockSales) {
     forceAdd = false,
     quantity = 1
   ) => {
-    const existingProduct = cartItems.find(
-      (item) => item.id_stock_available === product.id_stock_available
-    );
+    const existingProduct = (() => {
+      if (
+        product.reference_combination &&
+        product.reference_combination.startsWith("manual-product-")
+      ) {
+        return cartItems.find(
+          (item) => item.reference_combination === product.reference_combination
+        );
+      } else if (product.id_control_stock) {
+        // Si se tiene id_control_stock, buscar exactamente por él y el id_stock_available
+        return cartItems.find(
+          (item) =>
+            item.id_control_stock === product.id_control_stock &&
+            item.id_stock_available === product.id_stock_available
+        );
+      } else {
+        // Si no se tiene id_control_stock, buscar sólo entre productos sin id_control_stock
+        return cartItems.find(
+          (item) =>
+            !item.id_control_stock &&
+            item.id_stock_available === product.id_stock_available
+        );
+      }
+    })();
 
     // Si tiene id_control_stock, solo se permite añadirlo una vez
     if (product.id_control_stock) {
@@ -185,43 +206,42 @@ export default function useCart(allowOutOfStockSales) {
     });
   };
 
-  const handleDecreaseProduct = (idStockAvailable) => {
+  const handleDecreaseProduct = (id) => {
     setCartItems((prevItems) =>
       prevItems
         .map((item) =>
-          item.id_stock_available === idStockAvailable
-            ? { ...item, quantity: item.quantity - 1 }
-            : item
+          getRow(item) === id ? { ...item, quantity: item.quantity - 1 } : item
         )
         .filter((item) => item.quantity > 0)
     );
     setLastAction({
-      id: idStockAvailable,
+      id,
       action: "decrease",
       timestamp: Date.now(),
     });
   };
 
-  const handleRemoveProduct = (idStockAvailable) => {
-    const product = cartItems.find(
-      (item) => item.id_stock_available === idStockAvailable
-    );
+  const handleRemoveProduct = (id) => {
+    const product = cartItems.find((item) => getRow(item) === id);
     if (
       isDevolution &&
       (product?.reference_combination === "rectificacion" ||
         product?.quantity < 0)
     ) {
-      // Si se elimina un producto devolutivo, se limpia todo el carrito y se restablece el modo devolución
       setCartItems([]);
       setIsDevolution(false);
       setIsDiscount(false);
     } else {
       setCartItems((prevItems) =>
-        prevItems.filter((item) => item.id_stock_available !== idStockAvailable)
+        prevItems.filter((item) => getRow(item) !== id)
       );
       setIsDiscount(false);
     }
   };
+
+  // Función helper local para obtener el key único en useCart
+  const getRow = (item) =>
+    item.id_control_stock ? item.id_control_stock : item.id_stock_available;
 
   return {
     cartItems,

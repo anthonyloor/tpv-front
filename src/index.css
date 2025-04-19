@@ -91,3 +91,7 @@ code {
 .p-datatable .p-datatable-footer {
   padding: 0rem 0.3rem 0rem 0rem !important;
 }
+
+.p-column-filter-clear-button.p-link.p-hidden-space {
+  display: none !important;
+}

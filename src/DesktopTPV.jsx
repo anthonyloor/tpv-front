@@ -9,7 +9,6 @@ import SalesCardActions from "./components/Sales/SalesCardActions";
 import StoreStockPanel from "./components/Stock/StoreStockPanel";
 import useCart from "./hooks/useCart";
 import useDiscounts from "./hooks/useDiscounts";
-import { useIsCompact } from "./utils/responsive";
 
 function DesktopTPV() {
   const { configData } = useContext(ConfigContext);
@@ -50,7 +49,6 @@ function DesktopTPV() {
     },
     []
   );
-  const isCompact = useIsCompact();
 
   return (
     <div className="flex flex-col h-screen overflow-hidden p-2 gap-2">
@@ -59,7 +57,7 @@ function DesktopTPV() {
       </header>
       <main className="flex flex-col flex-1 gap-2 overflow-auto">
         <div className="flex-1 flex overflow-hidden rounded gap-2">
-          <div className={`flex-1 flex-col ${isCompact ? 'w-[42%]' : 'w-[33%]'} shadow rounded overflow-hidden`}>
+          <div className="flex-1 flex-col w-[35%] shadow rounded overflow-hidden">
             <SalesCard
               cartItems={cartItems}
               setCartItems={setCartItems}
@@ -77,7 +75,7 @@ function DesktopTPV() {
               onTotalsChange={handleTotalsChange}
             />
           </div>
-          <div className={`flex-2 flex-col ${isCompact ? 'w-[57%]' : 'w-[67%]'} rounded shadow overflow-hidden`}>
+          <div className="flex-2 flex-col w-[65%] rounded shadow overflow-hidden">
             <ProductSearchCard
               onAddProduct={handleAddProduct}
               onAddDiscount={addDiscount}
@@ -87,7 +85,7 @@ function DesktopTPV() {
         </div>
       </main>
       <footer className="flex-none flex gap-2 overflow-auto rounded">
-        <div className={`flex-1 flex-col ${isCompact ? 'w-[42%]' : 'w-[33%]'} shadow rounded overflow-hidden`}>
+        <div className="flex-1 flex-col w-[35%] shadow rounded overflow-hidden">
           <SalesCardActions
             cartItems={cartItems}
             setCartItems={setCartItems}
@@ -103,7 +101,7 @@ function DesktopTPV() {
             totalDiscounts={totals.totalDiscounts}
           />
         </div>
-        <div className={`flex-2 flex-col ${isCompact ? 'w-[57%]' : 'w-[67%]'} rounded shadow overflow-hidden`}>
+        <div className="flex-2 flex-col w-[65%] rounded shadow overflow-hidden">
           <StoreStockPanel product={selectedProductForStock} />
         </div>
       </footer>

@@ -15,14 +15,14 @@ import { InputNumber } from "primereact/inputnumber";
 import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
 import { useIsCompact } from "../../utils/responsive";
-import OnlineOrdersModal from "../modals/online/OnlineOrdersModal";
-import generateTicket from "../..//utils/ticket";
+import generateTicket from "../../utils/ticket";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { useEmployeesDictionary } from "../../hooks/useEmployeesDictionary";
 import getApiBaseUrl from "../../utils/getApiBaseUrl";
 import { useApiFetch } from "../../utils/useApiFetch";
 import { openCashRegister } from "../../utils/ticket";
-import { generateDiscountVoucherTicket } from "../..//utils/ticket";
+import { generateDiscountVoucherTicket } from "../../utils/ticket";
+import ManualProductModal from "../modals/manual/ManualProductModal";
 
 function SalesCardActions({
   cartItems,
@@ -69,7 +69,7 @@ function SalesCardActions({
   const [giftTicketTM, setGiftTicketTM] = useState(false);
   const [cartRuleModalOpen, setCartRuleModalOpen] = useState(false);
   const [newCartRuleCode, setNewCartRuleCode] = useState(null);
-  const [isOnlineOrdersModalOpen, setIsOnlineOrdersModalOpen] = useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const apiFetch = useApiFetch();
 
   // Métodos de pago
@@ -145,7 +145,7 @@ function SalesCardActions({
   const openReprintModal = () => setIsReprintModalOpen(true);
   const closeReprintModal = () => setIsReprintModalOpen(false);
   const handleAddManual = () => {
-    toast.success("Producto añadido manualmente");
+    setIsManualModalOpen(true);
   };
 
   const handleDescuentoClick = () => {
@@ -343,7 +343,7 @@ function SalesCardActions({
       setSelectedMethods((prev) => [...prev, method]);
       if (["efectivo", "tarjeta", "bizum"].includes(method)) {
         const remain = isRectification
-          ? Math.abs(total)
+          ? total
           : Math.max(0, total) - totalEntered;
         // Limitar al monto original disponible para este método, si existe
         const available = originalPaymentAmounts[method]
@@ -571,10 +571,8 @@ function SalesCardActions({
 
   // Definir los labels originales
   const labels = {
-    pedidos: "Pedidos Online",
     devoluciones: "Devoluciones",
     reimprimir: "Reimprimir",
-    anadir: "Añadir Manual",
     descuento: "Descuento",
     finalizar: "Finalizar Venta",
   };
@@ -762,65 +760,78 @@ function SalesCardActions({
     >
       {/* Primera fila de botones */}
       <div className="flex gap-2">
-        {idProfile === 1 && (
-          <Button
-            label={isCompact ? "" : labels.pedidos}
-            icon="pi pi-shopping-cart"
-            className={isCompact ? "p-button-icon-only w-full" : "w-full"}
-            onClick={() => setIsOnlineOrdersModalOpen(true)}
-          />
-        )}
         <Button
           label={isCompact ? "" : labels.devoluciones}
           icon="pi pi-undo"
-          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
+          className={`p-button w-full ${isCompact ? "p-button-icon-only" : ""}`}
+          style={{
+            flex: 1,
+            width: "50px",
+            height: "50px",
+          }}
           onClick={openReturnsModal}
-        />
-        <Button
-          label={isCompact ? "" : labels.reimprimir}
-          icon="pi pi-print"
-          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
-          onClick={openReprintModal}
-        />
-      </div>
-      {/* Segunda fila de botones */}
-      <div className="flex gap-2 mt-2">
-        <Button
-          label={isCompact ? "" : labels.anadir}
-          icon="pi pi-plus"
-          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
-          onClick={handleAddManual}
         />
         <Button
           label={isCompact ? "" : labels.descuento}
           icon="pi pi-percentage"
-          className={isCompact ? "p-button-icon-only w-full" : "w-full"}
+          className={`p-button w-full ${isCompact ? "p-button-icon-only" : ""}`}
+          style={{
+            flex: 1,
+            width: "50px",
+            height: "50px",
+          }}
           onClick={handleDescuentoClick}
         />
+        <Button
+          label={isCompact ? "" : labels.reimprimir}
+          icon="pi pi-print"
+          className={`p-button w-full ${isCompact ? "p-button-icon-only" : ""}`}
+          style={{
+            flex: 1,
+            width: "50px",
+            height: "50px",
+          }}
+          onClick={openReprintModal}
+        />
       </div>
+
+      {/* Botones agrupados en una fila de 3 columnas */}
       <div className="flex gap-2 mt-2">
         <Button
           label={
             isCompact ? "" : isLoading ? "Procesando..." : labels.finalizar
           }
           icon="pi pi-check"
-          className={
-            isCompact
-              ? "p-button-primary w-full p-button-icon-only"
-              : "p-button-primary w-full"
-          }
-          style={{ fontSize: "1.25rem" }}
+          className={`p-button-primary w-full ${
+            isCompact ? "p-button-icon-only" : ""
+          }`}
+          style={{
+            flex: 1,
+            height: "50px",
+            fontSize: "1.25rem",
+          }}
           disabled={cartItems.length === 0 || isLoading}
           onClick={handleFinalSale}
         />
         <Button
+          icon="pi pi-plus"
+          tooltip="Añadir manualmente"
+          tooltipOptions={{ position: "top" }}
+          className={`p-button-icon-only p-button-sm`}
+          style={{ width: "50px" }}
+          onClick={handleAddManual}
+        />
+        <Button
           icon="pi pi-inbox"
-          className="p-button-icon-only p-button-sm"
-          style={{ width: "40px" }}
+          tooltip="Abrir caja"
+          tooltipOptions={{ position: "top" }}
+          className={`p-button-icon-only p-button-sm`}
+          style={{ width: "50px" }}
           disabled={isLoading}
           onClick={handleOpenCashRegister}
         />
       </div>
+
       {/* Dialog: Finalizar Venta */}
       <Dialog
         header="Finalizar Venta"
@@ -954,7 +965,8 @@ function SalesCardActions({
             className="p-button-success mt-3"
             style={{ padding: "1rem", fontSize: "1.125rem" }}
             disabled={
-              (Math.max(0, displayTotal) > 0 &&
+              (!isRectification &&
+                Math.max(0, displayTotal) > 0 &&
                 totalEntered < Math.max(0, displayTotal)) ||
               isLoading
             }
@@ -988,13 +1000,11 @@ function SalesCardActions({
         targetProduct={selectedProductForDiscount}
         cartTotal={total}
       />
-      {/* Modal de Pedidos Online */}
-      {isOnlineOrdersModalOpen && (
-        <OnlineOrdersModal
-          isOpen={isOnlineOrdersModalOpen}
-          onClose={() => setIsOnlineOrdersModalOpen(false)}
-        />
-      )}
+      <ManualProductModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        onAddProduct={handleAddProduct}
+      />
       <Dialog
         header="Error de impresión"
         visible={printOptionModalVisible}

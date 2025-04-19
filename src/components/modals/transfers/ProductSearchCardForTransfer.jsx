@@ -69,11 +69,7 @@ const ProductSearchCardForTransfer = ({
   // Definir shopId para la búsqueda: para "entrada" se usa selectedDestinationStore; para "salida"/"traspaso" se usa selectedOriginStore.
   const searchShopId =
     type === "entrada" ? selectedDestinationStore : selectedOriginStore;
-  const {
-    groupedProducts,
-    isLoading: searchHookLoading,
-    handleSearch: productSearch,
-  } = useProductSearch({
+  const { handleSearch: productSearch } = useProductSearch({
     apiFetch,
     shopId: searchShopId,
     allowOutOfStockSales: true,
@@ -135,7 +131,7 @@ const ProductSearchCardForTransfer = ({
     }
   };
 
-  // “Map” para asociar stock de origen y destino
+  // “Map” para asociar stock de origen y destino usando el array stocks
   const transformProductsForTransfer = (apiResults) => {
     const map = {};
     apiResults.forEach((prod) => {
@@ -144,22 +140,34 @@ const ProductSearchCardForTransfer = ({
         map[key] = {
           id_product: prod.id_product,
           id_product_attribute: prod.id_product_attribute,
-          product_name: prod.product_name,
+          product_name: prod.combination_name
+            ? `${prod.reference_combination} - ${prod.combination_name}`
+            : prod.product_name,
           combination_name: prod.combination_name,
           reference_combination: prod.reference_combination,
           ean13: prod.ean13_combination || prod.ean13_combination_0 || "",
           stockOrigin: 0,
           stockDestination: 0,
+          originControlStock: [],
+          destinationControlStock: [],
           id_control_stock: prod.id_control_stock,
         };
       }
-      // Stock de Origen
-      if (String(prod.id_shop) === String(selectedOriginStore)) {
-        map[key].stockOrigin = prod.quantity ?? 0;
-      }
-      // Stock de Destino
-      if (String(prod.id_shop) === String(selectedDestinationStore)) {
-        map[key].stockDestination = prod.quantity ?? 0;
+      if (prod.stocks && Array.isArray(prod.stocks)) {
+        const originStock = prod.stocks.find(
+          (s) => String(s.id_shop) === String(selectedOriginStore)
+        );
+        const destStock = prod.stocks.find(
+          (s) => String(s.id_shop) === String(selectedDestinationStore)
+        );
+        if (originStock) {
+          map[key].stockOrigin = originStock.quantity;
+          map[key].originControlStock = originStock.control_stock || [];
+        }
+        if (destStock) {
+          map[key].stockDestination = destStock.quantity;
+          map[key].destinationControlStock = destStock.control_stock || [];
+        }
       }
     });
     return Object.values(map);
@@ -171,11 +179,15 @@ const ProductSearchCardForTransfer = ({
       const item = {
         id_product: prod.id_product,
         id_product_attribute: prod.id_product_attribute,
-        product_name: `${prod.product_name} ${prod.combination_name}`,
+        uniqueId: prod.id_control_stock
+          ? prod.id_control_stock
+          : prod.id_product_attribute,
+        product_name: prod.product_name,
         reference_combination: prod.reference_combination,
         ean13: prod.ean13,
         id_control_stock: prod.id_control_stock,
         stockOrigin: prod.stockOrigin,
+        stockDestination: prod.stockDestination,
         quantity: 1,
       };
       onAddProduct(item);

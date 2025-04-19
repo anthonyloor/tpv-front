@@ -213,10 +213,10 @@ function SalesCard({
   ]);
 
   // Función para quitar descuento aplicado a un producto y eliminar el descuento en appliedDiscounts
-  const removeProductDiscount = (idStockAvailable) => {
+  const removeProductDiscount = (uniqueId) => {
     setCartItems((prevItems) =>
       prevItems.map((item) =>
-        item.id_stock_available === idStockAvailable
+        getRowKey(item) === uniqueId
           ? {
               ...item,
               reduction_amount_tax_incl: 0, // se establece a 0
@@ -226,9 +226,7 @@ function SalesCard({
           : item
       )
     );
-    const product = cartItems.find(
-      (item) => item.id_stock_available === idStockAvailable
-    );
+    const product = cartItems.find((item) => getRowKey(item) === uniqueId);
     if (product) {
       // Utilizamos id_product y id_product_attribute para formar el identificador, en minúsculas
       const identifier =
@@ -280,7 +278,7 @@ function SalesCard({
         tooltipOptions={{ position: "right" }}
         icon="pi pi-times"
         className="p-button p-button-text"
-        onClick={() => onRemoveProduct(rowData.id_stock_available)}
+        onClick={() => onRemoveProduct(getRowKey(rowData))}
       />
     );
   };
@@ -301,7 +299,7 @@ function SalesCard({
           className="p-button-rounded p-button-danger p-button-text"
           tooltip="Quitar descuento"
           tooltipOptions={{ position: "right" }}
-          onClick={() => removeProductDiscount(data.id_stock_available)}
+          onClick={() => removeProductDiscount(getRowKey(data))}
         />
       </div>
     </div>
@@ -310,10 +308,7 @@ function SalesCard({
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const handleRowClick = (e) => {
-    if (
-      selectedProduct &&
-      selectedProduct.id_stock_available === e.data.id_stock_available
-    ) {
+    if (selectedProduct && getRowKey(selectedProduct) === getRowKey(e.data)) {
       setSelectedProduct(null);
       setSelectedProductForDiscount(null);
     } else {
@@ -332,7 +327,7 @@ function SalesCard({
   useEffect(() => {
     if (recentlyAddedId) {
       const newProd = cartItems.find(
-        (item) => item.id_stock_available === recentlyAddedId
+        (item) => getRowKey(item) === recentlyAddedId
       );
       if (newProd) {
         setSelectedProduct(newProd);
@@ -342,8 +337,7 @@ function SalesCard({
 
   // Función para definir clase en la fila seleccionada
   const rowClassName = (data) =>
-    selectedProduct &&
-    data.id_stock_available === selectedProduct.id_stock_available
+    selectedProduct && getRowKey(data) === getRowKey(selectedProduct)
       ? "selected-row"
       : "";
 
@@ -354,6 +348,16 @@ function SalesCard({
 
   // Agregar antes del return la obtención del descuento global (solo se permite uno)
   const globalDiscount = globalDiscounts.length > 0 ? globalDiscounts[0] : null;
+
+  // Agregar función helper para obtener el key único
+  const getRowKey = (item) =>
+    item.id_control_stock ? item.id_control_stock : item.id_stock_available;
+
+  // Generar una lista con key dinámica para la DataTable
+  const cartItemsWithKey = cartItems.map((item) => ({
+    ...item,
+    uniqueId: getRowKey(item),
+  }));
 
   return (
     <div
@@ -412,252 +416,252 @@ function SalesCard({
       <Divider style={{ borderColor: "var(--surface-border)" }} />
 
       <div className="flex-1 overflow-auto relative">
-        {cartItems.length > 0 ? (
-          <>
-            <DataTable
-              value={cartItems}
-              dataKey="id_stock_available"
-              expandedRows={expandedRows}
-              rowExpansionTemplate={rowExpansionTemplate}
-              selectionMode="single"
-              selection={selectedProduct}
-              onRowClick={handleRowClick}
-              rowClassName={rowClassName}
-              className="custom-cell-padding"
-              footer={
-                globalDiscount ? (
-                  <div className="p-datatable-footer flex justify-between items-center">
-                    <span>
-                      Descuento de{" "}
-                      {globalDiscount.reduction_percent
-                        ? `${globalDiscount.reduction_percent}%`
-                        : `${globalDiscount.reduction_amount} €`}{" "}
-                      sobre la venta
-                    </span>
-                    <Button
-                      icon="pi pi-times"
-                      className="p-button-rounded p-button-danger p-button-text"
-                      tooltip="Quitar descuento global"
-                      onClick={removeGlobalDiscount}
-                    />
-                  </div>
-                ) : null
-              }
-            >
-              <Column
-                header=""
-                body={(rowData) => (
-                  <i
-                    className={
-                      rowData.id_stock_available ===
-                      selectedProduct?.id_stock_available
-                        ? "pi pi-circle-on"
-                        : "pi pi-circle-off"
-                    }
-                  />
-                )}
-                style={{ width: "1%", textAlign: "center" }}
-              />
-              <Column
-                body={(rowData) => {
-                  const hasCombination =
-                    rowData.product_name.includes("Talla") &&
-                    rowData.product_name.includes("Color");
-                  if (
-                    hasCombination &&
-                    rowData.reference_combination &&
-                    (!rowData.combination_name ||
-                      rowData.combination_name === null)
-                  ) {
-                    const colorMatch =
-                      rowData.product_name.match(/Color\s*:\s*([^-]+)/);
-                    const sizeMatch =
-                      rowData.product_name.match(/Talla\s*:\s*(\S+)/);
-                    // Eliminar coma final en cada campo
-                    const color = colorMatch
-                      ? colorMatch[1].trim().replace(/,$/, "")
-                      : "";
-                    const size = sizeMatch
-                      ? sizeMatch[1].trim().replace(/,$/, "")
-                      : "";
-                    return `${rowData.reference_combination} - ${color} - ${size}`;
-                  }
-                  return rowData.product_name;
-                }}
-                header="Producto"
-                style={{ width: "50%" }}
-              />
-              <Column
-                header="Precio Und"
-                body={(rowData) => {
-                  if (rowData.reference_combination === "rectificacion")
-                    return "-";
-                  if (isDevolution) {
-                    const originalPrice = rowData.price_incl_tax;
-                    if (
-                      rowData.reduction_amount_tax_incl &&
-                      rowData.reduction_amount_tax_incl !== 0 &&
-                      rowData.reduction_amount_tax_incl < originalPrice
-                    ) {
-                      return (
-                        <div>
-                          <span
-                            style={{
-                              textDecoration: "line-through",
-                              fontSize: "0.85em",
-                              opacity: "0.8",
-                            }}
-                          >
-                            {originalPrice.toFixed(2)} €
-                          </span>
-                          <br />
-                          <span
-                            style={{
-                              color: "var(--red-500)",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            {rowData.reduction_amount_tax_incl.toFixed(2)} €
-                          </span>
-                        </div>
-                      );
-                    } else {
-                      return `${originalPrice.toFixed(2)} €`;
-                    }
-                  } else {
-                    const originalPrice = rowData.final_price_incl_tax;
-                    if (
-                      rowData.discountApplied &&
-                      rowData.reduction_amount_tax_incl < originalPrice
-                    ) {
-                      return (
-                        <div>
-                          <span
-                            style={{
-                              textDecoration: "line-through",
-                              fontSize: "0.85em",
-                              opacity: "0.8",
-                            }}
-                          >
-                            {originalPrice.toFixed(2)} €
-                          </span>
-                          <br />
-                          <span
-                            style={{
-                              color: "var(--red-500)",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            {rowData.reduction_amount_tax_incl.toFixed(2)} €
-                          </span>
-                        </div>
-                      );
-                    } else {
-                      return `${originalPrice.toFixed(2)} €`;
-                    }
-                  }
-                }}
-                style={{ width: "15%", textAlign: "center" }}
-              />
-              <Column
-                header="Total"
-                body={(rowData) => {
-                  if (rowData.reference_combination === "rectificacion")
-                    return "-";
-                  if (isDevolution) {
-                    const originalTotal =
-                      rowData.price_incl_tax * rowData.quantity;
-                    if (
-                      rowData.reduction_amount_tax_incl &&
-                      rowData.reduction_amount_tax_incl !== 0 &&
-                      rowData.reduction_amount_tax_incl < rowData.price_incl_tax
-                    ) {
-                      const discountedTotal =
-                        rowData.reduction_amount_tax_incl * rowData.quantity;
-                      return (
-                        <div>
-                          <span
-                            style={{
-                              textDecoration: "line-through",
-                              fontSize: "0.85em",
-                              opacity: "0.8",
-                            }}
-                          >
-                            {originalTotal.toFixed(2)} €
-                          </span>
-                          <br />
-                          <span
-                            style={{
-                              color: "var(--red-500)",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            {discountedTotal.toFixed(2)} €
-                          </span>
-                        </div>
-                      );
-                    } else {
-                      return `${originalTotal.toFixed(2)} €`;
-                    }
-                  } else {
-                    const unitPrice = Number(rowData.final_price_incl_tax);
-                    const originalTotal = unitPrice * rowData.quantity;
-                    const discountedTotal =
-                      Number(rowData.reduction_amount_tax_incl) *
-                      rowData.quantity;
-                    if (
-                      rowData.discountApplied &&
-                      rowData.reduction_amount_tax_incl <
-                        rowData.final_price_incl_tax
-                    ) {
-                      return (
-                        <div>
-                          <span
-                            style={{
-                              textDecoration: "line-through",
-                              fontSize: "0.85em",
-                              opacity: "0.8",
-                            }}
-                          >
-                            {originalTotal.toFixed(2)} €
-                          </span>
-                          <br />
-                          <span
-                            style={{
-                              color: "var(--red-500)",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            {discountedTotal.toFixed(2)} €
-                          </span>
-                        </div>
-                      );
-                    } else {
-                      return `${originalTotal.toFixed(2)} €`;
-                    }
-                  }
-                }}
-                style={{ width: "15%", textAlign: "center" }}
-              />
-              <Column
-                field="quantity"
-                header="Cant."
-                body={(rowData) =>
-                  rowData.reference_combination === "rectificacion"
-                    ? "-"
-                    : rowData.quantity
+        <DataTable
+          value={cartItemsWithKey}
+          dataKey="uniqueId"
+          expandedRows={expandedRows}
+          rowExpansionTemplate={rowExpansionTemplate}
+          selectionMode="single"
+          selection={selectedProduct}
+          onRowClick={handleRowClick}
+          rowClassName={rowClassName}
+          className="custom-cell-padding"
+          emptyMessage=" "
+          footer={
+            globalDiscount ? (
+              <div className="p-datatable-footer flex justify-between items-center">
+                <span>
+                  Descuento de{" "}
+                  {globalDiscount.reduction_percent
+                    ? `${globalDiscount.reduction_percent}%`
+                    : `${globalDiscount.reduction_amount} €`}{" "}
+                  sobre la venta
+                </span>
+                <Button
+                  icon="pi pi-times"
+                  className="p-button-rounded p-button-danger p-button-text"
+                  tooltip="Quitar descuento global"
+                  onClick={removeGlobalDiscount}
+                />
+              </div>
+            ) : null
+          }
+        >
+          <Column
+            body={(rowData) => (
+              <i
+                className={
+                  rowData.id_stock_available ===
+                  selectedProduct?.id_stock_available
+                    ? "pi pi-circle-on"
+                    : "pi pi-circle-off"
                 }
-                style={{ width: "1%", textAlign: "center" }}
               />
-              <Column
-                body={actionBodyTemplate}
-                style={{ width: "1%", textAlign: "center" }}
-              />
-            </DataTable>
-          </>
-        ) : (
-          <p>No hay productos en el ticket.</p>
-        )}
+            )}
+            style={{ width: "1%", textAlign: "center" }}
+            alignHeader={"center"}
+          />
+          <Column
+            field="id_control_stock"
+            headerClassName="pi pi-link"
+            style={{ display: "table-cell", width: "1%", textAlign: "center" }}
+            alignHeader={"center"}
+          />
+          <Column
+            body={(rowData) => {
+              const hasCombination =
+                rowData.product_name.includes("Talla") &&
+                rowData.product_name.includes("Color");
+              if (
+                hasCombination &&
+                rowData.reference_combination &&
+                (!rowData.combination_name || rowData.combination_name === null)
+              ) {
+                const colorMatch =
+                  rowData.product_name.match(/Color\s*:\s*([^-]+)/);
+                const sizeMatch =
+                  rowData.product_name.match(/Talla\s*:\s*(\S+)/);
+                const color = colorMatch
+                  ? colorMatch[1].trim().replace(/,$/, "")
+                  : "";
+                const size = sizeMatch
+                  ? sizeMatch[1].trim().replace(/,$/, "")
+                  : "";
+                return `${rowData.reference_combination} - ${color} - ${size}`;
+              }
+              return rowData.product_name;
+            }}
+            header="Producto"
+            style={{ width: "40%", textAlign: "left" }}
+            alignHeader={"left"}
+          />
+          <Column
+            header="Precio Und"
+            body={(rowData) => {
+              if (rowData.reference_combination === "rectificacion") return "-";
+              if (isDevolution) {
+                const originalPrice = rowData.price_incl_tax;
+                if (
+                  rowData.reduction_amount_tax_incl &&
+                  rowData.reduction_amount_tax_incl !== 0 &&
+                  rowData.reduction_amount_tax_incl < originalPrice
+                ) {
+                  return (
+                    <div>
+                      <span
+                        style={{
+                          textDecoration: "line-through",
+                          fontSize: "0.85em",
+                          opacity: "0.8",
+                        }}
+                      >
+                        {originalPrice.toFixed(2)} €
+                      </span>
+                      <br />
+                      <span
+                        style={{
+                          color: "var(--red-500)",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {rowData.reduction_amount_tax_incl.toFixed(2)} €
+                      </span>
+                    </div>
+                  );
+                } else {
+                  return `${originalPrice.toFixed(2)} €`;
+                }
+              } else {
+                const originalPrice = rowData.final_price_incl_tax;
+                if (
+                  rowData.discountApplied &&
+                  rowData.reduction_amount_tax_incl < originalPrice
+                ) {
+                  return (
+                    <div>
+                      <span
+                        style={{
+                          textDecoration: "line-through",
+                          fontSize: "0.85em",
+                          opacity: "0.8",
+                        }}
+                      >
+                        {originalPrice.toFixed(2)} €
+                      </span>
+                      <br />
+                      <span
+                        style={{
+                          color: "var(--red-500)",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {rowData.reduction_amount_tax_incl.toFixed(2)} €
+                      </span>
+                    </div>
+                  );
+                } else {
+                  return `${originalPrice.toFixed(2)} €`;
+                }
+              }
+            }}
+            style={{ width: "20%", textAlign: "center" }}
+            alignHeader={"center"}
+          />
+          <Column
+            header="Total"
+            body={(rowData) => {
+              if (rowData.reference_combination === "rectificacion") return "-";
+              if (isDevolution) {
+                const originalTotal = rowData.price_incl_tax * rowData.quantity;
+                if (
+                  rowData.reduction_amount_tax_incl &&
+                  rowData.reduction_amount_tax_incl !== 0 &&
+                  rowData.reduction_amount_tax_incl < rowData.price_incl_tax
+                ) {
+                  const discountedTotal =
+                    rowData.reduction_amount_tax_incl * rowData.quantity;
+                  return (
+                    <div>
+                      <span
+                        style={{
+                          textDecoration: "line-through",
+                          fontSize: "0.85em",
+                          opacity: "0.8",
+                        }}
+                      >
+                        {originalTotal.toFixed(2)} €
+                      </span>
+                      <br />
+                      <span
+                        style={{
+                          color: "var(--red-500)",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {discountedTotal.toFixed(2)} €
+                      </span>
+                    </div>
+                  );
+                } else {
+                  return `${originalTotal.toFixed(2)} €`;
+                }
+              } else {
+                const unitPrice = Number(rowData.final_price_incl_tax);
+                const originalTotal = unitPrice * rowData.quantity;
+                const discountedTotal =
+                  Number(rowData.reduction_amount_tax_incl) * rowData.quantity;
+                if (
+                  rowData.discountApplied &&
+                  rowData.reduction_amount_tax_incl <
+                    rowData.final_price_incl_tax
+                ) {
+                  return (
+                    <div>
+                      <span
+                        style={{
+                          textDecoration: "line-through",
+                          fontSize: "0.85em",
+                          opacity: "0.8",
+                        }}
+                      >
+                        {originalTotal.toFixed(2)} €
+                      </span>
+                      <br />
+                      <span
+                        style={{
+                          color: "var(--red-500)",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {discountedTotal.toFixed(2)} €
+                      </span>
+                    </div>
+                  );
+                } else {
+                  return `${originalTotal.toFixed(2)} €`;
+                }
+              }
+            }}
+            style={{ width: "20%", textAlign: "center" }}
+            alignHeader={"center"}
+          />
+          <Column
+            field="quantity"
+            header="Cant."
+            body={(rowData) =>
+              rowData.reference_combination === "rectificacion"
+                ? "-"
+                : rowData.quantity
+            }
+            style={{ width: "5%", textAlign: "center" }}
+            alignHeader={"center"}
+          />
+          <Column
+            body={actionBodyTemplate}
+            style={{ width: "1%", textAlign: "right" }}
+            alignHeader={"right"}
+          />
+        </DataTable>
       </div>
 
       <Divider style={{ borderColor: "var(--surface-border)" }} />

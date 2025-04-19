@@ -10,23 +10,26 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
-import { Toolbar } from "primereact/toolbar";
-import { InputText } from "primereact/inputtext";
-import { Calendar } from "primereact/calendar";
-import { Dropdown } from "primereact/dropdown";
-import { addLocale } from "primereact/api";
+import { addLocale, FilterMatchMode } from "primereact/api";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+
+// Definir filtros iniciales para global y para cada columna
+const initialFilters = {
+  id_warehouse_movement: { value: null, matchMode: FilterMatchMode.EQUALS },
+  date_add: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  description: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  type: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  shops: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  employee: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  status: { value: null, matchMode: FilterMatchMode.CONTAINS },
+};
 
 const TransfersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
   const shopsDict = useShopsDictionary();
   const employeesDict = useEmployeesDictionary();
   const API_BASE_URL = getApiBaseUrl();
-
-  const ShopNameCell = ({ id_shop }) => (
-    <span>{shopsDict[id_shop] || id_shop}</span>
-  );
   const EmployeeNameCell = ({ id_employee }) => (
     <span>{employeesDict[id_employee] || id_employee}</span>
   );
@@ -97,44 +100,17 @@ const TransfersModal = ({ isOpen, onClose }) => {
   // Guardamos data sin filtrar
   const [unfilteredMovements, setUnfilteredMovements] = useState([]);
 
-  // Filtros
-  const [filterId, setFilterId] = useState("");
-  const [filterDateFrom, setFilterDateFrom] = useState("");
-  const [filterDateTo, setFilterDateTo] = useState("");
-  const [filterTitle, setFilterTitle] = useState("");
-  const [filterType, setFilterType] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-
+  // Filtros avanzados
+  const [filters, setFilters] = useState(initialFilters);
   // Para mostrar/ocultar contenedor de filtros
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   // DataTable ref
   const dt = useRef(null);
 
-  // Opciones para Dropdown
-  const typeOptions = [
-    { label: "(Todos)", value: "" },
-    { label: "Traspaso", value: "traspaso" },
-    { label: "Entrada", value: "entrada" },
-    { label: "Salida", value: "salida" },
-  ];
-  const statusOptions = [
-    { label: "(Todos)", value: "" },
-    { label: "En creacion", value: "En creacion" },
-    { label: "Enviado", value: "Enviado" },
-    { label: "Recibido", value: "Recibido" },
-    { label: "En revision", value: "En revision" },
-    { label: "Ejecutado", value: "Ejecutado" },
-  ];
-
   // Reset filtros
   const resetFilters = useCallback(() => {
-    setFilterId("");
-    setFilterDateFrom("");
-    setFilterDateTo("");
-    setFilterTitle("");
-    setFilterType("");
-    setFilterStatus("");
+    setFilters(initialFilters);
   }, []);
 
   // Refrescar => sin filtros
@@ -188,77 +164,51 @@ const TransfersModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, handleRefresh]);
 
-  // Buscar con filtros
-  const handleSearch = async () => {
-    setLoading(true);
-    setSelectedMovements([]);
-    try {
-      if (filterId.trim() !== "") {
-        // buscar 1 movement
-        const url = `${API_BASE_URL}/get_warehouse_movement?id_warehouse_movement=${encodeURIComponent(
-          filterId.trim()
-        )}`;
-        const data = await apiFetch(url, { method: "GET" });
-        if (data && !Array.isArray(data)) {
-          setUnfilteredMovements([data]);
-          setMovements([data]);
-        } else if (Array.isArray(data)) {
-          setUnfilteredMovements(data);
-          setMovements(data);
-        } else {
-          setUnfilteredMovements([]);
-          setMovements([]);
-        }
-      } else {
-        const body = {};
-        if (filterDateFrom) body.data1 = filterDateFrom;
-        if (filterDateTo) body.data2 = filterDateTo;
-
-        const data = await apiFetch(`${API_BASE_URL}/get_warehouse_movements`, {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
-        if (Array.isArray(data)) {
-          setUnfilteredMovements(data);
-          const localFiltered = localFilterData(
-            data,
-            filterTitle,
-            filterType,
-            filterStatus
-          );
-          setMovements(localFiltered);
-        } else {
-          setUnfilteredMovements([]);
-          setMovements([]);
-        }
-      }
-    } catch (error) {
-      console.error("[TransfersModal] handleSearch error:", error);
-      setUnfilteredMovements([]);
-      setMovements([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filtrado local
-  const localFilterData = (arr, title, type, status) => {
-    let result = [...arr];
-    if (title.trim() !== "") {
-      const lower = title.toLowerCase();
-      result = result.filter((mov) =>
-        (mov.description || "").toLowerCase().includes(lower)
-      );
-    }
-    if (type !== "") {
-      result = result.filter((mov) => mov.type === type);
-    }
-    if (status !== "") {
-      result = result.filter(
-        (mov) => (mov.status || "").toLowerCase() === status.toLowerCase()
-      );
-    }
-    return result;
+  // Header con buscador global y botón Clear
+  const renderHeader = () => {
+    return (
+      <div className="flex justify-content-between items-center">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            tooltip="Crear movimiento"
+            tooltipOptions={{ position: "top" }}
+            icon="pi pi-plus"
+            severity="success"
+            onClick={handleCreateTransfer}
+          />
+          <Button
+            tooltip="Eliminar selección"
+            tooltipOptions={{ position: "top" }}
+            icon="pi pi-trash"
+            severity="danger"
+            onClick={handleDeleteTransfer}
+            disabled={selectedMovements.length === 0}
+          />
+          <Button
+            icon="pi pi-refresh"
+            tooltip="Refrescar"
+            tooltipOptions={{ position: "top" }}
+            onClick={handleRefresh}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            tooltip="Exportar PDF"
+            tooltipOptions={{ position: "top" }}
+            icon="pi pi-file-pdf"
+            className="p-button-help"
+            onClick={exportPdf}
+            disabled={selectedMovements.length === 0}
+          />
+          <Button
+            tooltip="Mostrar/Ocultar filtros"
+            tooltipOptions={{ position: "top" }}
+            icon={showFilters ? "pi pi-filter-slash" : "pi pi-filter"}
+            onClick={() => setShowFilters((prev) => !prev)}
+          />
+        </div>
+      </div>
+    );
   };
 
   // Doble click => abrir detalle
@@ -414,205 +364,23 @@ const TransfersModal = ({ isOpen, onClose }) => {
     }
   };
 
-  // Toolbar => parte izquierda
-  const leftToolbarTemplate = () => {
-    return (
-      <div className="flex flex-wrap gap-2">
-        <Button
-          tooltip="Crear movimiento"
-          tooltipOptions={{ position: "top" }}
-          icon="pi pi-plus"
-          severity="success"
-          onClick={handleCreateTransfer}
-        />
-        <Button
-          tooltip="Eliminar selección"
-          tooltipOptions={{ position: "top" }}
-          icon="pi pi-trash"
-          severity="danger"
-          onClick={handleDeleteTransfer}
-          disabled={selectedMovements.length === 0}
-        />
-        <Button
-          icon="pi pi-refresh"
-          tooltip="Refrescar"
-          tooltipOptions={{ position: "top" }}
-          onClick={handleRefresh}
-        />
-      </div>
-    );
-  };
-
-  // Toolbar => parte derecha
-  const rightToolbarTemplate = () => {
-    return (
-      <div className="flex flex-wrap gap-2">
-        <Button
-          tooltip="Exportar PDF"
-          tooltipOptions={{ position: "top" }}
-          icon="pi pi-file-pdf"
-          className="p-button-help"
-          onClick={exportPdf}
-        />
-        <Button
-          tooltip="Mostrar/ocultar filtros"
-          tooltipOptions={{ position: "top" }}
-          icon={showFilters ? "pi pi-filter-slash" : "pi pi-filter"}
-          onClick={() => setShowFilters((prev) => !prev)}
-        />
-      </div>
-    );
-  };
-
   // Render principal del "list"
   const renderMovementList = () => {
-    const disableById = filterId.trim() !== "";
-    const disableByDate = !!(filterDateFrom || filterDateTo);
+    // Crear campo "shops" concatenando el nombre de ambas tiendas
+    const augmentedMovements = movements.map((m) => ({
+      ...m,
+      shops: `${shopsDict[m.id_shop_origin] || m.id_shop_origin}\n${
+        shopsDict[m.id_shop_destiny] || m.id_shop_destiny
+      }`,
+    }));
 
-    const renderFilters = () => {
-      if (!showFilters) return null;
-      return (
-        <Toolbar
-          className="mb-4"
-          left={
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* ID Movimiento */}
-              <div className="relative">
-                <label className="block text-sm font-semibold mb-1">
-                  ID Movimiento
-                </label>
-                <InputText
-                  className="w-full rounded dark:bg-gray-700 dark:text-white"
-                  value={filterId}
-                  onChange={(e) => {
-                    setFilterId(e.target.value);
-                    if (e.target.value.trim()) {
-                      setFilterDateFrom("");
-                      setFilterDateTo("");
-                      setFilterTitle("");
-                      setFilterType("");
-                      setFilterStatus("");
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch();
-                    }
-                  }}
-                  disabled={disableByDate}
-                />
-              </div>
-              {/* Título */}
-              <div className="relative">
-                <label className="block text-sm font-semibold mb-1">
-                  Título
-                </label>
-                <InputText
-                  className="w-full rounded dark:bg-gray-700 dark:text-white"
-                  value={filterTitle}
-                  onChange={(e) => setFilterTitle(e.target.value)}
-                  disabled={disableById}
-                />
-              </div>
-              {/* Fecha Desde */}
-              <div className="relative">
-                <label className="block text-sm font-semibold mb-1">
-                  Fecha Desde
-                </label>
-                <Calendar
-                  className="w-full rounded dark:bg-gray-700 dark:text-white"
-                  value={filterDateFrom}
-                  onChange={(e) => {
-                    setFilterDateFrom(e.value);
-                    if (e.value) setFilterId("");
-                  }}
-                  dateFormat="dd-mm-yy"
-                  showIcon
-                  disabled={disableById}
-                  locale="es"
-                />
-              </div>
-              {/* Fecha Hasta */}
-              <div className="relative">
-                <label className="block text-sm font-semibold mb-1">
-                  Fecha Hasta
-                </label>
-                <Calendar
-                  className="w-full rounded dark:bg-gray-700 dark:text-white"
-                  value={filterDateTo}
-                  onChange={(e) => {
-                    setFilterDateTo(e.value);
-                    if (e.value) setFilterId("");
-                  }}
-                  dateFormat="dd-mm-yy"
-                  showIcon
-                  disabled={disableById}
-                  locale="es"
-                />
-              </div>
-              {/* Tipo */}
-              <div className="relative">
-                <label className="block text-sm font-semibold mb-1">Tipo</label>
-                <Dropdown
-                  className="w-full rounded dark:bg-gray-700 dark:text-white"
-                  value={filterType}
-                  style={{ minWidth: "250px" }}
-                  options={typeOptions}
-                  onChange={(e) => setFilterType(e.value)}
-                  disabled={disableById}
-                />
-              </div>
-              {/* Estado */}
-              <div className="relative">
-                <label className="block text-sm font-semibold mb-1">
-                  Estado
-                </label>
-                <Dropdown
-                  className="w-full rounded dark:bg-gray-700 dark:text-white"
-                  value={filterStatus}
-                  style={{ minWidth: "250px" }}
-                  options={statusOptions}
-                  onChange={(e) => setFilterStatus(e.value)}
-                  disabled={disableById}
-                />
-              </div>
-            </div>
-          }
-          right={
-            <div className="flex gap-2">
-              <Button
-                label="Filtrar"
-                icon="pi pi-search"
-                onClick={handleSearch}
-              />
-              <Button
-                label="Limpiar filtros"
-                icon="pi pi-times"
-                className="p-button-secondary"
-                onClick={() => {
-                  resetFilters();
-                  handleSearch();
-                }}
-              />
-            </div>
-          }
-        />
-      );
-    };
+    const header = renderHeader();
 
     return (
       <div>
-        <Toolbar
-          className="mb-4"
-          left={leftToolbarTemplate}
-          right={rightToolbarTemplate}
-        />
-
-        {renderFilters()}
-
         <DataTable
           ref={dt}
-          value={movements}
+          value={augmentedMovements}
           loading={loading}
           scrollable
           scrollHeight="650px"
@@ -620,7 +388,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
           selectionMode="multiple"
           metaKeySelection={false}
           selection={selectedMovements}
-          onSelectionChange={(e) => setSelectedMovements(e.value)}
           paginator
           rows={10}
           rowsPerPageOptions={[10, 15, 30]}
@@ -628,26 +395,46 @@ const TransfersModal = ({ isOpen, onClose }) => {
           className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
           onRowClick={(e) => handleRowClick(e.data)}
           onRowDoubleClick={(e) => handleRowDoubleClick(e.data)}
+          filterDisplay={showFilters ? "row" : undefined}
+          filters={filters}
+          onFilter={(e) => setFilters(e.filters)}
+          header={header}
         >
-          <Column selectionMode="multiple" headerStyle={{ width: "1px" }} />
+          <Column
+            selectionMode="multiple"
+            style={{ width: "1px", textAlign: "center" }}
+          />
           <Column
             field="id_warehouse_movement"
             header="ID"
-            style={{ width: "25px", textAlign: "center" }}
+            filter={showFilters}
+            filterMatchMode="contains"
+            showFilterMenu={false}
+            style={{ width: "100px", textAlign: "center" }}
+            alignHeader={"center"}
           />
           <Column
             field="date_add"
             header="Fecha"
-            style={{ width: "125px", textAlign: "center" }}
+            filter={showFilters}
+            filterMatchMode="contains"
+            showFilterMenu={false}
+            style={{ width: "150px", textAlign: "center" }}
           />
           <Column
             field="description"
             header="Título"
-            style={{ minWidth: "150px" }}
+            filter={showFilters}
+            filterMatchMode="contains"
+            showFilterMenu={false}
+            style={{ width: "350px" }}
           />
           <Column
             field="type"
             header="Tipo"
+            filter={showFilters}
+            filterMatchMode="contains"
+            showFilterMenu={false}
             style={{ width: "100px" }}
             body={(rowData) => {
               let iconClass = "";
@@ -670,23 +457,33 @@ const TransfersModal = ({ isOpen, onClose }) => {
             }}
           />
           <Column
+            field="shops"
             header="Tiendas"
+            filter={showFilters}
+            filterMatchMode="contains"
+            showFilterMenu={false}
             style={{ width: "125px" }}
             body={(rowData) => {
               return (
                 <div className="flex flex-col">
                   <span>
-                    <ShopNameCell id_shop={rowData.id_shop_origin} />
+                    {shopsDict[rowData.id_shop_origin] ||
+                      rowData.id_shop_origin}
                   </span>
                   <span>
-                    <ShopNameCell id_shop={rowData.id_shop_destiny} />
+                    {shopsDict[rowData.id_shop_destiny] ||
+                      rowData.id_shop_destiny}
                   </span>
                 </div>
               );
             }}
           />
           <Column
+            field="employee"
             header="Empleado"
+            filter={showFilters}
+            filterMatchMode="contains"
+            showFilterMenu={false}
             style={{ width: "125px" }}
             body={(rowData) => (
               <EmployeeNameCell id_employee={rowData.employee} />
@@ -695,9 +492,12 @@ const TransfersModal = ({ isOpen, onClose }) => {
           <Column
             field="status"
             header="Estado"
-            style={{ width: "125px" }}
+            filter={showFilters}
+            filterMatchMode="contains"
+            showFilterMenu={false}
+            style={{ width: "100px" }}
             body={(rowData) => {
-              let statusColor = "#5ab5ff"; // Default: En creación
+              let statusColor = "#5ab5ff"; // Default: En creacion
               switch (rowData.status) {
                 case "En creacion":
                   statusColor = "#5ab5ff";
@@ -853,11 +653,11 @@ const TransfersModal = ({ isOpen, onClose }) => {
       closable={false}
       modal
       style={{
-        maxWidth: "1250px",
-        maxHeight: "950px",
-        minWidth: "900px",
-        minHeight: "700px",
-        width: "45vw",
+        maxWidth: "90vw",
+        maxHeight: "90vh",
+        minWidth: "950px",
+        minHeight: "750px",
+        width: "60vw",
         height: "70vh",
       }}
     >
