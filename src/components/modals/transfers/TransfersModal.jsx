@@ -1,18 +1,27 @@
 // src/components/modals/transfers/TransfersModal.jsx
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useContext,
+} from "react";
 import { Dialog } from "primereact/dialog";
 import TransferForm from "./TransferForm";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
-
-// PrimeReact
+import { AuthContext } from "../../../contexts/AuthContext";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
+import { SplitButton } from "primereact/splitbutton";
 import { addLocale, FilterMatchMode } from "primereact/api";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import { ProgressSpinner } from "primereact/progressspinner";
+import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
+import { Toast } from "primereact/toast";
 
 // Definir filtros iniciales para global y para cada columna
 const initialFilters = {
@@ -30,9 +39,14 @@ const TransfersModal = ({ isOpen, onClose }) => {
   const shopsDict = useShopsDictionary();
   const employeesDict = useEmployeesDictionary();
   const API_BASE_URL = getApiBaseUrl();
+  const toast = useRef(null);
+  const { idProfile, shopId } = useContext(AuthContext);
   const EmployeeNameCell = ({ id_employee }) => (
     <span>{employeesDict[id_employee] || id_employee}</span>
   );
+  const splitButtonContainerRef = useRef(null);
+  const formRef = useRef(null);
+  const [footerContent, setFooterContent] = useState(null);
 
   // Definir el locale global "es" al montar el componente
   useEffect(() => {
@@ -83,7 +97,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
     });
   }, []);
 
-  // Vistas => 'list', 'selectType', 'form'
+  // Vistas => 'list', 'form'
   const [currentView, setCurrentView] = useState("list");
 
   // Movimientos
@@ -108,6 +122,9 @@ const TransfersModal = ({ isOpen, onClose }) => {
   // DataTable ref
   const dt = useRef(null);
 
+  // Nuevo estado para el loading del formulario
+  const [formLoading, setFormLoading] = useState(false);
+
   // Reset filtros
   const resetFilters = useCallback(() => {
     setFilters(initialFilters);
@@ -131,11 +148,18 @@ const TransfersModal = ({ isOpen, onClose }) => {
     try {
       const data = await apiFetch(`${API_BASE_URL}/get_warehouse_movements`, {
         method: "POST",
-        body: JSON.stringify({}), // últimas 50
+        body: JSON.stringify({}),
       });
       if (Array.isArray(data)) {
-        // Formateamos campos de fecha
-        const formattedData = data.map((mov) => ({
+        const filteredData =
+          idProfile === 1
+            ? data
+            : data.filter(
+                (mov) =>
+                  Number(mov.id_shop_origin) === Number(shopId) ||
+                  Number(mov.id_shop_destiny) === Number(shopId)
+              );
+        const formattedData = filteredData.map((mov) => ({
           ...mov,
           date_add: formatDate(mov.date_add),
           date_excute: formatDate(mov.date_excute),
@@ -155,7 +179,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [apiFetch, resetFilters, API_BASE_URL]);
+  }, [apiFetch, resetFilters, API_BASE_URL, idProfile, shopId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -164,18 +188,53 @@ const TransfersModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, handleRefresh]);
 
+  // Crear el arreglo de acciones para el SplitButton
+  const createMovementItems = [
+    {
+      label: "Traspaso",
+      icon: "pi pi-arrow-right-arrow-left",
+      command: () => {
+        selectMovementType("traspaso");
+      },
+    },
+    {
+      label: "Entrada",
+      icon: "pi pi-download",
+      command: () => {
+        selectMovementType("entrada");
+      },
+    },
+    {
+      label: "Salida",
+      icon: "pi pi-upload",
+      command: () => {
+        selectMovementType("salida");
+      },
+    },
+  ];
+
   // Header con buscador global y botón Clear
   const renderHeader = () => {
     return (
       <div className="flex justify-content-between items-center">
         <div className="flex flex-wrap gap-2">
-          <Button
-            tooltip="Crear movimiento"
-            tooltipOptions={{ position: "top" }}
-            icon="pi pi-plus"
-            severity="success"
-            onClick={handleCreateTransfer}
-          />
+          <div ref={splitButtonContainerRef}>
+            <SplitButton
+              model={createMovementItems}
+              label="Crear"
+              onClick={(e) => {
+                if (splitButtonContainerRef.current) {
+                  const menuButton =
+                    splitButtonContainerRef.current.querySelector(
+                      ".p-splitbutton-menubutton"
+                    );
+                  if (menuButton) {
+                    menuButton.click();
+                  }
+                }
+              }}
+            />
+          </div>
           <Button
             tooltip="Eliminar selección"
             tooltipOptions={{ position: "top" }}
@@ -219,12 +278,30 @@ const TransfersModal = ({ isOpen, onClose }) => {
         `${API_BASE_URL}/get_warehouse_movement?id_warehouse_movement=${movement.id_warehouse_movement}`,
         { method: "GET" }
       );
+      if (
+        idProfile !== 1 &&
+        !(
+          Number(data.id_shop_origin) === Number(shopId) ||
+          Number(data.id_shop_destiny) === Number(shopId)
+        )
+      ) {
+        toast.current.show({
+          severity: "error",
+          summary: "Acceso denegado",
+          detail: "No tiene acceso a este movimiento.",
+        });
+        return;
+      }
       setSelectedMovement(data);
       setMovementType(data.type || "traspaso");
       setCurrentView("form");
     } catch (error) {
       console.error("Error al obtener detalles del movimiento:", error);
-      alert("No se pudo cargar el detalle del movimiento");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "No se pudo cargar el detalle del movimiento",
+      });
     } finally {
       setLoading(false);
     }
@@ -246,19 +323,53 @@ const TransfersModal = ({ isOpen, onClose }) => {
     setSelectedMovements(_selected);
   };
 
-  // Botones de la toolbar
-  const handleCreateTransfer = () => {
-    setSelectedMovement(null);
-    setMovementType(null);
-    setCurrentView("selectType");
-  };
-
   const handleDeleteTransfer = () => {
     if (selectedMovements.length === 0) {
-      alert("No hay movimientos seleccionados para eliminar.");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "No hay movimientos seleccionados para eliminar.",
+      });
       return;
     }
-    alert(`Eliminar ${selectedMovements.length} movimientos (pendiente).`);
+    confirmDialog({
+      message: `¿Seguro que desea borrar ${selectedMovements.length} movimiento(s)?`,
+      header: "Confirmación de eliminación",
+      icon: "pi pi-exclamation-triangle",
+      acceptLabel: "Sí",
+      acceptClassName: "p-button-danger",
+      rejectClassName: "p-button-secondary",
+      rejectLabel: "No",
+      accept: async () => {
+        try {
+          for (const movement of selectedMovements) {
+            await apiFetch(`${API_BASE_URL}/delete_warehouse_movement`, {
+              method: "POST",
+              body: JSON.stringify({
+                id_warehouse_movement: movement.id_warehouse_movement,
+              }),
+            });
+          }
+          toast.current.show({
+            severity: "success",
+            summary: "Éxito",
+            detail: "Movimiento(s) borrado(s) con éxito.",
+          });
+          setSelectedMovements([]);
+          handleRefresh();
+        } catch (error) {
+          console.error("Error al borrar movimiento:", error);
+          toast.current.show({
+            severity: "error",
+            summary: "Error",
+            detail: "Error al borrar movimiento(s).",
+          });
+        }
+      },
+      reject: () => {
+        // No se realiza acción si se rechaza la confirmación
+      },
+    });
   };
 
   const selectMovementType = (newType) => {
@@ -267,9 +378,48 @@ const TransfersModal = ({ isOpen, onClose }) => {
     setCurrentView("form");
   };
 
-  const handleFormSave = () => {
-    handleRefresh();
-    setCurrentView("list");
+  const handleFormSave = async (action) => {
+    if (action === "created" || action === "executed") {
+      // Para creación o ejecución: cerrar modal y refrescar lista
+      setCurrentView("list");
+      setSelectedMovement(null);
+      setMovementType(null);
+      handleRefresh();
+    } else if (action === "updated") {
+      // Para actualización: refrescar detalle sin cerrar formulario
+      if (selectedMovement && selectedMovement.id_warehouse_movement) {
+        setFormLoading(true);
+        try {
+          const url = `${API_BASE_URL}/get_warehouse_movement?id_warehouse_movement=${selectedMovement.id_warehouse_movement}`;
+          const data = await apiFetch(url, { method: "GET" });
+          // Filtrar localmente según tienda actual
+          if (
+            idProfile !== 1 &&
+            !(
+              Number(data.id_shop_origin) === Number(shopId) ||
+              Number(data.id_shop_destiny) === Number(shopId)
+            )
+          ) {
+            toast.current.show({
+              severity: "error",
+              summary: "Acceso denegado",
+              detail: "No tiene acceso a este movimiento.",
+            });
+            return;
+          }
+          setSelectedMovement(data);
+        } catch (error) {
+          console.error("Error al actualizar detalle del movimiento:", error);
+          toast.current.show({
+            severity: "error",
+            summary: "Error",
+            detail: "Error al actualizar el movimiento",
+          });
+        } finally {
+          setFormLoading(false);
+        }
+      }
+    }
   };
 
   // Modificar exportPdf para usar los diccionarios y mostrar nombres en vez de IDs
@@ -315,9 +465,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
             40,
             125
           );
-          head = [
-            ["Producto", "Cod. Barras", "ID Control Stock", "Cant. Enviada"],
-          ];
+          head = [["Producto", "Cod. Barras", "Seguimiento", "Cant. Enviada"]];
           body = (data.movement_details || []).map((detail) => [
             detail.product_name,
             detail.ean13,
@@ -326,9 +474,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
           ]);
         } else if (data.type === "entrada") {
           doc.text(`Tienda: ${shopDestinyName}`, 40, 125);
-          head = [
-            ["Producto", "Cod. Barras", "ID Control Stock", "Cant. Recibida"],
-          ];
+          head = [["Producto", "Cod. Barras", "Seguimiento", "Cant. Recibida"]];
           body = (data.movement_details || []).map((detail) => [
             detail.product_name,
             detail.ean13,
@@ -337,9 +483,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
           ]);
         } else if (data.type === "salida") {
           doc.text(`Tienda: ${shopOriginName}`, 40, 125);
-          head = [
-            ["Producto", "Cod. Barras", "ID Control Stock", "Cant. Enviada"],
-          ];
+          head = [["Producto", "Cod. Barras", "Seguimiento", "Cant. Enviada"]];
           body = (data.movement_details || []).map((detail) => [
             detail.product_name,
             detail.ean13,
@@ -347,10 +491,26 @@ const TransfersModal = ({ isOpen, onClose }) => {
             detail.sent_quantity,
           ]);
         }
+        // Calcular la suma total de la cantidad
+        const totalQuantity = body.reduce(
+          (sum, row) => sum + (Number(row[3]) || 0),
+          0
+        );
         doc.autoTable({
           startY: 140,
           head,
           body,
+          foot: [
+            [
+              {
+                content: "Total Productos:",
+                colSpan: 3,
+                styles: { halign: "right" },
+              },
+              totalQuantity,
+            ],
+          ],
+          showFoot: "lastPage",
           theme: "grid",
         });
         doc.save(`Movimiento_${data.id_warehouse_movement}.pdf`);
@@ -383,7 +543,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
           value={augmentedMovements}
           loading={loading}
           scrollable
-          scrollHeight="650px"
+          scrollHeight="700px"
           dataKey="id_warehouse_movement"
           selectionMode="multiple"
           metaKeySelection={false}
@@ -402,7 +562,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
         >
           <Column
             selectionMode="multiple"
-            style={{ width: "1px", textAlign: "center" }}
+            style={{ width: "1px", height: "55px", textAlign: "center" }}
           />
           <Column
             field="id_warehouse_movement"
@@ -415,11 +575,12 @@ const TransfersModal = ({ isOpen, onClose }) => {
           />
           <Column
             field="date_add"
-            header="Fecha"
+            header="Fecha creación"
             filter={showFilters}
             filterMatchMode="contains"
             showFilterMenu={false}
             style={{ width: "150px", textAlign: "center" }}
+            alignHeader={"center"}
           />
           <Column
             field="description"
@@ -427,7 +588,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
             filter={showFilters}
             filterMatchMode="contains"
             showFilterMenu={false}
-            style={{ width: "350px" }}
+            style={{ width: "325px" }}
           />
           <Column
             field="type"
@@ -436,6 +597,7 @@ const TransfersModal = ({ isOpen, onClose }) => {
             filterMatchMode="contains"
             showFilterMenu={false}
             style={{ width: "100px" }}
+            alignHeader={"center"}
             body={(rowData) => {
               let iconClass = "";
               if (rowData.type === "traspaso") {
@@ -457,12 +619,22 @@ const TransfersModal = ({ isOpen, onClose }) => {
             }}
           />
           <Column
+            field="total_quantity"
+            header="Total Prod."
+            filter={showFilters}
+            filterMatchMode="contains"
+            showFilterMenu={false}
+            style={{ width: "50px", textAlign: "center" }}
+            alignHeader={"center"}
+          />
+          <Column
             field="shops"
             header="Tiendas"
             filter={showFilters}
             filterMatchMode="contains"
             showFilterMenu={false}
-            style={{ width: "125px" }}
+            style={{ width: "125px", textAlign: "center" }}
+            alignHeader={"center"}
             body={(rowData) => {
               return (
                 <div className="flex flex-col">
@@ -484,7 +656,8 @@ const TransfersModal = ({ isOpen, onClose }) => {
             filter={showFilters}
             filterMatchMode="contains"
             showFilterMenu={false}
-            style={{ width: "125px" }}
+            style={{ width: "125px", textAlign: "center" }}
+            alignHeader={"center"}
             body={(rowData) => (
               <EmployeeNameCell id_employee={rowData.employee} />
             )}
@@ -495,7 +668,8 @@ const TransfersModal = ({ isOpen, onClose }) => {
             filter={showFilters}
             filterMatchMode="contains"
             showFilterMenu={false}
-            style={{ width: "100px" }}
+            style={{ width: "100px", textAlign: "center" }}
+            alignHeader={"center"}
             body={(rowData) => {
               let statusColor = "#5ab5ff"; // Default: En creacion
               switch (rowData.status) {
@@ -532,46 +706,22 @@ const TransfersModal = ({ isOpen, onClose }) => {
     );
   };
 
-  // Vista: Seleccionar tipo
-  const renderSelectType = () => {
-    return (
-      <div>
-        <h2 className="text-xl font-bold mb-4">
-          Selecciona el tipo de movimiento
-        </h2>
-        <div className="space-y-4">
-          <Button
-            label="Traspaso entre Tiendas"
-            icon="pi pi-arrow-right-arrow-left"
-            className="w-full"
-            onClick={() => selectMovementType("traspaso")}
-          />
-          <Button
-            label="Entrada de Mercadería"
-            icon="pi pi-download"
-            className="w-full p-button-success"
-            onClick={() => selectMovementType("entrada")}
-          />
-          <Button
-            label="Salida de Mercadería"
-            icon="pi pi-upload"
-            className="w-full p-button-danger"
-            onClick={() => selectMovementType("salida")}
-          />
-        </div>
-      </div>
-    );
-  };
-
   // Vista: Formulario TransferForm
   const renderForm = () => {
     return (
       <div>
-        <TransferForm
-          movementData={selectedMovement}
-          type={movementType}
-          onSave={handleFormSave}
-        />
+        {formLoading ? (
+          <ProgressSpinner />
+        ) : (
+          <TransferForm
+            ref={formRef}
+            movementData={selectedMovement}
+            type={movementType}
+            onSave={handleFormSave}
+            hideFooter={true}
+            onFooterChange={(footer) => setFooterContent(footer)}
+          />
+        )}
       </div>
     );
   };
@@ -580,8 +730,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
   let modalTitle = "";
   if (currentView === "list") {
     modalTitle = "Gestión de Stock";
-  } else if (currentView === "selectType") {
-    modalTitle = "Crear Movimiento";
   } else if (currentView === "form") {
     if (!selectedMovement) {
       const t = movementType || "traspaso";
@@ -637,32 +785,36 @@ const TransfersModal = ({ isOpen, onClose }) => {
   let content = null;
   if (currentView === "list") {
     content = renderMovementList();
-  } else if (currentView === "selectType") {
-    content = renderSelectType();
   } else if (currentView === "form") {
     content = renderForm();
   }
 
   return (
-    <Dialog
-      visible={isOpen}
-      onHide={onClose}
-      header={dialogHeader}
-      draggable={false}
-      resizable={false}
-      closable={false}
-      modal
-      style={{
-        maxWidth: "90vw",
-        maxHeight: "90vh",
-        minWidth: "950px",
-        minHeight: "750px",
-        width: "60vw",
-        height: "70vh",
-      }}
-    >
-      {content}
-    </Dialog>
+    <>
+      <Toast ref={toast} />
+      <Dialog
+        visible={isOpen}
+        onHide={onClose}
+        header={dialogHeader}
+        draggable={false}
+        resizable={false}
+        closable={false}
+        modal
+        footer={currentView === "form" ? footerContent : null}
+        style={{
+          maxWidth: "90vw",
+          maxHeight: "90vh",
+          minWidth: "950px",
+          minHeight: "750px",
+          width: "60vw",
+          height: "75vh",
+          
+        }}
+      >
+        {content}
+      </Dialog>
+      <ConfirmDialog />{" "}
+    </>
   );
 };
 

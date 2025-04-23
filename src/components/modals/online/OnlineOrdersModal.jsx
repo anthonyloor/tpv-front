@@ -1,10 +1,16 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useContext,
+  useRef,
+} from "react";
 import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { useApiFetch } from "../../../utils/useApiFetch";
-import { toast } from "sonner";
+import { Toast } from "primereact/toast";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import useProductSearch from "../../../hooks/useProductSearch";
@@ -35,6 +41,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const { configData } = useContext(ConfigContext);
   const employeesDict = useEmployeesDictionary();
   const { selectedClient } = useContext(ClientContext);
+  const toast = useRef(null);
 
   const [controlStockModalVisible, setControlStockModalVisible] =
     useState(false);
@@ -80,7 +87,11 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       });
       setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
-      toast.error("Error al cargar las órdenes online.");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Error al cargar los pedidos online.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -208,7 +219,11 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
 
   const handleUpdateOnlineOrder = async () => {
     if (!selectedOrderForStock) {
-      toast.error("No hay un pedido seleccionado para actualizar.");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "No hay un pedido seleccionado para gestionar.",
+      });
       return;
     }
 
@@ -489,6 +504,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
 
   return (
     <>
+      <Toast ref={toast} position="top-center" />
       <Dialog
         header="Pedidos Online"
         visible={isOpen}

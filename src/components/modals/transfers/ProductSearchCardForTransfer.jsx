@@ -1,12 +1,16 @@
 import React, { useState, useRef, useEffect, useContext } from "react";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import { ProgressSpinner } from "primereact/progressspinner";
-import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 import ProductSelectionDialog from "./ProductSelectionDialog";
 import useProductSearch from "../../../hooks/useProductSearch";
 import { ClientContext } from "../../../contexts/ClientContext";
+import { IconField } from "primereact/iconfield";
+import { InputIcon } from "primereact/inputicon";
+import { InputText } from "primereact/inputtext";
+import { Toast } from "primereact/toast";
+import { playSound } from "../../../utils/playSound";
 
 const ProductSearchCardForTransfer = ({
   onAddProduct,
@@ -17,6 +21,7 @@ const ProductSearchCardForTransfer = ({
   destinationShopName,
 }) => {
   const apiFetch = useApiFetch();
+  const toast = useRef(null);
 
   // Estados
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,7 +73,11 @@ const ProductSearchCardForTransfer = ({
 
   // Definir shopId para la búsqueda: para "entrada" se usa selectedDestinationStore; para "salida"/"traspaso" se usa selectedOriginStore.
   const searchShopId =
-    type === "entrada" ? selectedDestinationStore : selectedOriginStore;
+    type === "traspaso"
+      ? "all"
+      : type === "entrada"
+      ? selectedDestinationStore
+      : selectedOriginStore;
   const { handleSearch: productSearch } = useProductSearch({
     apiFetch,
     shopId: searchShopId,
@@ -108,7 +117,12 @@ const ProductSearchCardForTransfer = ({
         : [];
       console.log("[ProductSearchCardForTransfer] Flat results:", flatResults);
       if (flatResults.length === 0) {
-        alert("No se encontró producto con el código especificado.");
+        toast.current.show({
+          severity: "error",
+          summary: "Error",
+          detail: "Producto no encontrado en base de datos",
+        });
+        playSound("error");
         return;
       }
       const transformed = transformProductsForTransfer(flatResults);
@@ -121,7 +135,12 @@ const ProductSearchCardForTransfer = ({
       }
     } catch (error) {
       console.error("[ProductSearchCardForTransfer] Error:", error);
-      alert("Error al buscar productos");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Error al buscar productos.",
+      });
+      playSound("error");
     } finally {
       setIsLoading(false);
       setSearchTerm("");
@@ -155,10 +174,10 @@ const ProductSearchCardForTransfer = ({
       }
       if (prod.stocks && Array.isArray(prod.stocks)) {
         const originStock = prod.stocks.find(
-          (s) => String(s.id_shop) === String(selectedOriginStore)
+          (s) => Number(s.id_shop) === Number(selectedOriginStore)
         );
         const destStock = prod.stocks.find(
-          (s) => String(s.id_shop) === String(selectedDestinationStore)
+          (s) => Number(s.id_shop) === Number(selectedDestinationStore)
         );
         if (originStock) {
           map[key].stockOrigin = originStock.quantity;
@@ -186,11 +205,12 @@ const ProductSearchCardForTransfer = ({
         reference_combination: prod.reference_combination,
         ean13: prod.ean13,
         id_control_stock: prod.id_control_stock,
-        stockOrigin: prod.stockOrigin,
-        stockDestination: prod.stockDestination,
+        stock_origin: prod.stockOrigin,
+        stock_destiny: prod.stockDestination,
         quantity: 1,
       };
       onAddProduct(item);
+      playSound("success");
     });
     setIsDialogOpen(false);
     setSearchTerm("");
@@ -208,15 +228,21 @@ const ProductSearchCardForTransfer = ({
   };
 
   return (
-    <div className="mt-6" onClick={handleContainerClick}>
+    <div
+      className="mt-4 surface-card"
+      onClick={handleContainerClick}
+      style={{
+        position: "sticky",
+        top: 1,
+        zIndex: 100,
+      }}
+    >
+      <Toast ref={toast} position="top-center" />
       {/* Fila: input + botón Buscar */}
       <div className="flex items-end gap-2 mb-3">
         <div className="flex-1 relative">
-          <span className="p-input-icon-left w-full">
-            <i
-              className="pi pi-search absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none"
-              style={{ color: "#999" }}
-            />
+          <IconField iconPosition="left">
+            <InputIcon className="pi pi-search"> </InputIcon>
             <InputText
               ref={inputRef}
               value={searchTerm}
@@ -225,10 +251,10 @@ const ProductSearchCardForTransfer = ({
               onBlur={handleInputBlur}
               placeholder="Buscar por referencia o código de barras"
               disabled={isSearchDisabled || isLoading}
-              className="w-full pl-8 pr-8"
+              className="w-full"
               autoFocus
             />
-          </span>
+          </IconField>
           {isLoading && (
             <ProgressSpinner
               style={{

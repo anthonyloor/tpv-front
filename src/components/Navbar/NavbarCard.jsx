@@ -19,6 +19,8 @@ import { Dialog } from "primereact/dialog";
 import VersionInfoModal from "../modals/session/VersionInfoModal";
 import OnlineOrdersModal from "../modals/online/OnlineOrdersModal";
 import InventoryModal from "../modals/inventory/InventoryModal";
+import ListCashRegisterModal from "../modals/cashRegister/ListCashRegisterModal";
+import ControlStockModal from "../modals/controlStock/ControlStockModal";
 
 const NavbarCard = () => {
   const navigate = useNavigate();
@@ -37,6 +39,8 @@ const NavbarCard = () => {
   const [isConfigurationModalOpen, setConfigurationModalOpen] = useState(false);
   const [isSalesReportModalOpen, setIsSalesReportModalOpen] = useState(false);
   const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
+  const [isListCashRegisterModalOpen, setIsListCashRegisterModalOpen] =
+    useState(false);
 
   const [showPricesTags, setShowPricesTags] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
@@ -45,6 +49,7 @@ const NavbarCard = () => {
   const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
   const [isOnlineOrdersModalOpen, setOnlineOrdersModalOpen] = useState(false);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isControlStockModalOpen, setIsControlStockModalOpen] = useState(false);
 
   const closeAllModals = () => {
     setTransfersModalOpen(false);
@@ -52,6 +57,8 @@ const NavbarCard = () => {
     setIsSalesReportModalOpen(false);
     setIsCashRegisterModalOpen(false);
     setIsPinDialogOpen(false);
+    setIsListCashRegisterModalOpen(false);
+    setIsControlStockModalOpen(false);
   };
 
   const openTransfers = () => {
@@ -65,19 +72,30 @@ const NavbarCard = () => {
     setConfigurationModalOpen(true);
   };
   */
-  const openSalesReport = () => {
-    closeAllModals();
-    setIsSalesReportModalOpen(true);
-  };
 
   const openCashRegister = () => {
     closeAllModals();
     setIsCashRegisterModalOpen(true);
   };
 
+  const openListCashRegisterModal = () => {
+    closeAllModals();
+    setIsListCashRegisterModalOpen(true);
+  };
+
+  const openSalesReport = () => {
+    closeAllModals();
+    setIsSalesReportModalOpen(true);
+  };
+
   const openInventoryModal = () => {
     closeAllModals();
     setIsInventoryModalOpen(true);
+  };
+
+  const openControlStock = () => {
+    closeAllModals();
+    setIsControlStockModalOpen(true);
   };
 
   useEffect(() => {
@@ -117,13 +135,40 @@ const NavbarCard = () => {
       icon: "pi pi-home",
       command: () => navigate(`/${shop.route}/app`),
     },
-    {
-      label: "Gestion stock",
-      icon: "pi pi-warehouse",
-      command: openTransfers,
-    },
     ...(idProfile === 1
       ? [
+          {
+            label: "Gestion stock",
+            icon: "pi pi-warehouse",
+            items: [
+              {
+                label: "Transferencias",
+                icon: "pi pi-arrow-right-arrow-left",
+                command: openTransfers,
+              },
+              {
+                label: "Seguimiento",
+                icon: "pi pi-link",
+                command: openControlStock,
+              },
+            ],
+          },
+          {
+            label: "Caja",
+            icon: "pi pi-desktop",
+            items: [
+              {
+                label: "Cierre de caja",
+                icon: "pi pi-sign-in",
+                command: openCashRegister,
+              },
+              {
+                label: "Ver cajas",
+                icon: "pi pi-list",
+                command: openListCashRegisterModal,
+              },
+            ],
+          },
           {
             label: "Etiquetas",
             icon: "pi pi-barcode",
@@ -150,12 +195,18 @@ const NavbarCard = () => {
             command: openInventoryModal,
           },
         ]
-      : []),
-    {
-      label: "Caja",
-      icon: "pi pi-desktop",
-      command: openCashRegister,
-    },
+      : [
+          {
+            label: "Gestion stock",
+            icon: "pi pi-warehouse",
+            command: openTransfers,
+          },
+          {
+            label: "Caja",
+            icon: "pi pi-desktop",
+            command: openCashRegister,
+          },
+        ]),
     /*{
       label: "Configuración",
       icon: "pi pi-cog",
@@ -282,6 +333,16 @@ const NavbarCard = () => {
         </PortalOrNormal>
       )}
 
+      {/* Nuevo Modal para Lista de Cajas */}
+      {isListCashRegisterModalOpen && (
+        <PortalOrNormal isInlineMode={isMobile}>
+          <ListCashRegisterModal
+            isOpen
+            onClose={() => setIsListCashRegisterModalOpen(false)}
+          />
+        </PortalOrNormal>
+      )}
+
       {/* Modal de Etiquetas */}
       {showPricesTags && (
         <PriceTags
@@ -332,6 +393,14 @@ const NavbarCard = () => {
           isOpen={isInventoryModalOpen}
           onClose={() => setIsInventoryModalOpen(false)}
           shop={shop}
+        />
+      )}
+
+      {/* Nuevo modal de Control Stock */}
+      {isControlStockModalOpen && (
+        <ControlStockModal
+          isOpen={isControlStockModalOpen}
+          onClose={() => setIsControlStockModalOpen(false)}
         />
       )}
     </>

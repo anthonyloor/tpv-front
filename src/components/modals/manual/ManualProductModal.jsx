@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { InputNumber } from "primereact/inputnumber";
 import { Button } from "primereact/button";
-import { toast } from "sonner";
+import { Toast } from "primereact/toast";
 
 const ManualProductModal = ({ isOpen, onClose, onAddProduct }) => {
   const [productName, setProductName] = useState("");
   const [unitPrice, setUnitPrice] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const toast = useRef(null);
 
   const handleAdd = () => {
     // Validaciones básicas
@@ -31,53 +32,60 @@ const ManualProductModal = ({ isOpen, onClose, onAddProduct }) => {
     };
     // Se utiliza el callback para añadir el producto con la cantidad indicada
     onAddProduct(manualProduct, null, null, false, quantity);
-    toast.success("Producto añadido manualmente");
+    toast.current.show({
+      severity: "success",
+      summary: "Éxito",
+      detail: "Producto manual añadido.",
+    });
     onClose();
   };
 
   return (
-    <Dialog
-      header="Añadir Producto Manual"
-      visible={isOpen}
-      onHide={onClose}
-      modal
-      draggable={false}
-      resizable={false}
-    >
-      <div className="p-fluid">
-        {/* Nombre Producto */}
-        <div className="p-field">
-          <label htmlFor="productName">Nombre Producto</label>
-          <InputText
-            id="productName"
-            value={productName}
-            onChange={(e) => setProductName(e.target.value)}
-          />
+    <>
+      <Toast ref={toast} position="top-center" />
+      <Dialog
+        header="Añadir Producto Manual"
+        visible={isOpen}
+        onHide={onClose}
+        modal
+        draggable={false}
+        resizable={false}
+      >
+        <div className="p-fluid">
+          {/* Nombre Producto */}
+          <div className="p-field">
+            <label htmlFor="productName">Nombre Producto</label>
+            <InputText
+              id="productName"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+            />
+          </div>
+          {/* Precio Unitario */}
+          <div className="p-field">
+            <label htmlFor="unitPrice">Precio Unitario</label>
+            <InputNumber
+              id="unitPrice"
+              value={unitPrice}
+              onValueChange={(e) => setUnitPrice(e.value)}
+              mode="currency"
+              currency="EUR"
+              locale="es-ES"
+            />
+          </div>
+          {/* Cantidad */}
+          <div className="p-field">
+            <label htmlFor="quantity">Cantidad</label>
+            <InputNumber
+              id="quantity"
+              value={quantity}
+              onValueChange={(e) => setQuantity(e.value)}
+            />
+          </div>
+          <Button label="Añadir" onClick={handleAdd} className="p-mt-2" />
         </div>
-        {/* Precio Unitario */}
-        <div className="p-field">
-          <label htmlFor="unitPrice">Precio Unitario</label>
-          <InputNumber
-            id="unitPrice"
-            value={unitPrice}
-            onValueChange={(e) => setUnitPrice(e.value)}
-            mode="currency"
-            currency="EUR"
-            locale="es-ES"
-          />
-        </div>
-        {/* Cantidad */}
-        <div className="p-field">
-          <label htmlFor="quantity">Cantidad</label>
-          <InputNumber
-            id="quantity"
-            value={quantity}
-            onValueChange={(e) => setQuantity(e.value)}
-          />
-        </div>
-        <Button label="Añadir" onClick={handleAdd} className="p-mt-2" />
-      </div>
-    </Dialog>
+      </Dialog>
+    </>
   );
 };
 

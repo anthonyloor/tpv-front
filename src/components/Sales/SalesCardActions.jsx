@@ -1,6 +1,12 @@
 // src/components/Sales/SalesCardActions.jsx
 
-import React, { useState, useContext, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import ReturnsExchangesModal from "../modals/returns/ReturnsExchangesModal";
@@ -10,7 +16,7 @@ import DiscountModal from "../modals/discount/DiscountModal";
 import ActionResultDialog from "../common/ActionResultDialog";
 import useFinalizeSale from "../../hooks/useFinalizeSale";
 import { AuthContext } from "../../contexts/AuthContext";
-import { toast } from "sonner";
+import { Toast } from "primereact/toast";
 import { InputNumber } from "primereact/inputnumber";
 import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
@@ -54,6 +60,7 @@ function SalesCardActions({
   const { isLoading, finalizeSale } = useFinalizeSale();
   const { configData } = useContext(ConfigContext);
   const employeesDict = useEmployeesDictionary();
+  const toast = useRef(null);
 
   // Modales
   const [isReturnsModalOpen, setIsReturnsModalOpen] = useState(false);
@@ -150,9 +157,11 @@ function SalesCardActions({
 
   const handleDescuentoClick = () => {
     if (cartItems.length === 0) {
-      toast.error(
-        "El carrito está vacío. Añade productos antes de aplicar descuentos."
-      );
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Ticket vacio. Añade productos antes de aplicar descuentos.",
+      });
       return;
     }
     console.log("[handleDescuentoClick] appliedDiscounts:", appliedDiscounts);
@@ -161,9 +170,12 @@ function SalesCardActions({
         (d) => d.description && d.description.includes("venta")
       )
     ) {
-      toast.error(
-        "No se pueden aplicar descuentos a productos si ya se ha aplicado un descuento sobre toda la venta."
-      );
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail:
+          "Ya existe un descuento sobre el total de la venta, no se puede añadir otro descuento.",
+      });
       setSelectedProductForDiscount(null);
       return;
     }
@@ -171,7 +183,11 @@ function SalesCardActions({
       // Intentando aplicar descuento a producto
 
       if (selectedProductForDiscount.discountApplied) {
-        toast.error("Ese producto ya tiene un descuento aplicado.");
+        toast.current.show({
+          severity: "error",
+          summary: "Error",
+          detail: "Este producto ya tiene un descuento aplicado.",
+        });
         setSelectedProductForDiscount(null);
         return;
       }
@@ -182,9 +198,12 @@ function SalesCardActions({
           (d) => d.description && !d.description.includes("venta")
         )
       ) {
-        toast.error(
-          "No se pueden aplicar descuentos globales si ya se han aplicado descuentos en productos."
-        );
+        toast.current.show({
+          severity: "error",
+          summary: "Error",
+          detail:
+            "Ya existe un descuento sobre un producto, no se puede añadir otro descuento.",
+        });
         return;
       }
     }
@@ -534,15 +553,21 @@ function SalesCardActions({
     );
 
     if (isGlobal && hasProductDiscount) {
-      toast.error(
-        "No se pueden aplicar descuentos globales junto con descuentos de productos."
-      );
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail:
+          "Ya existe un descuento sobre un producto, no se puede añadir otro descuento.",
+      });
       return;
     }
     if (!isGlobal && hasGlobalDiscount) {
-      toast.error(
-        "No se pueden aplicar descuentos de productos si ya existe un descuento global sobre la venta."
-      );
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail:
+          "Ya existe un descuento sobre el total de la venta, no se puede añadir otro descuento.",
+      });
       return;
     }
     if (
@@ -550,7 +575,11 @@ function SalesCardActions({
       selectedProductForDiscount &&
       selectedProductForDiscount.discountApplied
     ) {
-      toast.error("Ese producto ya tiene un descuento aplicado.");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "El producto ya tiene un descuento aplicado.",
+      });
       return;
     }
 
@@ -705,7 +734,11 @@ function SalesCardActions({
           {}
         );
         if (voucherResponse.success) {
-          toast.success("Vale impreso correctamente");
+          toast.current.show({
+            severity: "success",
+            summary: "Éxito",
+            detail: "Vale descuento impreso correctamente",
+          });
           setNewCartRuleCode(null);
           setVoucherPrintOptionModalVisible(false);
         } else if (voucherResponse.manual) {
@@ -758,6 +791,7 @@ function SalesCardActions({
         color: "var(--text-color)",
       }}
     >
+      <Toast ref={toast} position="top-center" />
       {/* Primera fila de botones */}
       <div className="flex gap-2">
         <Button

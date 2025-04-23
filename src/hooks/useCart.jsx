@@ -1,9 +1,8 @@
 // src/hooks/useCart.jsx
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { CartContext } from "../contexts/CartContext";
-import { toast } from "sonner";
 
 export default function useCart(allowOutOfStockSales) {
   const [cartItems, setCartItems] = useState([]);
@@ -13,6 +12,7 @@ export default function useCart(allowOutOfStockSales) {
   const { shopId } = useContext(AuthContext);
   const { isDevolution, setIsDevolution, isDiscount, setIsDiscount } =
     useContext(CartContext);
+  const toast = useRef(null);
 
   const getCartKey = (shopId) => `cart_shop_${shopId}`;
   const getParkedCartsKey = (shopId) => `parked_carts_shop_${shopId}`;
@@ -51,7 +51,11 @@ export default function useCart(allowOutOfStockSales) {
 
   const saveCurrentCartAsParked = (name = null, extraData = null) => {
     if (!shopId) {
-      toast.error("No se ha encontrado la tienda.");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "No se ha encontrado la tienda.",
+      });
       return;
     }
     const parkedCarts =
@@ -70,7 +74,11 @@ export default function useCart(allowOutOfStockSales) {
       getParkedCartsKey(shopId),
       JSON.stringify(parkedCarts)
     );
-    toast.success("Carrito guardado.");
+    toast.current.show({
+      severity: "success",
+      summary: "Éxito",
+      detail: "Carrito guardado.",
+    });
   };
 
   const getParkedCarts = () => {
@@ -80,7 +88,11 @@ export default function useCart(allowOutOfStockSales) {
 
   const loadParkedCart = (cartId) => {
     if (!shopId) {
-      toast.error("No se ha encontrado la tienda.");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "No se ha encontrado la tienda.",
+      });
       return;
     }
     const parkedCarts =
@@ -88,15 +100,27 @@ export default function useCart(allowOutOfStockSales) {
     const cartToLoad = parkedCarts.find((cart) => cart.id === cartId);
     if (cartToLoad) {
       setCartItems(cartToLoad.items);
-      toast.success(`Carrito "${cartToLoad.name}" cargado.`);
+      toast.current.show({
+        severity: "success",
+        summary: "Éxito",
+        detail: `Carrito ${cartToLoad.name} cargado.`,
+      });
     } else {
-      toast.error("No se ha encontrado el carrito.");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "No se ha encontrado el carrito.",
+      });
     }
   };
 
   const deleteParkedCart = (cartId) => {
     if (!shopId) {
-      toast.error("No se ha encontrado la tienda.");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "No se ha encontrado la tienda.",
+      });
       return;
     }
     let parkedCarts =
@@ -106,7 +130,11 @@ export default function useCart(allowOutOfStockSales) {
       getParkedCartsKey(shopId),
       JSON.stringify(parkedCarts)
     );
-    toast.success("Ticket guardado eliminado.");
+    toast.current.show({
+      severity: "success",
+      summary: "Éxito",
+      detail: "Ticket aparcado eliminado.",
+    });
   };
 
   const handleAddProduct = (
@@ -144,7 +172,11 @@ export default function useCart(allowOutOfStockSales) {
     // Si tiene id_control_stock, solo se permite añadirlo una vez
     if (product.id_control_stock) {
       if (existingProduct) {
-        toast.error("Producto con control de stock ya añadido.");
+        toast.current.show({
+          severity: "error",
+          summary: "Error",
+          detail: "Producto con control de stock ya añadido.",
+        });
         return;
       }
     }
@@ -156,7 +188,12 @@ export default function useCart(allowOutOfStockSales) {
 
     if (newQuantity > maxQuantity && !forceAdd) {
       if (!allowOutOfStockSales) {
-        toast.error("No puedes añadir más de la cantidad disponible");
+        toast.current.show({
+          severity: "error",
+          summary: "Error",
+          detail: "No puedes añadir más de la cantidad disponible.",
+        });
+
         return;
       } else {
         if (exceedsStockCallback) exceedsStockCallback(true);
@@ -239,7 +276,6 @@ export default function useCart(allowOutOfStockSales) {
     }
   };
 
-  // Función helper local para obtener el key único en useCart
   const getRow = (item) =>
     item.id_control_stock ? item.id_control_stock : item.id_stock_available;
 
@@ -254,7 +290,7 @@ export default function useCart(allowOutOfStockSales) {
     getParkedCarts,
     loadParkedCart,
     deleteParkedCart,
-    // Exporta recentlyAddedId para que el componente de ticket (SalesCard) aplique la animación
     recentlyAddedId,
+    toast,
   };
 }

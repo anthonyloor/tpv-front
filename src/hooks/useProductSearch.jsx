@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { toast } from "sonner";
+import { useState, useRef } from "react";
 import getApiBaseUrl from "../utils/getApiBaseUrl";
+import { playSound } from "../utils/playSound";
 
 // Funciones helper agregadas para refactorizar el filtrado
 const isValidProduct = (product) =>
@@ -35,6 +35,7 @@ const useProductSearch = ({
   const [soldLabelProductCandidate, setSoldLabelProductCandidate] =
     useState(null);
   const API_BASE_URL = getApiBaseUrl();
+  const toast = useRef(null);
 
   const groupProductsByProductName = (products, strategy = "ean") => {
     console.log("Agrupando productos. Productos recibidos:", products);
@@ -128,7 +129,11 @@ const useProductSearch = ({
     }
     const stockQuantity = currentShopStock ? currentShopStock.quantity : 0;
     if (!allowOutOfStockSales && stockQuantity <= 0) {
-      toast.error("Sin stock disponible. No se permite la venta sin stock.");
+      toast.current.show({
+        severity: "error",
+        summary: "Error",
+        detail: "Sin stock disponible. No se permite la venta sin stock.",
+      });
       return;
     }
     const productForCart = {
@@ -157,8 +162,14 @@ const useProductSearch = ({
         setProductToConfirm(productForCart);
         setConfirmModalOpen(true);
       } else {
-        toast.success("Producto añadido al ticket");
+        toast.current.show({
+          severity: "success",
+          summary: "Éxito",
+          detail: "Producto añadido al ticket.",
+        });
+        playSound("success");
       }
+      
     });
   };
 
@@ -299,23 +310,42 @@ const useProductSearch = ({
       }
       if (ean13ApostropheRegex.test(searchTerm)) {
         const [, eanCode, controlId] = searchTerm.match(ean13ApostropheRegex);
+        console.log(
+          "EAN13 con apóstrofe - código EAN:",
+          eanCode,
+          "ID control stock:",
+          controlId
+        );
         const payload = {
           search_term: eanCode,
           id_default_group: selectedClient.id_default_group,
         };
         let results = await fetchProducts(payload);
         if (results.length === 0) {
-          toast.error("Producto no encontrado.");
+          toast.current.show({
+            severity: "error",
+            summary: "Error",
+            detail: "Producto no encontrado.",
+          });
+          playSound("error");
           return;
         }
+        console.log("EAN13 con apóstrofe - resultados:", results);
         let validResults = results.filter(
           (p) => Number(p.id_control_stock) === Number(controlId)
         );
         if (validResults.length === 0 && results.length > 0) {
-          toast.error("ID control stock no existe.");
+          toast.current.show({
+            severity: "error",
+            summary: "Error",
+            detail: "ID control stock no existe.",
+          });
+          playSound("error");
           return;
         }
-        const filtered = filterProductsForShop(validResults, shopId);
+        const filtered = forEan13
+          ? validResults
+          : filterProductsForShop(validResults, shopId);
         const groups = groupProductsByProductName(filtered, "idcontrolstock");
         if (filtered.length === 1 && filtered[0].active_control_stock) {
           addProductToCart(filtered[0]);
@@ -373,7 +403,12 @@ const useProductSearch = ({
   const handleConfirmAdd = () => {
     if (productToConfirm) {
       onAddProduct(productToConfirm, null, null, true, 1);
-      toast.success("Producto sin stock añadido al ticket");
+      toast.current.show({
+        severity: "success",
+        summary: "Éxito",
+        detail: "Producto sin stock añadido al ticket.",
+      });
+      playSound("success");
       setConfirmModalOpen(false);
       setProductToConfirm(null);
     }
@@ -383,7 +418,12 @@ const useProductSearch = ({
   const handleForeignConfirmAdd = () => {
     if (foreignProductCandidate) {
       addProductToCart(foreignProductCandidate);
-      toast.success("Producto añadido al ticket");
+      toast.current.show({
+        severity: "success",
+        summary: "Éxito",
+        detail: "Producto añadido al ticket.",
+      });
+      playSound("success");
       setForeignConfirmDialogOpen(false);
       setForeignProductCandidate(null);
     }
@@ -399,7 +439,11 @@ const useProductSearch = ({
     if (soldLabelProductCandidate) {
       // Usar addProductToCart para que se construya el producto correctamente
       addProductToCart(soldLabelProductCandidate);
-      toast.success("Producto con etiqueta ya vendida añadido al ticket");
+      toast.current.show({
+        severity: "success",
+        summary: "Éxito",
+        detail: "Producto con etiqueta ya vendida añadido al ticket.",
+      });
       setSoldLabelConfirmDialogOpen(false);
       setSoldLabelProductCandidate(null);
     }
@@ -451,6 +495,7 @@ const useProductSearch = ({
     soldLabelProductCandidate,
     handleSoldLabelConfirmAdd,
     handleSoldLabelCancelAdd,
+    toast,
   };
 };
 

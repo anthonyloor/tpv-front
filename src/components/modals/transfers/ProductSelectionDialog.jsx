@@ -181,10 +181,6 @@ const ProductSelectionDialog = ({
     );
   };
 
-  // Cuerpo para columnas estándares
-  const productNameBodyTemplate = (rowData) =>
-    `${rowData.product_name} ${rowData.combination_name}`;
-
   // Se modifica la función para renderizar el código de barras, haciéndola clickable
   const barcodeBodyTemplate = (rowData) => {
     return (
@@ -239,7 +235,7 @@ const ProductSelectionDialog = ({
               body={selectionBodyTemplate}
               style={{ textAlign: "center", width: "80px" }}
             />
-            <Column header="Producto" body={productNameBodyTemplate} />
+            <Column header="Producto" field="product_name" />
             {/* Columna para Cod. Barras */}
             <Column header="Cod. Barras" body={barcodeBodyTemplate} />
             {showOriginStock && (

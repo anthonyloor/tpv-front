@@ -112,24 +112,41 @@ export default function PricesTags({ isOpen, onHide }) {
   );
 
   const productsWithGroup = flatProducts
-    .map((product) => ({
-      ...product,
-      group: product.id_control_stock
-        ? "Productos con seguimiento"
-        : "Productos sin seguimiento",
-    }))
+    .flatMap((product) => {
+      if (
+        product.stocks &&
+        product.stocks.length > 0 &&
+        product.stocks.some((stock) => stock.control_stock?.length > 0)
+      ) {
+        // Crear un registro por cada id_control_stock dentro de cada stock.control_stock
+        return product.stocks.flatMap((stock) =>
+          stock.control_stock.map((cs) => ({
+            ...product,
+            id_control_stock: cs.id_control_stock,
+            active_control_stock: cs.active_control_stock,
+            group: "Productos con seguimiento",
+          }))
+        );
+      } else {
+        // Si no hay control_stock, se considera como producto sin seguimiento
+        return {
+          ...product,
+          group: "Productos sin seguimiento",
+        };
+      }
+    })
     .sort((a, b) => a.group.localeCompare(b.group));
 
   const finalNoTracking = productsWithGroup
     .reduce((unique, item) => {
       const key = `${item.id_product}_${item.id_product_attribute}_${
-        item.id_stock_available || ""
+        item.id_shop || ""
       }`;
       if (!unique.some((u) => u.uniqueKey === key)) {
         // Contar registros con id_control_stock para el mismo key
         const trackingCount = productsWithGroup.filter((p) => {
           const pKey = `${p.id_product}_${p.id_product_attribute}_${
-            p.id_stock_available || ""
+            p.id_shop || ""
           }`;
           return pKey === key && p.id_control_stock;
         }).length;
@@ -143,24 +160,15 @@ export default function PricesTags({ isOpen, onHide }) {
 
   const finalTrackingDetailed = productsWithGroup
     .filter((p) => p.id_control_stock && p.active_control_stock)
-    .flatMap((product) => {
-      if (
-        product.stocks &&
-        product.stocks.length > 0 &&
-        product.stocks[0].control_stock &&
-        product.stocks[0].control_stock.length > 0
-      ) {
-        return product.stocks[0].control_stock
-          .filter((cs) => cs.active_control_stock)
-          .map((cs) => ({
-            ...product,
-            id_control_stock: cs.id_control_stock,
-            active_control_stock: cs.active_control_stock,
-          }));
-      } else {
-        return [product];
-      }
-    });
+    .map((product) => ({
+      ...product,
+      stocks: product.stocks?.map((stock) => ({
+        ...stock,
+        control_stock: stock.control_stock?.filter(
+          (cs) => cs.active_control_stock
+        ),
+      })),
+    }));
 
   // Función para abrir el diálogo o llamar directamente para imprimir según el tipo de producto
   const openQuantityDialog = () => {
@@ -281,6 +289,7 @@ export default function PricesTags({ isOpen, onHide }) {
       }
       // Caso de producto único (sin seguimiento o con seguimiento seleccionado de forma individual)
       else if (selectedProduct) {
+        console.log("selectedProduct:", selectedProduct);
         let ean13 =
           selectedProduct.ean13_combination ||
           selectedProduct.ean13_combination_0 ||
@@ -306,6 +315,7 @@ export default function PricesTags({ isOpen, onHide }) {
               "",
             id_product: selectedProduct.id_product,
             id_product_attribute: selectedProduct.id_product_attribute,
+            product_name: selectedProduct.product_name,
             id_shop: selectedProduct.id_shop,
             quantity: selectedProduct.quantity,
           };

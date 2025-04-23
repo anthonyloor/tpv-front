@@ -14,6 +14,7 @@ import useProductSearch from "../../hooks/useProductSearch";
 import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
 import { OverlayPanel } from "primereact/overlaypanel";
+import { Toast } from "primereact/toast";
 
 const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   const { setIsDevolution } = useContext(CartContext);
@@ -65,6 +66,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     soldLabelConfirmDialogOpen,
     handleSoldLabelConfirmAdd,
     handleSoldLabelCancelAdd,
+    toast,
   } = useProductSearch({
     apiFetch,
     shopId: ean13Regex.test(searchTerm) ? shopId : "all",
@@ -180,6 +182,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
       }}
       onClick={handleContainerClick}
     >
+      <Toast ref={toast} position="top-center" />
       {/* Fila de búsqueda */}
       <div className="flex items-center">
         <span className="p-input-icon-left w-full">

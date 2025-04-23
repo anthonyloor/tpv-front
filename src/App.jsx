@@ -1,7 +1,7 @@
 // src/App.jsx
 
 import React, { useEffect, useContext, useState, useRef } from "react";
-import { Toaster } from "sonner";
+import { Toast } from "primereact/toast";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import PinPage from "./components/pages/PinPage";
 import LoginPage from "./components/pages/LoginPage";
@@ -30,6 +30,7 @@ function App() {
   const [isShopLoaded, setIsShopLoaded] = useState(false);
   const [showVersionUpdate, setShowVersionUpdate] = useState(false);
   const currentVersion = useRef(null);
+  const toast = useRef(null);
 
   useEffect(() => {
     applyTheme(theme);
@@ -112,7 +113,7 @@ function App() {
         className="flex flex-col min-h-screen"
         style={{ backgroundColor: "var(--surface-200)" }}
       >
-        <Toaster position="top-center" expand={true} />
+        <Toast ref={toast} />
         <Routes>
           {/* Rutas de login */}
           <Route

@@ -1,13 +1,13 @@
 // src/components/modals/returns/ReturnsExchangesModal.jsx
 
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { useApiFetch } from "../../../utils/useApiFetch";
-import { toast } from "sonner";
+import { Toast } from "primereact/toast";
 import { CartContext } from "../../../contexts/CartContext";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import generateTicket from "../../../utils/ticket";
@@ -18,6 +18,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   const [orderId, setOrderId] = useState("");
   const [orderData, setOrderData] = useState(null);
   const [error, setError] = useState(null);
+  const toast = useRef(null);
 
   // Para la selección de productos a devolver
   const [selectedRows, setSelectedRows] = useState([]);
@@ -349,8 +350,11 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     }
 
     setIsDevolution(true);
-
-    toast.success("Rectificación añadida y productos devueltos al carrito.");
+    toast.current.show({
+      severity: "success",
+      summary: "Éxito",
+      detail: "Productos añadidos a devolución.",
+    });
     // Limpieza
     setOrderId("");
     setOrderData(null);
@@ -461,6 +465,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   // Render
   return (
     <>
+      <Toast ref={toast} position="top-center" />
       <Dialog
         visible={isOpen}
         onHide={onClose}
