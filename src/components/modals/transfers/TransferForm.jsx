@@ -24,6 +24,9 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { FloatLabel } from "primereact/floatlabel";
 import { OverlayPanel } from "primereact/overlaypanel";
+import JsBarcode from "jsbarcode";
+import useProductSearch from "../../../hooks/useProductSearch";
+import { ClientContext } from "../../../contexts/ClientContext";
 
 const TransferForm = forwardRef(
   ({ type, onSave, movementData, onFooterChange }, ref) => {
@@ -59,6 +62,7 @@ const TransferForm = forwardRef(
     const [movementStatus, setMovementStatus] = useState("en creacion");
     const [employeeIdV, setEmployeeId] = useState(null);
     const API_BASE_URL = getApiBaseUrl();
+    const { selectedClient } = useContext(ClientContext);
 
     const apiFetch = useApiFetch();
     const { idProfile } = useContext(AuthContext);
@@ -646,10 +650,19 @@ const TransferForm = forwardRef(
       console.log("Estado actual de los productos:", productsToTransfer);
     };
 
-    const handlePrintLabels = () => {
-      // Filtrar solo productos que tengan control_stocks
+    // Reemplazar la definición de handlePrintLabels por la siguiente versión:
+    const { handleSearch } = useProductSearch({
+      apiFetch,
+      shopId,
+      allowOutOfStockSales: true,
+      onAddProduct: () => {},
+      idProfile,
+      selectedClient,
+    });
+    const handlePrintLabels = async () => {
+      // Filtrar productos con seguimiento
       const productsToPrint = productsToTransfer.filter(
-        (p) => p.control_stocks && p.control_stocks.length > 0
+        (detail) => detail.control_stocks && detail.control_stocks.length > 0
       );
       if (productsToPrint.length === 0) {
         toast.current.show({
@@ -659,34 +672,110 @@ const TransferForm = forwardRef(
         });
         return;
       }
+
+      // Para cada producto, obtener detalles usando handleSearch
+      const detailedData = await Promise.all(
+        productsToPrint.map(async (detail) => {
+          const groups = await handleSearch(detail.ean13);
+          let productInfo = {};
+          if (
+            groups &&
+            groups.length > 0 &&
+            groups[0].combinations &&
+            groups[0].combinations.length > 0
+          ) {
+            productInfo = groups[0].combinations[0];
+          }
+          return { detail, productInfo };
+        })
+      );
+
+      // Aplanar los control_stocks: para cada producto se recorre cada control_stock
+      const payloadItems = detailedData.flatMap(({ detail, productInfo }) =>
+        detail.control_stocks.map((cs) => ({
+          detail,
+          productInfo,
+          cs, // se agrega el objeto cs para reutilizar su id_control_stock
+          payload: {
+            ean13: detail.ean13,
+            id_control_stock: cs.id_control_stock,
+          },
+        }))
+      );
+
+      // Ejecutar la consulta de get_product_price_tag para cada control_stock
+      const responses = await Promise.all(
+        payloadItems.map(({ detail, productInfo, cs, payload }) =>
+          apiFetch(`${API_BASE_URL}/get_product_price_tag`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }).then((tagInfo) => ({ detail, productInfo, cs, tagInfo }))
+        )
+      );
+
+      // Construir el HTML de etiquetas: se generará una etiqueta por cada control_stock obtenido
       const labelStyle =
         "box-sizing:border-box; margin:15px; page-break-after: always; break-after: page;";
       let labelsHtml = "";
-      productsToPrint.forEach((product) => {
-        product.control_stocks.forEach((cs) => {
-          labelsHtml += `
-            <div class="label" style="${labelStyle}">
-              <div style="font-size:16px; font-weight:bold;">${product.product_name}</div>
-              <div style="font-size:14px;">${product.ean13} - ${cs.id_control_stock}</div>
-            </div>
-          `;
-        });
+      responses.forEach(({ detail, productInfo, cs, tagInfo }, index) => {
+        const barcodeId = `barcode-${index}`;
+        labelsHtml += `
+      <div class="label" style="${labelStyle}">
+        <div style="font-size:16px; font-weight:bold;">${
+          productInfo.product_name || detail.product_name
+        }</div>
+        <div style="font-size:14px;">
+          <svg id="${barcodeId}"></svg>
+          <div>${tagInfo.ean13 || detail.ean13} - ${cs.id_control_stock}</div>
+        </div>
+        <div style="font-size:14px;">
+          <span>${productInfo.combination || detail.combination || ""}</span>
+          <span>${productInfo.reference || detail.reference || ""}</span>
+          <span>${productInfo.price ? productInfo.price + " €" : ""}</span>
+        </div>
+      </div>
+    `;
       });
+
       const pageStyle =
         "@page { size: 62mm 32mm; margin: 5mm; } body { margin: 0; }";
       const printWindow = window.open("", "_blank", "width=600,height=400");
       printWindow.document.write(`
-        <html>
-          <head>
-            <style>${pageStyle}</style>
-          </head>
-          <body>${labelsHtml}</body>
-        </html>
-      `);
+    <html>
+      <head>
+        <style>${pageStyle}</style>
+      </head>
+      <body>${labelsHtml}</body>
+    </html>
+  `);
       printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
+      printWindow.addEventListener("load", () => {
+        responses.forEach(({ detail, cs }, index) => {
+          const barcodeId = `barcode-${index}`;
+          const svgElem = printWindow.document.getElementById(barcodeId);
+          if (svgElem) {
+            try {
+              JsBarcode(
+                svgElem,
+                (detail.ean13 || "") + "" + cs.id_control_stock,
+                {
+                  format: "code128",
+                  displayValue: false,
+                  width: 2,
+                  height: 50,
+                  margin: 4,
+                }
+              );
+            } catch (err) {
+              console.error("Error generando código de barras:", err);
+            }
+          }
+        });
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      });
     };
 
     const canExecute =
