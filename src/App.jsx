@@ -2,6 +2,7 @@
 
 import React, { useEffect, useContext, useState, useRef } from "react";
 import { Toast } from "primereact/toast";
+import { ProgressBar } from "primereact/progressbar";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import PinPage from "./components/pages/PinPage";
 import LoginPage from "./components/pages/LoginPage";
@@ -15,6 +16,7 @@ import MobileDashboard from "./MobileDashboard";
 import DesktopTPV from "./DesktopTPV";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { useTheme, applyTheme } from "./components/ThemeSwitcher";
+import { useTokenExpiryWarning } from "./hooks/useTokenExpiryWarning";
 
 function App() {
   const {
@@ -31,6 +33,7 @@ function App() {
   const [showVersionUpdate, setShowVersionUpdate] = useState(false);
   const currentVersion = useRef(null);
   const toast = useRef(null);
+  const tokenToastShownRef = useRef(false);
 
   useEffect(() => {
     applyTheme(theme);
@@ -99,6 +102,61 @@ function App() {
     window.location.reload();
   };
 
+  const TokenCountdownToast = ({ duration = 300000 }) => {
+    const [remaining, setRemaining] = useState(duration);
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setRemaining((prev) => Math.max(prev - 1000, 0));
+      }, 1000);
+      return () => clearInterval(interval);
+    }, []);
+
+    const formatTime = (ms) => {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+      const seconds = String(totalSeconds % 60).padStart(2, "0");
+      return `${minutes}:${seconds}`;
+    };
+
+    const progress = Math.floor(((duration - remaining) / duration) * 100);
+
+    return (
+      <section className="flex p-3 gap-3 w-full fadeindown">
+        <i className="pi pi-clock text-primary-500 text-2xl"></i>
+        <div className="flex flex-column gap-3 w-full">
+          <p className="m-0 font-semibold text-base">
+            La sesión se cerrará en {formatTime(remaining)}
+          </p>
+          <div className="flex flex-column gap-2">
+            <ProgressBar value={progress} showValue={false} />
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  const handleTokenExpiryWarning = (remainingMs) => {
+    if (remainingMs <= 0 && toast.current) {
+      toast.current.clear("token-warning");
+      return;
+    }
+    if (!tokenToastShownRef.current && toast.current) {
+      toast.current.show({
+        id: "token-warning",
+        sticky: true,
+        content: ({ message }) => <TokenCountdownToast />,
+        style: {
+          backgroundColor: "var(--surface-0)",
+          borderRadius: "10px",
+        },
+      });
+      tokenToastShownRef.current = true;
+    }
+  };
+
+  useTokenExpiryWarning(handleTokenExpiryWarning, 5);
+
   if (!isShopLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -125,8 +183,8 @@ function App() {
             element={<LoginPage shopRoute="bravomurillo205" />}
           />
           <Route
-            path="/alcala397"
-            element={<LoginPage shopRoute="alcala397" />}
+            path="/pueblonuevo"
+            element={<LoginPage shopRoute="pueblonuevo" />}
           />
           <Route path="/bodega" element={<LoginPage shopRoute="bodega" />} />
           <Route

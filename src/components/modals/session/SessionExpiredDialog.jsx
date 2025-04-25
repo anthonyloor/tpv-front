@@ -1,6 +1,6 @@
 // src/components/modals/session/SessionExpiredDialog.jsx
 
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { AuthContext } from "../../../contexts/AuthContext";
@@ -26,6 +26,24 @@ const SessionExpiredDialog = () => {
     navigate(`/${shopRoute}`);
   };
 
+  const [countdown, setCountdown] = useState(5);
+  useEffect(() => {
+    if (isSessionExpired) {
+      setCountdown(5);
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            handleRelogin();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isSessionExpired]);
+
   return (
     <Dialog
       header="Sesión Expirada"
@@ -38,7 +56,8 @@ const SessionExpiredDialog = () => {
     >
       <div className="text-center">
         <p className="mb-6">
-          La sesión del empleado ha expirado. Por favor, inicia sesión de nuevo.
+          La sesión del empleado ha expirado. La aplicación se cerrará en{" "}
+          {countdown} {countdown === 1 ? "segundo" : "segundos"}.
         </p>
         <Button
           label="Aceptar"

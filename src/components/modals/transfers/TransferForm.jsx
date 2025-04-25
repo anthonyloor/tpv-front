@@ -23,6 +23,7 @@ import { Column } from "primereact/column";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { FloatLabel } from "primereact/floatlabel";
+import { OverlayPanel } from "primereact/overlaypanel";
 
 const TransferForm = forwardRef(
   ({ type, onSave, movementData, onFooterChange }, ref) => {
@@ -83,6 +84,9 @@ const TransferForm = forwardRef(
               item.label.toLowerCase() === movementData.status.toLowerCase()
           )
         : 0;
+
+    const [controlStocksState, setControlStocksState] = useState([]);
+    const overlayPanelControlStock = useRef(null);
 
     useEffect(() => {
       const loadShops = async () => {
@@ -197,6 +201,7 @@ const TransferForm = forwardRef(
               quantity,
               stock_origin: md.stock_origin,
               stock_destiny: md.stock_destiny,
+              control_stocks: md.control_stocks || [],
             };
           });
           setProductsToTransfer(loadedProducts);
@@ -226,16 +231,38 @@ const TransferForm = forwardRef(
       isNewMovement || movementStatus.toLowerCase() === "en creacion";
 
     const barcodeBodyTemplate = (rowData) => {
-      const { ean13, id_control_stock } = rowData;
-      return id_control_stock ? (
-        <>
-          <span style={{ width: "100px" }}>
-            {ean13}-{id_control_stock} <i className="pi pi-link" />
-          </span>
-        </>
-      ) : (
-        <span style={{ width: "100px" }}>{ean13}</span>
-      );
+      if (
+        type === "entrada" &&
+        movementData &&
+        movementData.status.toLowerCase() === "ejecutado" &&
+        rowData.control_stocks &&
+        rowData.control_stocks.length > 0
+      ) {
+        return (
+          <div style={{ width: "100px" }}>
+            <span>{rowData.ean13}</span>
+            <i
+              className="pi pi-link ml-1"
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                setControlStocksState(rowData.control_stocks);
+                overlayPanelControlStock.current.toggle(e);
+              }}
+            />
+          </div>
+        );
+      }
+      if (rowData.id_control_stock) {
+        return (
+          <>
+            <span style={{ width: "100px" }}>
+              {rowData.ean13} - {rowData.id_control_stock}{" "}
+              <i className="pi pi-link" />
+            </span>
+          </>
+        );
+      }
+      return <span style={{ width: "100px" }}>{rowData.ean13}</span>;
     };
 
     // Funciones auxiliares para identificar un producto
@@ -619,6 +646,49 @@ const TransferForm = forwardRef(
       console.log("Estado actual de los productos:", productsToTransfer);
     };
 
+    const handlePrintLabels = () => {
+      // Filtrar solo productos que tengan control_stocks
+      const productsToPrint = productsToTransfer.filter(
+        (p) => p.control_stocks && p.control_stocks.length > 0
+      );
+      if (productsToPrint.length === 0) {
+        toast.current.show({
+          severity: "warn",
+          summary: "Advertencia",
+          detail: "No hay productos con seguimiento para imprimir.",
+        });
+        return;
+      }
+      const labelStyle =
+        "box-sizing:border-box; margin:15px; page-break-after: always; break-after: page;";
+      let labelsHtml = "";
+      productsToPrint.forEach((product) => {
+        product.control_stocks.forEach((cs) => {
+          labelsHtml += `
+            <div class="label" style="${labelStyle}">
+              <div style="font-size:16px; font-weight:bold;">${product.product_name}</div>
+              <div style="font-size:14px;">${product.ean13} - ${cs.id_control_stock}</div>
+            </div>
+          `;
+        });
+      });
+      const pageStyle =
+        "@page { size: 62mm 32mm; margin: 5mm; } body { margin: 0; }";
+      const printWindow = window.open("", "_blank", "width=600,height=400");
+      printWindow.document.write(`
+        <html>
+          <head>
+            <style>${pageStyle}</style>
+          </head>
+          <body>${labelsHtml}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
+
     const canExecute =
       productsToTransfer.length > 0 &&
       productsToTransfer.every(
@@ -966,6 +1036,18 @@ const TransferForm = forwardRef(
             <Steps model={stepItems} activeIndex={activeIndex} readOnly />{" "}
           </div>
 
+          {type === "entrada" &&
+            movementData &&
+            movementData.status.toLowerCase() === "ejecutado" && (
+              <div className="mb-4">
+                <Button
+                  label="Imprimir etiquetas"
+                  icon="pi pi-print"
+                  onClick={handlePrintLabels}
+                />
+              </div>
+            )}
+
           <div className="card flex flex-column md:flex-row gap-3">
             <div className="p-inputgroup flex-1">
               <FloatLabel>
@@ -1110,6 +1192,16 @@ const TransferForm = forwardRef(
             </DataTable>
           </div>
         </div>
+        <OverlayPanel
+          ref={overlayPanelControlStock}
+          style={{ maxWidth: "200px" }}
+        >
+          {controlStocksState.map((cs, index) => (
+            <div key={index} className="p-1">
+              <strong>Seguimiento:</strong> {cs.id_control_stock}
+            </div>
+          ))}
+        </OverlayPanel>
       </div>
     );
   }

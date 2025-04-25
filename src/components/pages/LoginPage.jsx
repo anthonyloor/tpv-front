@@ -15,7 +15,7 @@ import getApiBaseUrl from "../../utils/getApiBaseUrl";
 const routeToShopInfo = {
   penaprieta8: { name: "Peña Prieta", id_shop: 11 },
   bravomurillo205: { name: "Bravo Murillo", id_shop: 9 },
-  alcala397: { name: "Pueblo Nuevo", id_shop: 14 },
+  pueblonuevo: { name: "Pueblo Nuevo", id_shop: 14 },
   bodega: { name: "Bodega", id_shop: 13 },
   mayretmodacolombiana: { name: "Mayret Moda Colombiana", id_shop: 1 },
 };

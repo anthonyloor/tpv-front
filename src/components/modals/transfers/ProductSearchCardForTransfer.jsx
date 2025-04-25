@@ -110,6 +110,9 @@ const ProductSearchCardForTransfer = ({
     if (isSearchDisabled || !searchTerm.trim()) return;
     setIsLoading(true);
     try {
+      const ean13Regex = /^\d{13}$/;
+      const ean13ApostropheRegex = /^(\d{13})(\d+)$/;
+
       const groups = await productSearch(searchTerm, false, true);
       console.log("[ProductSearchCardForTransfer] Search results:", groups);
       const flatResults = groups
@@ -125,7 +128,17 @@ const ProductSearchCardForTransfer = ({
         playSound("error");
         return;
       }
+
       const transformed = transformProductsForTransfer(flatResults);
+
+      if (
+        !ean13Regex.test(searchTerm) &&
+        !ean13ApostropheRegex.test(searchTerm)
+      ) {
+        setSearchResults(transformed);
+        setIsDialogOpen(true);
+        return;
+      }
       if (transformed.length === 1) {
         // Agregar automáticamente si sólo hay un resultado
         handleAddSelectedProducts([transformed[0]]);

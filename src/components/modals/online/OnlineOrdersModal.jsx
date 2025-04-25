@@ -285,6 +285,11 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
         body: JSON.stringify(payload),
       });
       if (res.status === "OK") {
+        setUpdatedStockSelections({});
+        setStockData([]);
+        setSelectedOrderForStock(null);
+        setSelectedControlStock(null);
+        setCurrentCell(null);
         setResultDialogSuccess(true);
         setResultDialogMessage("Actualización realizada con éxito");
         setStockModalVisible(false);

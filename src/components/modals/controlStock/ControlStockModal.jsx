@@ -6,6 +6,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 
 const ControlStockModal = ({ isOpen, onClose, inlineMode = false }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -13,6 +14,7 @@ const ControlStockModal = ({ isOpen, onClose, inlineMode = false }) => {
   const [loading, setLoading] = useState(false);
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
+  const shopsDict = useShopsDictionary();
 
   const handleSearch = async () => {
     setLoading(true);
@@ -43,7 +45,12 @@ const ControlStockModal = ({ isOpen, onClose, inlineMode = false }) => {
       modal
       draggable={false}
       resizable={false}
-      style={{ width: "70vw" }}
+      style={{
+        maxWidth: "50vw",
+        maxHeight: "75vh",
+        width: "45vw",
+        height: "70vh",
+      }}
     >
       <div className="p-fluid">
         {/* Región de búsqueda */}
@@ -79,14 +86,14 @@ const ControlStockModal = ({ isOpen, onClose, inlineMode = false }) => {
                     <strong>Codigo de barras:</strong> {results.ean13}
                   </div>
                   <div className="p-col">
+                    <strong>Tienda:</strong> {shopsDict[results.id_shop] || "-"}
+                  </div>
+                  <div className="p-col">
                     <strong>Fecha creación seguimiento:</strong>{" "}
                     {results.date_add}
                   </div>
                   <div className="p-col">
                     <strong>Activo:</strong> {results.active ? "Sí" : "No"}
-                  </div>
-                  <div className="p-col">
-                    <strong>Impreso:</strong> {results.printed ? "Sí" : "No"}
                   </div>
                 </div>
                 {results.history && results.history.length > 0 ? (
@@ -100,9 +107,8 @@ const ControlStockModal = ({ isOpen, onClose, inlineMode = false }) => {
                     responsiveLayout="scroll"
                   >
                     <Column
-                      field="id_control_stock_history"
-                      header="ID"
-                      sortable
+                      field="date"
+                      header="Fecha movimiento"
                       style={{ textAlign: "center" }}
                       alignHeader="center"
                     />
@@ -118,15 +124,9 @@ const ControlStockModal = ({ isOpen, onClose, inlineMode = false }) => {
                       style={{ textAlign: "center" }}
                       alignHeader="center"
                     />
-                    <Column
-                      field="date"
-                      header="Fecha movimiento"
-                      style={{ textAlign: "center" }}
-                      alignHeader="center"
-                    />
                   </DataTable>
                 ) : (
-                  <p>No hay historial disponible.</p>
+                  <p>Sin seguimiento.</p>
                 )}
               </>
             )}

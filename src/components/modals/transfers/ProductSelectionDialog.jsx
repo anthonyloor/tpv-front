@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -37,6 +37,14 @@ const ProductSelectionDialog = ({
 
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
+
+  // Limpiar el modal al mostrarse
+  useEffect(() => {
+    if (visible) {
+      setSelectedItems([]);
+      setSelectedBarcodeItems([]);
+    }
+  }, [visible]);
 
   // Al hacer check
   const handleCheckboxChange = (product) => {
@@ -214,10 +222,10 @@ const ProductSelectionDialog = ({
         draggable={false}
         resizable={false}
         style={{
-          width: "70vw",
-          maxWidth: "900px",
-          backgroundColor: "var(--surface-0)",
-          color: "var(--text-color)",
+          maxWidth: "70vw",
+          maxHeight: "85vh",
+          width: "45vw",
+          height: "80vh",
         }}
         footer={renderFooter()}
       >

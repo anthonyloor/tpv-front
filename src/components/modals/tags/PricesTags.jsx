@@ -670,12 +670,10 @@ export default function PricesTags({ isOpen, onHide }) {
         draggable={false}
         resizable={false}
         style={{
-          maxWidth: "60vw",
-          maxHeight: "70vh",
-          minWidth: "950px",
-          minHeight: "650px",
-          width: "50vw",
-          height: "65vh",
+          maxWidth: "70vw",
+          maxHeight: "85vh",
+          width: "65vw",
+          height: "80vh",
         }}
         footer={dialogFooter}
       >
@@ -982,6 +980,12 @@ export default function PricesTags({ isOpen, onHide }) {
         modal
         draggable={false}
         resizable={false}
+        style={{
+          maxWidth: "25vw",
+          maxHeight: "30vh",
+          width: "23vw",
+          height: "29vh",
+        }}
         closable={!isGenerating}
       >
         <div className="p-4">

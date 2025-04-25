@@ -6,6 +6,8 @@ import { Button } from "primereact/button";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { generateSalesPdf } from "../../../utils/generateSalesPdf";
+import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 
 const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
   const [sessions, setSessions] = useState([]);
@@ -14,6 +16,11 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
   const shop = JSON.parse(localStorage.getItem("shop"));
+  const shopsDict = useShopsDictionary();
+  const employeesDict = useEmployeesDictionary();
+  const EmployeeNameCell = ({ id_employee }) => (
+    <span>{employeesDict[id_employee] || id_employee}</span>
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -23,7 +30,8 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
           const data = await apiFetch(`${API_BASE_URL}/get_pos_sessions`, {
             method: "GET",
           });
-          setSessions(data);
+          const res = data.filter((s) => s.id_shop !== 1);
+          setSessions(res);
           setLoading(false);
         } catch (error) {
           console.error("Error fetching data:", error);
@@ -72,12 +80,6 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
         icon="pi pi-file-pdf"
         onClick={handleGenerateSessionPdf}
       />
-      <Button
-        label="Cerrar"
-        icon="pi pi-times"
-        onClick={onClose}
-        className="p-button-text"
-      />
     </div>
   );
 
@@ -90,7 +92,12 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
       draggable={false}
       resizable={false}
       footer={footer}
-      style={{ width: "70vw" }}
+      style={{
+        axWidth: "70vw",
+        maxHeight: "85vh",
+        width: "65vw",
+        height: "80vh",
+      }}
     >
       {loading ? (
         <p>Cargando...</p>
@@ -99,7 +106,7 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
           <DataTable
             value={sessions}
             paginator
-            rows={10}
+            rows={7}
             className="p-datatable-striped p-datatable-gridlines"
             selectionMode="single"
             selection={selectedSession}
@@ -112,49 +119,74 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
             <Column
               field="id_pos_session"
               header="ID"
-              style={{ textAlign: "center" }}
+              style={{ textAlign: "center", width: "5px" }}
+              alignHeader="center"
+            ></Column>
+            <Column
+              field="id_shop"
+              header="Tienda"
+              body={(rowData) => <span>{shopsDict[rowData.id_shop]}</span>}
+              style={{ textAlign: "center", width: "100px" }}
               alignHeader="center"
             ></Column>
             <Column
               field="date_add"
               header="Fecha Apertura"
-              style={{ textAlign: "center" }}
+              style={{ textAlign: "center", width: "130px" }}
+              alignHeader="center"
+            ></Column>
+            <Column
+              field="id_employee_open"
+              header="Empleado Apertura"
+              body={(rowData) => (
+                <EmployeeNameCell id_employee={rowData.id_employee_open} />
+              )}
+              style={{ textAlign: "center", width: "130px" }}
               alignHeader="center"
             ></Column>
             <Column
               field="date_close"
               header="Fecha Cierre"
+              style={{ textAlign: "center", width: "130px" }}
+              alignHeader="center"
+            ></Column>
+            <Column
+              field="id_employee_close"
+              header="Empleado Cierre"
               style={{ textAlign: "center" }}
+              body={(rowData) => (
+                <EmployeeNameCell id_employee={rowData.id_employee_close} />
+              )}
               alignHeader="center"
             ></Column>
             <Column
               field="init_cash"
               header="Caja Inicial"
-              style={{ textAlign: "center" }}
+              style={{ textAlign: "center", width: "100px" }}
               alignHeader="center"
             ></Column>
             <Column
               field="total_cash"
               header="Total Efectivo"
-              style={{ textAlign: "center" }}
+              style={{ textAlign: "center", width: "100px" }}
               alignHeader="center"
             ></Column>
             <Column
               field="total_card"
               header="Total Tarjeta"
-              style={{ textAlign: "center" }}
+              style={{ textAlign: "center", width: "100px" }}
               alignHeader="center"
             ></Column>
             <Column
               field="total_bizum"
               header="Total Bizum"
-              style={{ textAlign: "center" }}
+              style={{ textAlign: "center", width: "100px" }}
               alignHeader="center"
             ></Column>
             <Column
               field="active"
               header="Activo"
-              style={{ textAlign: "center" }}
+              style={{ textAlign: "center", width: "50px" }}
               alignHeader="center"
               sortable
               body={(rowData) => (rowData.active ? "Sí" : "No")}

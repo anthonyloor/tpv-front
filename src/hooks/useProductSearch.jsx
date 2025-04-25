@@ -169,7 +169,6 @@ const useProductSearch = ({
         });
         playSound("success");
       }
-      
     });
   };
 
@@ -388,7 +387,6 @@ const useProductSearch = ({
       }
     } catch (error) {
       console.error("Error en la búsqueda:", error);
-      alert("Error al buscar productos. Inténtalo de nuevo más tarde.");
     } finally {
       setIsLoading(false);
     }

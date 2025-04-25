@@ -17,106 +17,48 @@ export const generateSalesPdf = (data, shopName) => {
     );
     yPos += 30;
 
-    // Procesar líneas de productos a partir de cada orden
-    const productLines = data.flatMap((order) =>
-      order.order_details.map((detail) => {
-        let combination = detail.product_name;
-        if (detail.product_name && detail.product_reference) {
-          const refIndex = detail.product_name.indexOf(
-            detail.product_reference
-          );
-          if (refIndex !== -1) {
-            let afterRef = detail.product_name.substring(
-              refIndex + detail.product_reference.length
-            );
-            let cleaned = afterRef.trim();
-            if (cleaned.startsWith("-")) {
-              cleaned = cleaned.slice(1).trim();
-            }
-            if (cleaned.endsWith("undefined")) {
-              cleaned = cleaned.slice(0, -"undefined".length).trim();
-            }
-            const colorMatch = cleaned.match(/Color\s*[:\-]?\s*([\w\s]+)/i);
-            const tallaMatch = cleaned.match(/Talla\s*[:\-]?\s*([\w\s]+)/i);
-            if (colorMatch || tallaMatch) {
-              const color = colorMatch ? colorMatch[1].trim() : "";
-              const talla = tallaMatch ? tallaMatch[1].trim() : "";
-              combination = [color, talla].filter(Boolean).join(" - ");
-            } else {
-              const parts = cleaned
-                .split("-")
-                .map((p) => p.trim())
-                .filter(Boolean);
-              if (parts.length >= 2) {
-                combination = `${parts[0]} - ${parts[1]}`;
-              } else {
-                combination = cleaned;
+    // Procesar descuentos (order_cart_rules)
+    data.forEach((order) => {
+      if (order.order_cart_rules && Array.isArray(order.order_cart_rules)) {
+        order.order_cart_rules.forEach((rule) => {
+          if (rule.description.startsWith("Producto:")) {
+            const prodIdentifier = rule.description
+              .split("Producto:")[1]
+              .trim(); // Ej: "7073-25459"
+            order.order_details = order.order_details.map((detail) => {
+              const detailIdentifier = `${detail.product_id}-${detail.product_attribute_id}`;
+              if (detailIdentifier === prodIdentifier) {
+                detail.hasDiscount = true;
+                detail.discountRuleName = rule.name;
               }
-            }
+              return detail;
+            });
+          } else if (rule.description.startsWith("Descuento sobre venta")) {
+            order.hasGlobalDiscount = true;
+            order.globalDiscountName = rule.name + " sobre la venta";
+          } else if (rule.name) {
+            order.hasGlobalDiscount = true;
+            order.globalDiscountName = rule.name;
           }
-        }
-        const payments = order.payment
-          .split(",")
-          .map((p) => p.trim().toLowerCase());
-        const cashAmount = order.total_cash || 0;
-        const cardAmount = order.total_card || 0;
-        const bizumAmount = order.total_bizum || 0;
-        const includedMethods = [];
-        if (payments.includes("efectivo")) {
-          includedMethods.push({ method: "efectivo", amount: cashAmount });
-        }
-        if (payments.includes("contra reembolso")) {
-          includedMethods.push({
-            method: "contra reembolso",
-            amount: cashAmount,
-          });
-        }
-        if (payments.includes("tarjeta")) {
-          includedMethods.push({ method: "tarjeta", amount: cardAmount });
-        }
-        if (payments.includes("redsys - tarjeta")) {
-          includedMethods.push({
-            method: "redsys - tarjeta",
-            amount: cardAmount,
-          });
-        }
-        if (payments.includes("bizum")) {
-          includedMethods.push({ method: "bizum", amount: bizumAmount });
-        }
-        if (payments.includes("redsys - bizum")) {
-          includedMethods.push({
-            method: "redsys - bizum",
-            amount: bizumAmount,
-          });
-        }
-        const nonZeroCount = includedMethods.filter((m) => m.amount > 0).length;
-        const paymentText = includedMethods
-          .map((m) =>
-            nonZeroCount > 1 && m.amount > 0
-              ? `${m.method}: ${m.amount.toFixed(2)}€`
-              : m.method
-          )
-          .join(", ");
-        return {
-          id_order: order.id_order,
-          customer_name: order.customer_name?.includes("TPV")
-            ? "TPV"
-            : order.customer_name,
-          payment: paymentText,
-          product_quantity: detail.product_quantity,
-          product_reference: detail.product_reference,
-          combination_name: combination,
-          product_name: detail.product_name,
-          total_price_tax_incl: detail.total_price_tax_incl,
-          reduction_amount_tax_incl: detail.reduction_amount_tax_incl || 0,
-          total_cash: order.total_cash || 0,
-          total_card: order.total_card || 0,
-          total_bizum: order.total_bizum || 0,
-        };
-      })
-    );
+        });
+      }
+    });
 
-    // Calcular suma de descuentos realizados en todas las líneas:
+    // NUEVO: Función para calcular totales
+    function calculateTotals(orders) {
+      let totalCash = 0,
+        totalCard = 0,
+        totalBizum = 0;
+      orders.forEach((order) => {
+        totalCash += order.total_cash || 0;
+        totalCard += order.total_card || 0;
+        totalBizum += order.total_bizum || 0;
+      });
+      return { totalCash, totalCard, totalBizum };
+    }
+    const { totalCash, totalCard, totalBizum } = calculateTotals(data);
+
+    // Calcular suma de descuentos
     let discountSum = 0;
     data.forEach((order) => {
       order.order_details.forEach((detail) => {
@@ -128,44 +70,6 @@ export const generateSalesPdf = (data, shopName) => {
       });
     });
 
-    const tableRows = productLines.map((item) => {
-      let precio;
-      if (
-        item.reduction_amount_tax_incl &&
-        item.reduction_amount_tax_incl !== 0
-      ) {
-        precio = {
-          discount: true,
-          original: Number(item.total_price_tax_incl).toFixed(2) + "€",
-          discounted: Number(item.reduction_amount_tax_incl).toFixed(2) + "€",
-        };
-      } else {
-        precio = Number(item.total_price_tax_incl).toFixed(2) + "€";
-      }
-      return [
-        item.id_order,
-        item.customer_name,
-        item.product_quantity,
-        item.product_reference,
-        item.combination_name,
-        item.payment,
-        precio,
-      ];
-    });
-
-    const totalCash = data.reduce(
-      (acc, order) => acc + (order.total_cash || 0),
-      0
-    );
-    const totalCard = data.reduce(
-      (acc, order) => acc + (order.total_card || 0),
-      0
-    );
-    const totalBizum = data.reduce(
-      (acc, order) => acc + (order.total_bizum || 0),
-      0
-    );
-
     const tableColumn = [
       "Ticket",
       "Cliente",
@@ -176,7 +80,145 @@ export const generateSalesPdf = (data, shopName) => {
       "Importe",
     ];
 
-    // Definir variables para alternar el fondo por id_order
+    // Recalcular la propiedad "combination_name" para cada detalle si no está definida
+    data.forEach((order) => {
+      order.order_details.forEach((detail) => {
+        if (!detail.combination_name) {
+          let combination = detail.product_name;
+          if (detail.product_name && detail.product_reference) {
+            const refIndex = detail.product_name.indexOf(
+              detail.product_reference
+            );
+            if (refIndex !== -1) {
+              let afterRef = detail.product_name.substring(
+                refIndex + detail.product_reference.length
+              );
+              let cleaned = afterRef.trim();
+              if (cleaned.startsWith("-")) {
+                cleaned = cleaned.slice(1).trim();
+              }
+              if (cleaned.endsWith("undefined")) {
+                cleaned = cleaned.slice(0, -"undefined".length).trim();
+              }
+              const colorMatch = cleaned.match(/Color\s*[:\-]?\s*([\w\s]+)/i);
+              const tallaMatch = cleaned.match(/Talla\s*[:\-]?\s*([\w\s]+)/i);
+              if (colorMatch || tallaMatch) {
+                const color = colorMatch ? colorMatch[1].trim() : "";
+                const talla = tallaMatch ? tallaMatch[1].trim() : "";
+                combination = [color, talla].filter(Boolean).join(" - ");
+              } else {
+                const parts = cleaned
+                  .split("-")
+                  .map((p) => p.trim())
+                  .filter(Boolean);
+                if (parts.length >= 2) {
+                  combination = `${parts[0]} - ${parts[1]}`;
+                } else {
+                  combination = cleaned;
+                }
+              }
+            }
+          }
+          detail.combination_name = combination;
+        }
+      });
+    });
+
+    // Recalcular el texto de pago para cada orden
+    data.forEach((order) => {
+      const payments = order.payment
+        .split(",")
+        .map((p) => p.trim().toLowerCase());
+      const cashAmount = order.total_cash || 0;
+      const cardAmount = order.total_card || 0;
+      const bizumAmount = order.total_bizum || 0;
+      const includedMethods = [];
+      if (payments.includes("efectivo")) {
+        includedMethods.push({ method: "efectivo", amount: cashAmount });
+      }
+      if (payments.includes("contra reembolso")) {
+        includedMethods.push({
+          method: "contra reembolso",
+          amount: cashAmount,
+        });
+      }
+      if (payments.includes("tarjeta")) {
+        includedMethods.push({ method: "tarjeta", amount: cardAmount });
+      }
+      if (payments.includes("redsys - tarjeta")) {
+        includedMethods.push({
+          method: "redsys - tarjeta",
+          amount: cardAmount,
+        });
+      }
+      if (payments.includes("bizum")) {
+        includedMethods.push({ method: "bizum", amount: bizumAmount });
+      }
+      if (payments.includes("redsys - bizum")) {
+        includedMethods.push({
+          method: "redsys - bizum",
+          amount: bizumAmount,
+        });
+      }
+      const nonZeroCount = includedMethods.filter((m) => m.amount > 0).length;
+      const paymentText = includedMethods
+        .map((m) =>
+          nonZeroCount > 1 && m.amount > 0
+            ? `${m.method}: ${m.amount.toFixed(2)}€`
+            : m.method
+        )
+        .join(", ");
+      order.payment = paymentText;
+    });
+
+    const tableRows = data.flatMap((order) => {
+      let rows = [];
+      order.order_details.forEach((detail) => {
+        let precio;
+        if (
+          detail.reduction_amount_tax_incl &&
+          detail.reduction_amount_tax_incl !== 0
+        ) {
+          precio = {
+            discount: true,
+            original: Number(detail.total_price_tax_incl).toFixed(2) + "€",
+            discounted:
+              Number(detail.reduction_amount_tax_incl).toFixed(2) + "€",
+          };
+        } else {
+          precio = Number(detail.total_price_tax_incl).toFixed(2) + "€";
+        }
+        rows.push([
+          order.id_order,
+          order.customer_name?.includes("TPV") ? "TPV" : order.customer_name,
+          detail.product_quantity,
+          detail.product_reference,
+          detail.combination_name,
+          order.payment,
+          precio,
+        ]);
+        if (detail.hasDiscount) {
+          rows.push([
+            {
+              content: detail.discountRuleName,
+              colSpan: tableColumn.length,
+              styles: { fillColor: "#ffe6e6", textColor: "red" },
+            },
+          ]);
+        }
+      });
+      if (order.hasGlobalDiscount) {
+        rows.push([
+          {
+            content: order.globalDiscountName,
+            colSpan: tableColumn.length,
+            styles: { fillColor: "#ffe6e6", textColor: "red" },
+          },
+        ]);
+      }
+      return rows;
+    });
+
     let rowColors = {};
     let lastOrder = null;
     let useGray = false;
@@ -189,7 +231,16 @@ export const generateSalesPdf = (data, shopName) => {
       styles: { fontSize: 12 },
       theme: "grid",
       didParseCell: function (data) {
-        // Aplicar colores solo a las filas de productos (excluyendo la cabecera)
+        if (data.cell.raw && data.cell.raw.colSpan) {
+          return;
+        }
+        if (
+          data.column.index === 6 &&
+          data.cell.raw &&
+          data.cell.raw.discount
+        ) {
+          data.cell.text = [];
+        }
         if (data.row.section === "body") {
           const rowIndex = data.row.index;
           if (rowColors[rowIndex] === undefined && data.column.index === 0) {
@@ -202,18 +253,8 @@ export const generateSalesPdf = (data, shopName) => {
           }
           data.cell.styles.fillColor = rowColors[rowIndex];
         }
-
-        // Manejo existente para celdas de descuento en la columna "Importe"
-        if (
-          data.column.index === 6 &&
-          data.cell.raw &&
-          data.cell.raw.discount
-        ) {
-          data.cell.text = [];
-        }
       },
       didDrawCell: function (data) {
-        // Aplicar lógica de descuento solo a las filas de productos
         if (data.row.section === "body" && data.column.index === 6) {
           if (data.cell.raw && data.cell.raw.discount) {
             const originalText = data.cell.raw.original;
@@ -263,7 +304,6 @@ export const generateSalesPdf = (data, shopName) => {
       0
     );
 
-    // Tabla de totales generales; se añade la fila de descuentos si corresponde.
     const totalsTableBody = [];
     if (discountSum > 0) {
       totalsTableBody.push([

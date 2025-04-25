@@ -14,12 +14,10 @@ const CloseCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
       draggable={false}
       resizable={false}
       style={{
-        maxWidth: "800px",
-        maxHeight: "550px",
-        minWidth: "750px",
-        minHeight: "500px",
-        width: "50vw",
-        height: "60vh",
+        maxWidth: "50vw",
+        maxHeight: "60vh",
+        width: "45vw",
+        height: "55vh",
       }}
     >
       <CloseCashRegisterForm onClose={onClose} />

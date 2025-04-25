@@ -543,14 +543,13 @@ const TransfersModal = ({ isOpen, onClose }) => {
           value={augmentedMovements}
           loading={loading}
           scrollable
-          scrollHeight="700px"
           dataKey="id_warehouse_movement"
           selectionMode="multiple"
           metaKeySelection={false}
           selection={selectedMovements}
           paginator
-          rows={10}
-          rowsPerPageOptions={[10, 15, 30]}
+          rows={8}
+          rowsPerPageOptions={[8, 15, 30]}
           emptyMessage={loading ? "Cargando..." : "No hay movimientos."}
           className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
           onRowClick={(e) => handleRowClick(e.data)}
@@ -802,13 +801,10 @@ const TransfersModal = ({ isOpen, onClose }) => {
         modal
         footer={currentView === "form" ? footerContent : null}
         style={{
-          maxWidth: "90vw",
-          maxHeight: "90vh",
-          minWidth: "950px",
-          minHeight: "750px",
-          width: "60vw",
-          height: "75vh",
-          
+          maxWidth: "70vw",
+          maxHeight: "85vh",
+          width: "65vw",
+          height: "80vh",
         }}
       >
         {content}
