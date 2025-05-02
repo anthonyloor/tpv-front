@@ -27,6 +27,7 @@ import { OverlayPanel } from "primereact/overlaypanel";
 import JsBarcode from "jsbarcode";
 import useProductSearch from "../../../hooks/useProductSearch";
 import { ClientContext } from "../../../contexts/ClientContext";
+import { generatePriceLabels } from "../../../utils/generatePriceLabels";
 
 const TransferForm = forwardRef(
   ({ type, onSave, movementData, onFooterChange }, ref) => {
@@ -267,15 +268,6 @@ const TransferForm = forwardRef(
         );
       }
       return <span style={{ width: "100px" }}>{rowData.ean13}</span>;
-    };
-
-    // Funciones auxiliares para identificar un producto
-    const getProductKey = (product) => {
-      return (
-        product.id_control_stock ||
-        product.uniqueId ||
-        product.id_product_attribute
-      );
     };
 
     const getNonStockKey = (product) => {
@@ -650,7 +642,7 @@ const TransferForm = forwardRef(
       console.log("Estado actual de los productos:", productsToTransfer);
     };
 
-    // Reemplazar la definición de handlePrintLabels por la siguiente versión:
+    // Reemplazar la definición de handlePrintLabels por:
     const { handleSearch } = useProductSearch({
       apiFetch,
       shopId,
@@ -673,7 +665,7 @@ const TransferForm = forwardRef(
         return;
       }
 
-      // Para cada producto, obtener detalles usando handleSearch
+      // Obtener detalles para cada producto usando handleSearch
       const detailedData = await Promise.all(
         productsToPrint.map(async (detail) => {
           const groups = await handleSearch(detail.ean13);
@@ -690,22 +682,20 @@ const TransferForm = forwardRef(
         })
       );
 
-      // Aplanar los control_stocks: para cada producto se recorre cada control_stock
+      // Nueva sección: llamar a get_product_price_tag para cada control_stock
       const payloadItems = detailedData.flatMap(({ detail, productInfo }) =>
         detail.control_stocks.map((cs) => ({
           detail,
           productInfo,
-          cs, // se agrega el objeto cs para reutilizar su id_control_stock
+          cs,
           payload: {
             ean13: detail.ean13,
             id_control_stock: cs.id_control_stock,
           },
         }))
       );
-
-      // Ejecutar la consulta de get_product_price_tag para cada control_stock
       const responses = await Promise.all(
-        payloadItems.map(({ detail, productInfo, cs, payload }) =>
+        payloadItems.map(({ payload, detail, productInfo, cs }) =>
           apiFetch(`${API_BASE_URL}/get_product_price_tag`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -713,64 +703,57 @@ const TransferForm = forwardRef(
           }).then((tagInfo) => ({ detail, productInfo, cs, tagInfo }))
         )
       );
-
-      // Construir el HTML de etiquetas: se generará una etiqueta por cada control_stock obtenido
-      const labelStyle =
-        "box-sizing:border-box; margin:15px; page-break-after: always; break-after: page;";
-      let labelsHtml = "";
-      responses.forEach(({ detail, productInfo, cs, tagInfo }, index) => {
-        const barcodeId = `barcode-${index}`;
-        labelsHtml += `
-      <div class="label" style="${labelStyle}">
-        <div style="font-size:16px; font-weight:bold;">${
-          productInfo.product_name || detail.product_name
-        }</div>
-        <div style="font-size:14px;">
-          <svg id="${barcodeId}"></svg>
-          <div>${tagInfo.ean13 || detail.ean13} - ${cs.id_control_stock}</div>
-        </div>
-        <div style="font-size:14px;">
-          <span>${productInfo.combination || detail.combination || ""}</span>
-          <span>${productInfo.reference || detail.reference || ""}</span>
-          <span>${productInfo.price ? productInfo.price + " €" : ""}</span>
-        </div>
-      </div>
-    `;
+      const tagMap = {};
+      responses.forEach(({ detail, cs, tagInfo }) => {
+        const key = (detail.ean13 || "") + "-" + cs.id_control_stock;
+        tagMap[key] = tagInfo;
       });
 
+      console.log("Tag map obtenido de get_product_price_tag:", tagMap);
+
+      // Generar HTML de etiquetas usando generatePriceLabels pasando tagMap en options
+      const labelsHtml = generatePriceLabels(detailedData, { tagMap });
       const pageStyle =
-        "@page { size: 62mm 32mm; margin: 5mm; } body { margin: 0; }";
+        "@page { size: 62mm 32mm; margin: 1mm; } body { margin: 0; }";
       const printWindow = window.open("", "_blank", "width=600,height=400");
       printWindow.document.write(`
-    <html>
-      <head>
-        <style>${pageStyle}</style>
-      </head>
-      <body>${labelsHtml}</body>
-    </html>
-  `);
+		<html>
+		  <head>
+			<style>${pageStyle}</style>
+		  </head>
+		  <body>${labelsHtml}</body>
+		</html>
+		`);
       printWindow.document.close();
       printWindow.addEventListener("load", () => {
-        responses.forEach(({ detail, cs }, index) => {
-          const barcodeId = `barcode-${index}`;
-          const svgElem = printWindow.document.getElementById(barcodeId);
-          if (svgElem) {
-            try {
-              JsBarcode(
-                svgElem,
-                (detail.ean13 || "") + "" + cs.id_control_stock,
-                {
-                  format: "code128",
-                  displayValue: false,
-                  width: 2,
-                  height: 50,
-                  margin: 4,
-                }
-              );
-            } catch (err) {
-              console.error("Error generando código de barras:", err);
+        detailedData.forEach(({ detail }, dataIndex) => {
+          detail.control_stocks.forEach((cs, csIndex) => {
+            const barcodeId = `barcode-${dataIndex}-${csIndex}`;
+            const svgElem = printWindow.document.getElementById(barcodeId);
+            if (svgElem) {
+              try {
+                JsBarcode(
+                  svgElem,
+                  (detail.ean13 || "") + "" + cs.id_control_stock,
+                  {
+                    format: "code128",
+                    width: 2,
+                    height: 100,
+                    displayValue: false,
+                    fontSize: 18,
+                    margin: 4,
+                    textPosition: "bottom",
+                    textAlign: "center",
+                    rotation: 0,
+                  }
+                );
+                svgElem.style.width = "230px";
+                svgElem.style.height = "75px";
+              } catch (err) {
+                console.error("Error generando código de barras:", err);
+              }
             }
-          }
+          });
         });
         printWindow.focus();
         printWindow.print();
