@@ -16,7 +16,12 @@ import { ClientContext } from "../../contexts/ClientContext";
 import { OverlayPanel } from "primereact/overlaypanel";
 import { Toast } from "primereact/toast";
 
-const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
+const ProductSearchCard = ({
+  onAddProduct,
+  onAddDiscount,
+  onClickProduct,
+  disableAutoFocus = false,
+}) => {
   const { setIsDevolution } = useContext(CartContext);
   const { selectedClient } = useContext(ClientContext);
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,23 +83,31 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
   });
 
   useEffect(() => {
-    if (searchTerm === "" && searchInputRef.current) {
+    if (!disableAutoFocus && searchTerm === "" && searchInputRef.current) {
       searchInputRef.current.focus();
     }
-  }, [searchTerm]);
+  }, [searchTerm, disableAutoFocus]);
 
   // Si existe algún modal abierto, se fuerza el foco en el input
   const isAnyModalOpen = () =>
     document.querySelector('[role="dialog"]') !== null;
 
   const handleContainerClick = () => {
-    if (!isAnyModalOpen() && searchInputRef.current) {
+    if (
+      !disableAutoFocus &&
+      !isAnyModalOpen() &&
+      searchInputRef.current
+    ) {
       searchInputRef.current.focus();
     }
   };
 
   const handleInputBlur = () => {
-    if (!isAnyModalOpen() && searchInputRef.current) {
+    if (
+      !disableAutoFocus &&
+      !isAnyModalOpen() &&
+      searchInputRef.current
+    ) {
       searchInputRef.current.focus();
     }
   };
@@ -161,7 +174,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
     await handleSearch(searchTerm);
     setSearchTerm("");
     setTimeout(() => {
-      if (searchInputRef.current) {
+      if (!disableAutoFocus && searchInputRef.current) {
         searchInputRef.current.focus();
       }
     }, 100);
@@ -206,7 +219,7 @@ const ProductSearchCard = ({ onAddProduct, onAddDiscount, onClickProduct }) => {
               backgroundColor: "var(--surface-50)",
               color: "var(--text-color)",
             }}
-            autoFocus
+            autoFocus={!disableAutoFocus}
           />
         </span>
       </div>

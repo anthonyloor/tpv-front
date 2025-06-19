@@ -5,10 +5,13 @@ import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { Divider } from "primereact/divider";
 import { InputText } from "primereact/inputtext";
+import { InputNumber } from "primereact/inputnumber";
 
 import { ClientContext } from "../../contexts/ClientContext";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { CartContext } from "../../contexts/CartContext";
+import { AuthContext } from "../../contexts/AuthContext";
+import PinValidationModal from "../modals/pin/PinValidationModal";
 
 import ParkedCartsModal from "../modals/parked/ParkedCartsModal";
 import AddressModal from "../modals/customer/AddressModal";
@@ -35,6 +38,8 @@ function SalesCard({
   setSelectedProductForDiscount,
   selectedProductForDiscount,
   onTotalsChange = () => {},
+  isEditing,
+  setIsEditing,
 }) {
   const { configData } = useContext(ConfigContext);
   const {
@@ -52,6 +57,7 @@ function SalesCard({
     setOriginalPaymentMethods,
     setOriginalPaymentAmounts,
   } = useContext(CartContext);
+  const { idProfile } = useContext(AuthContext);
 
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] =
@@ -61,6 +67,7 @@ function SalesCard({
   const [isParkedCartsModalOpen, setIsParkedCartsModalOpen] = useState(false);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [ticketName, setTicketName] = useState(null);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const defaultClientId = configData?.id_customer_default;
 
   const isDefaultClient =
@@ -172,6 +179,49 @@ function SalesCard({
     if (window.confirm("¿Estás seguro de eliminar este ticket aparcado?")) {
       deleteParkedCart(cartId);
     }
+  };
+
+  const handleEditTicket = () => {
+    if (!isEditing) {
+      if (idProfile === 1) {
+        const input = document.querySelector(
+          'input[placeholder="Buscar por referencia o código de barras..."]'
+        );
+        if (input) input.blur();
+        setIsEditing(true);
+      } else {
+        setIsPinModalOpen(true);
+      }
+    } else {
+      setIsEditing(false);
+    }
+  };
+
+  const handlePinSuccess = () => {
+    const input = document.querySelector(
+      'input[placeholder="Buscar por referencia o código de barras..."]'
+    );
+    if (input) input.blur();
+    setIsEditing(true);
+    setIsPinModalOpen(false);
+  };
+
+  const handlePriceChange = (id, value) => {
+    setCartItems((prev) =>
+      prev.map((item) =>
+        getRowKey(item) === id
+          ? { ...item, final_price_incl_tax: Number(value) }
+          : item
+      )
+    );
+  };
+
+  const handleQuantityChange = (id, value) => {
+    setCartItems((prev) =>
+      prev.map((item) =>
+        getRowKey(item) === id ? { ...item, quantity: Number(value) } : item
+      )
+    );
   };
   // === CALCULOS TOTALES
 
@@ -387,13 +437,20 @@ function SalesCard({
         </div>
         <div>
           <div className="flex space-x-2">
-            <Button
-              icon="pi pi-file-plus"
-              tooltip="Guardar Ticket"
-              tooltipOptions={{ position: "top" }}
-              severity="warning"
-              onClick={handleParkCart}
-            />
+          <Button
+            icon={isEditing ? "pi pi-save" : "pi pi-pencil"}
+            tooltip={isEditing ? "Guardar edición" : "Editar Ticket"}
+            tooltipOptions={{ position: "top" }}
+            severity="warning"
+            onClick={handleEditTicket}
+          />
+          <Button
+            icon="pi pi-file-plus"
+            tooltip="Guardar Ticket"
+            tooltipOptions={{ position: "top" }}
+            severity="warning"
+            onClick={handleParkCart}
+          />
             <Button
               label={isCompact ? "" : "Tickets"}
               tooltip={isCompact ? "Tickets" : ""}
@@ -499,6 +556,20 @@ function SalesCard({
             header="Precio Und"
             body={(rowData) => {
               if (rowData.reference_combination === "rectificacion") return "-";
+              if (isEditing) {
+                return (
+                  <InputNumber
+                    value={rowData.final_price_incl_tax}
+                    onValueChange={(e) =>
+                      handlePriceChange(rowData.uniqueId, e.value)
+                    }
+                    min={0}
+                    mode="currency"
+                    currency="EUR"
+                    locale="es-ES"
+                  />
+                );
+              }
               if (isDevolution) {
                 const originalPrice = rowData.price_incl_tax;
                 if (
@@ -649,9 +720,19 @@ function SalesCard({
             field="quantity"
             header="Cant."
             body={(rowData) =>
-              rowData.reference_combination === "rectificacion"
-                ? "-"
-                : rowData.quantity
+              rowData.reference_combination === "rectificacion" ? (
+                "-"
+              ) : isEditing ? (
+                <InputNumber
+                  value={rowData.quantity}
+                  onValueChange={(e) =>
+                    handleQuantityChange(rowData.uniqueId, e.value)
+                  }
+                  min={0}
+                />
+              ) : (
+                rowData.quantity
+              )
             }
             style={{ width: "5%", textAlign: "center" }}
             alignHeader={"center"}
@@ -741,6 +822,13 @@ function SalesCard({
           </div>
         </div>
       </Dialog>
+
+      <PinValidationModal
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        onSuccess={handlePinSuccess}
+        reason="edición ticket"
+      />
 
       {/* =========== MODAL ADDRESS (por si solo cambias dirección) =========== */}
       <AddressModal
