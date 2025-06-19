@@ -275,6 +275,8 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       status: 43,
       origin: selectedOrderForStock.origin,
       id_employee: employeeId,
+      num_pedido: "",
+      identificador_rts: "",
       shops: Object.values(shopsMap),
     };
     console.log("Payload para update_online_orders:", payload);

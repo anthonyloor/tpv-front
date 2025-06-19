@@ -98,6 +98,14 @@ function SalesCardActions({
     useState(false);
   const [voucherManualPdfDataUrl, setVoucherManualPdfDataUrl] = useState(null);
 
+  // Nuevo estado y referencia para el manejo de errores de datáfono
+  const [dataphoneErrorModalVisible, setDataphoneErrorModalVisible] =
+    useState(false);
+  const [paymentDecisionCallback, setPaymentDecisionCallback] = useState(null);
+
+  // Agregar nuevo estado para controlar la espera de respuesta de tpvpc
+  const [isTpvProcessing, setIsTpvProcessing] = useState(false);
+
   useEffect(() => {
     // Leer datos de pago actualizados al dispararse el evento personalizado
     const handlePaymentDataUpdated = () => {
@@ -130,6 +138,13 @@ function SalesCardActions({
 
   // Si es devolución, se muestran valores en negativo
   const displayTotal = isDevolution ? Math.abs(total) : total;
+
+  // Agregar el efecto para desactivar isDevolution cuando total >= 0
+  //useEffect(() => {
+  // if (total >= 0 && isDevolution) {
+  //    setIsDevolution(false);
+  //  }
+  //}, [total, isDevolution, setIsDevolution]);
 
   // Estados para alertas
   const [alertVisible, setAlertVisible] = useState(false);
@@ -231,7 +246,130 @@ function SalesCardActions({
     setChangeAmount(0);
   };
 
-  const handleConfirmSale = () => {
+  // Función para llamar a la API del datáfono
+  const callPaymentAPI = async () => {
+    const payload = {
+      // Cambio: usar importe del método tarjeta en lugar del total global
+      importe: (parseFloat(amounts.tarjeta) || 0).toFixed(2),
+      factura: "0",
+      tipoOper: "PAGO",
+    };
+    try {
+      const res = await fetch("http://localhost:3002/tpvpc/pago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data && data.Xml) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(data.Xml, "application/xml");
+        const estado = xmlDoc.getElementsByTagName("estado")[0]?.textContent;
+        const resultado =
+          xmlDoc.getElementsByTagName("resultado")[0]?.textContent;
+        if (estado === "F" && resultado === "Autorizada") {
+          const pedido = xmlDoc.getElementsByTagName("pedido")[0]?.textContent;
+          const identificadorRTS =
+            xmlDoc.getElementsByTagName("identificadorRTS")[0]?.textContent;
+          return { success: true, pedido, identificadorRTS };
+        } else {
+          return { success: false, message: "Respuesta no autorizada" };
+        }
+      }
+      return { success: false, message: "Respuesta inválida" };
+    } catch (err) {
+      return { success: false, message: "Error al comunicar con Datáfono" };
+    }
+  };
+
+  // NUEVAS funciones para procesar operaciones con tarjeta, incluyendo devoluciones
+
+  const callReturnAPI = async (extraData = {}) => {
+    const payload = {
+      // Cambio: usar importe del método tarjeta en lugar del total global para devoluciones
+      importe: Math.abs(parseFloat(amounts.tarjeta) || 0).toFixed(2),
+      factura: "1",
+      tipoOper: "DEVOLUCION",
+      // Siempre se envían los campos; si no tienen información, se asigna null
+      numPedido:
+        extraData.num_pedido !== undefined ? extraData.num_pedido : null,
+      identificadorRTS:
+        extraData.identificador_rts !== undefined
+          ? extraData.identificador_rts
+          : null,
+    };
+    try {
+      const res = await fetch(
+        "http://localhost:3002/tpvpc/devolucion-con-tarjeta",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const data = await res.json();
+      if (data && data.Xml) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(data.Xml, "application/xml");
+        const estado = xmlDoc.getElementsByTagName("estado")[0]?.textContent;
+        const resultado =
+          xmlDoc.getElementsByTagName("resultado")[0]?.textContent;
+        if (estado === "F" && resultado === "Autorizada") {
+          return { success: true };
+        } else {
+          return { success: false, message: "Respuesta no autorizada" };
+        }
+      }
+      return { success: false, message: "Respuesta inválida" };
+    } catch (err) {
+      return { success: false, message: "Error al comunicar con Datáfono" };
+    }
+  };
+
+  const processCardTransaction = async () => {
+    if (isDevolution) {
+      // Extraer num_pedido e identificador_rts del producto de rectificación en el carrito
+      let extra = {};
+      const returnItem = cartItems.find(
+        (item) =>
+          item.reference_combination === "rectificacion" && item.num_pedido
+      );
+      if (returnItem) {
+        extra.num_pedido = returnItem.num_pedido;
+        extra.identificador_rts = returnItem.identificador_rts;
+      }
+      while (true) {
+        const response = await callReturnAPI(extra);
+        if (response.success) {
+          return {};
+        }
+        const decision = await new Promise((resolve) => {
+          setPaymentDecisionCallback(() => resolve);
+          setDataphoneErrorModalVisible(true);
+        });
+        if (decision === "retry") continue;
+        if (decision === "manual") return {};
+      }
+    } else {
+      while (true) {
+        const paymentResponse = await callPaymentAPI();
+        if (paymentResponse.success) {
+          return {
+            num_pedido: paymentResponse.pedido,
+            identificador_rts: paymentResponse.identificadorRTS,
+          };
+        }
+        const decision = await new Promise((resolve) => {
+          setPaymentDecisionCallback(() => resolve);
+          setDataphoneErrorModalVisible(true);
+        });
+        if (decision === "retry") continue;
+        if (decision === "manual") return {};
+      }
+    }
+  };
+
+  const handleConfirmSale = async () => {
     console.log("=== handleConfirmSale ===");
     console.log("cartItems:", cartItems);
     console.log("appliedDiscounts:", appliedDiscounts);
@@ -240,6 +378,14 @@ function SalesCardActions({
     console.log("changeAmount:", changeAmount);
     console.log("giftTicket:", giftTicket);
     console.log("final total =>", total);
+    let extraData = {};
+    if (selectedMethods.includes("tarjeta")) {
+      setIsTpvProcessing(true);
+      // Espera un breve momento para que se renderice el spinner
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      extraData = await processCardTransaction();
+      setIsTpvProcessing(false);
+    }
     setOriginalPaymentMethods(originalPaymentMethods);
     setOriginalPaymentAmounts(originalPaymentAmounts);
 
@@ -295,7 +441,9 @@ function SalesCardActions({
           alert("Error al finalizar la venta.");
         },
       },
-      true
+      true,
+      // En caso de devolución (total negativo), no se inyectan campos extra
+      extraData
     );
   };
 
@@ -783,6 +931,17 @@ function SalesCardActions({
     }
   };
 
+  // Funciones para el modal de error en comunicación con el datáfono
+  const handleRetryPayment = () => {
+    if (paymentDecisionCallback) paymentDecisionCallback("retry");
+    setDataphoneErrorModalVisible(false);
+  };
+
+  const handleContinueManual = () => {
+    if (paymentDecisionCallback) paymentDecisionCallback("manual");
+    setDataphoneErrorModalVisible(false);
+  };
+
   return (
     <div
       className="h-full flex flex-col p-3 relative"
@@ -844,7 +1003,7 @@ function SalesCardActions({
             height: "50px",
             fontSize: "1.25rem",
           }}
-          disabled={cartItems.length === 0 || isLoading}
+          disabled={cartItems.length === 0 || isLoading || isTpvProcessing}
           onClick={handleFinalSale}
         />
         <Button
@@ -995,14 +1154,27 @@ function SalesCardActions({
             <div className="mt-2 text-red-500 font-bold">{voucherMessage}</div>
           )}
           <Button
-            label={isLoading ? "Procesando..." : "Confirmar Venta"}
+            label={
+              isLoading || isTpvProcessing ? (
+                <span>
+                  Procesando...{" "}
+                  <i
+                    className="pi pi-spinner pi-spin"
+                    style={{ marginLeft: "0.5rem" }}
+                  ></i>
+                </span>
+              ) : (
+                labels.finalizar
+              )
+            }
             className="p-button-success mt-3"
             style={{ padding: "1rem", fontSize: "1.125rem" }}
             disabled={
               (!isRectification &&
                 Math.max(0, displayTotal) > 0 &&
                 totalEntered < Math.max(0, displayTotal)) ||
-              isLoading
+              isLoading ||
+              isTpvProcessing
             }
             onClick={handleConfirmSale}
           />
@@ -1093,6 +1265,36 @@ function SalesCardActions({
               onClick={handleVoucherManualPrint}
             />
             <Button label="Reintentar" onClick={handleVoucherRetryPrint} />
+          </div>
+        </div>
+      </Dialog>
+      {/* Dialog para error al comunicar con Datáfono */}
+      <Dialog
+        header="Error al comunicar con Datáfono"
+        visible={dataphoneErrorModalVisible}
+        onClose={() => {
+          setDataphoneErrorModalVisible(false);
+          setIsTpvProcessing(false);
+        }}
+        onHide={() => {
+          setDataphoneErrorModalVisible(false);
+          setIsTpvProcessing(false);
+        }}
+        modal
+        draggable={false}
+        resizable={false}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <span>Error al comunicar con Datáfono</span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.5rem",
+            }}
+          >
+            <Button label="Reintentar" onClick={handleRetryPayment} />
+            <Button label="Finalizar manual" onClick={handleContinueManual} />
           </div>
         </div>
       </Dialog>

@@ -197,13 +197,17 @@ const TransfersModal = ({ isOpen, onClose }) => {
         selectMovementType("traspaso");
       },
     },
-    {
-      label: "Entrada",
-      icon: "pi pi-download",
-      command: () => {
-        selectMovementType("entrada");
-      },
-    },
+    ...(idProfile === 1
+      ? [
+          {
+            label: "Entrada",
+            icon: "pi pi-download",
+            command: () => {
+              selectMovementType("entrada");
+            },
+          },
+        ]
+      : []),
     {
       label: "Salida",
       icon: "pi pi-upload",

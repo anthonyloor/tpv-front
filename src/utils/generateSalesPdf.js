@@ -1,21 +1,71 @@
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
-export const generateSalesPdf = (data, shopName) => {
+export const generateSalesPdf = (data, shopName, closureData, configData) => {
   try {
     const doc = new jsPDF("p", "pt", "a4");
     const margin = 40;
     let yPos = margin;
+
+    // Función auxiliar para formatear fecha
+    function formatDateTime(date) {
+      const d = new Date(date);
+      const weekday = d.toLocaleDateString("es-ES", { weekday: "long" });
+      const day = d.toLocaleDateString("es-ES", { day: "2-digit" });
+      const month = d.toLocaleDateString("es-ES", { month: "long" });
+      const year = d.toLocaleDateString("es-ES", { year: "numeric" });
+      const capitalizedWeekday =
+        weekday.charAt(0).toUpperCase() + weekday.slice(1);
+      const hh = ("0" + d.getHours()).slice(-2);
+      const min = ("0" + d.getMinutes()).slice(-2);
+      return `${hh}:${min} - ${capitalizedWeekday} ${day} de ${month} de ${year}`;
+    }
+
     doc.setFontSize(18);
     doc.text(`Reporte de ventas: ${shopName}`, margin, yPos);
+    // Nuevo: Incluir ticket_text_header_1 desde ConfigContext
+    yPos += 20;
+    doc.setFontSize(14);
+    doc.text(`${configData.ticket_text_header_1}`, margin, yPos);
     yPos += 25;
     doc.setFontSize(12);
-    doc.text(
-      `Fecha generación reporte: ${new Date().toLocaleString()}`,
-      margin,
-      yPos
-    );
-    yPos += 30;
+    // Se elimina la línea de "Fecha generación reporte"
+    // Nuevo: Incluir datos de cierre (apertura y cierre)
+    yPos += 15;
+    // Mostrar apertura
+    if (closureData.employee_open) {
+      doc.text(
+        `Apertura: ${closureData.employee_open} - ${formatDateTime(
+          closureData.date_add
+        )}`,
+        margin,
+        yPos
+      );
+    } else {
+      doc.text(
+        `Apertura: ${formatDateTime(closureData.date_add)}`,
+        margin,
+        yPos
+      );
+    }
+    yPos += 15;
+    // Mostrar cierre
+    if (closureData.employee_close) {
+      doc.text(
+        `Cierre: ${closureData.employee_close} - ${formatDateTime(
+          closureData.date_close
+        )}`,
+        margin,
+        yPos
+      );
+    } else {
+      doc.text(
+        `Cierre: ${formatDateTime(closureData.date_close)}`,
+        margin,
+        yPos
+      );
+    }
+    yPos += 20;
 
     // Procesar descuentos (order_cart_rules)
     data.forEach((order) => {
@@ -70,7 +120,9 @@ export const generateSalesPdf = (data, shopName) => {
       });
     });
 
+    // Actualizar columnas de la tabla para incluir "Hora"
     const tableColumn = [
+      "Hora",
       "Ticket",
       "Cliente",
       "Cant.",
@@ -173,6 +225,10 @@ export const generateSalesPdf = (data, shopName) => {
 
     const tableRows = data.flatMap((order) => {
       let rows = [];
+      // Extraer hora de order.date_add (formato "HH:MM")
+      const timeStr = order.date_add
+        ? order.date_add.split(" ")[1].substring(0, 5)
+        : "";
       order.order_details.forEach((detail) => {
         let precio;
         if (
@@ -188,7 +244,9 @@ export const generateSalesPdf = (data, shopName) => {
         } else {
           precio = Number(detail.total_price_tax_incl).toFixed(2) + "€";
         }
+        // Inserción de la hora al inicio de cada fila
         rows.push([
+          timeStr,
           order.id_order,
           order.customer_name?.includes("TPV") ? "TPV" : order.customer_name,
           detail.product_quantity,
@@ -322,7 +380,7 @@ export const generateSalesPdf = (data, shopName) => {
       tableLineWidth: 0,
     });
 
-    doc.save(`Reporte_Ventas_${shopName}.pdf`);
+    doc.save(`Reporte de Ventas ${shopName}.pdf`);
     return true;
   } catch (error) {
     console.error("Error generating PDF:", error);

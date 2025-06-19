@@ -23,7 +23,8 @@ export default function useFinalizeSale() {
       onSuccess,
       onError,
     },
-    print = true
+    print = true,
+    extraData = {}
   ) => {
     setIsLoading(true);
     try {
@@ -81,7 +82,7 @@ export default function useFinalizeSale() {
           (item.final_price_incl_tax / factorTax).toFixed(2)
         ),
         unit_price_tax_incl: item.final_price_incl_tax,
-        id_shop: item.id_shop,
+        id_shop: shopId,
       }));
 
       let remaining = subtotalInclTaxCalc;
@@ -161,6 +162,10 @@ export default function useFinalizeSale() {
       if (discountsArray.length > 0) {
         saleData.discounts = discountsArray;
       }
+
+      // Se asignan siempre los campos num_pedido e identificador_rts
+      saleData.num_pedido = extraData.num_pedido || "";
+      saleData.identificador_rts = extraData.identificador_rts || "";
 
       // Solo se crea vale descuento si voucherAmount > 0 y no se seleccionó ningún método de pago
       let newCartRuleCode = null;
