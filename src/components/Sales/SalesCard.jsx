@@ -38,6 +38,8 @@ function SalesCard({
   setSelectedProductForDiscount,
   selectedProductForDiscount,
   onTotalsChange = () => {},
+  isEditing,
+  setIsEditing,
 }) {
   const { configData } = useContext(ConfigContext);
   const {
@@ -65,7 +67,6 @@ function SalesCard({
   const [isParkedCartsModalOpen, setIsParkedCartsModalOpen] = useState(false);
   const [isNameModalOpen, setIsNameModalOpen] = useState(false);
   const [ticketName, setTicketName] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const defaultClientId = configData?.id_customer_default;
 
@@ -183,6 +184,10 @@ function SalesCard({
   const handleEditTicket = () => {
     if (!isEditing) {
       if (idProfile === 1) {
+        const input = document.querySelector(
+          'input[placeholder="Buscar por referencia o código de barras..."]'
+        );
+        if (input) input.blur();
         setIsEditing(true);
       } else {
         setIsPinModalOpen(true);
@@ -193,6 +198,10 @@ function SalesCard({
   };
 
   const handlePinSuccess = () => {
+    const input = document.querySelector(
+      'input[placeholder="Buscar por referencia o código de barras..."]'
+    );
+    if (input) input.blur();
     setIsEditing(true);
     setIsPinModalOpen(false);
   };

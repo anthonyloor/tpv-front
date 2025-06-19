@@ -39,6 +39,7 @@ function DesktopTPV() {
   const [selectedProductForStock, setSelectedProductForStock] = useState(null);
   const [selectedProductForDiscount, setSelectedProductForDiscount] =
     useState(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [totals, setTotals] = useState({
     subtotal: 0,
     total: 0,
@@ -77,6 +78,8 @@ function DesktopTPV() {
                 recentlyAddedId={recentlyAddedId}
                 setSelectedProductForDiscount={setSelectedProductForDiscount}
                 onTotalsChange={handleTotalsChange}
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
               />
             </div>
             <div className="flex-2 flex-col w-[65%] rounded shadow overflow-hidden">
@@ -84,6 +87,7 @@ function DesktopTPV() {
                 onAddProduct={handleAddProduct}
                 onAddDiscount={addDiscount}
                 onClickProduct={setSelectedProductForStock}
+                disableAutoFocus={isEditing}
               />
             </div>
           </div>
