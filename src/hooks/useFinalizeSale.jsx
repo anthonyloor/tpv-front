@@ -23,8 +23,7 @@ export default function useFinalizeSale() {
       onSuccess,
       onError,
     },
-    print = true,
-    extraData = {}
+    print = true
   ) => {
     setIsLoading(true);
     try {
@@ -164,8 +163,8 @@ export default function useFinalizeSale() {
       }
 
       // Se asignan siempre los campos num_pedido e identificador_rts
-      saleData.num_pedido = extraData.num_pedido || "";
-      saleData.identificador_rts = extraData.identificador_rts || "";
+      saleData.num_pedido = "";
+      saleData.identificador_rts = "";
 
       // Solo se crea vale descuento si voucherAmount > 0 y no se seleccionó ningún método de pago
       let newCartRuleCode = null;
