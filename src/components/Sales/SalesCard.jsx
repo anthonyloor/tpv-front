@@ -827,6 +827,7 @@ function SalesCard({
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
         onSuccess={handlePinSuccess}
+        reason="edición ticket"
       />
 
       {/* =========== MODAL ADDRESS (por si solo cambias dirección) =========== */}

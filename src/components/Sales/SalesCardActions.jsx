@@ -1053,6 +1053,7 @@ function SalesCardActions({
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
         onSuccess={handlePinSuccess}
+        reason="descuento"
       />
       <DiscountModal
         isOpen={isDiscountModalOpen}

@@ -6,7 +6,7 @@ import { AuthContext } from "../../../contexts/AuthContext";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
-const PinValidationModal = ({ isOpen, onClose, onSuccess }) => {
+const PinValidationModal = ({ isOpen, onClose, onSuccess, reason = "descuento" }) => {
   const { employeeId } = useContext(AuthContext);
   const apiFetch = useApiFetch();
   const [enteredPin, setEnteredPin] = useState("");
@@ -21,7 +21,7 @@ const PinValidationModal = ({ isOpen, onClose, onSuccess }) => {
         body: JSON.stringify({
           pin: enteredPin,
           id_employee_used: employeeId,
-          reason: "descuento",
+          reason,
         }),
       });
       if (response && response.usable) {
