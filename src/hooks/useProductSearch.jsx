@@ -222,9 +222,11 @@ const useProductSearch = ({
         }
         // Leer el carrito para calcular el total actual
         let currentCartTotal = 0;
+        const licenseData = JSON.parse(localStorage.getItem("licenseData"));
+        const shopId = licenseData?.id_shop;
         const cartRaw = localStorage.getItem(`cart_shop_${shopId}`);
         if (cartRaw) {
-          const parsedCart = JSON.parse(cartRaw);
+          const parsedCart = JSON.parse(cartRaw);          
           if (parsedCart && parsedCart.items) {
             currentCartTotal = parsedCart.items.reduce(
               (sum, item) => sum + item.final_price_incl_tax * item.quantity,

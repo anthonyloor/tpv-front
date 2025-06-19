@@ -7,6 +7,7 @@ import { useApiFetch } from "../../../utils/useApiFetch";
 import { InputNumber } from "primereact/inputnumber";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
+import { Checkbox } from "primereact/checkbox";
 import ActionResultDialog from "../../common/ActionResultDialog";
 import { Divider } from "primereact/divider";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
@@ -41,6 +42,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
     useState(false);
   const [closureManualPdfDataUrl, setClosureManualPdfDataUrl] = useState(null);
   const [closureDataForRetry, setClosureDataForRetry] = useState(null);
+  const [includeSalesSummary, setIncludeSalesSummary] = useState(true);
   const employeesDict = useEmployeesDictionary();
   const { configData } = useContext(ConfigContext);
 
@@ -238,19 +240,23 @@ const CloseCashRegisterForm = ({ onClose }) => {
           "Resumen del reporte de ventas generado e impreso correctamente.",
           true
         );
+        return true;
       } else if (result.manual) {
         setClosureManualPdfDataUrl(result.pdfDataUrl);
         setClosurePrintOptionModalVisible(true);
+        return false;
       } else {
         showAlert(
           result.message ||
             "Error al generar el resumen del reporte de ventas.",
           false
         );
+        return false;
       }
     } catch (error) {
       console.error("Error generando el resumen:", error);
       alert("Error al generar el resumen del reporte de ventas.");
+      return false;
     }
   };
 
@@ -319,7 +325,40 @@ const CloseCashRegisterForm = ({ onClose }) => {
         alert("Datos del reporte no válidos.");
         return;
       }
-      const result = generateSalesPdf(saleReportData, shop.name);
+      // Construir closureData a partir de los datos obtenidos
+      const totalCashNum = fetchedTotalCash;
+      const totalCardNum = fetchedTotalCard;
+      const totalBizumNum = fetchedTotalBizum;
+      const total = totalCashNum + totalCardNum + totalBizumNum;
+      const iva = total - total / 1.21;
+      const closureData = {
+        date_add: reportDateAdd,
+        date_close: new Date(),
+        total_cash: totalCashNum,
+        total_card: totalCardNum,
+        total_bizum: totalBizumNum,
+        shop_name: shopName,
+        total,
+        iva,
+      };
+      const formatDate = (dateStr) => {
+        const d = new Date(dateStr);
+        const weekday = d.toLocaleDateString("es-ES", { weekday: "long" });
+        const day = d.toLocaleDateString("es-ES", { day: "2-digit" });
+        const month = d.toLocaleDateString("es-ES", { month: "long" });
+        const year = d.toLocaleDateString("es-ES", { year: "numeric" });
+        const capitalizedWeekday =
+          weekday.charAt(0).toUpperCase() + weekday.slice(1);
+        return `${capitalizedWeekday} ${day} de ${month} de ${year}`;
+      };
+      const formattedDate = formatDate(reportDateAdd);
+      const pdfName = `${closureData.shop_name} - ${formattedDate}`;
+      const result = generateSalesPdf(
+        saleReportData,
+        pdfName,
+        closureData,
+        configData
+      );
       if (result) {
         setPdfReportGenerated(true);
       } else {
@@ -359,6 +398,14 @@ const CloseCashRegisterForm = ({ onClose }) => {
       handleLogout();
       navigate(`/${shop.route}`);
     }
+  };
+
+  const handleCombinedClose = async () => {
+    if (includeSalesSummary) {
+      const summarySuccess = await handleGenerateSalesSummary();
+      if (!summarySuccess) return;
+    }
+    await handleCloseCashRegister();
   };
 
   return (
@@ -514,15 +561,20 @@ const CloseCashRegisterForm = ({ onClose }) => {
           className="p-button-success"
           onClick={handleGeneratePdf}
         />
-        <Button
-          label="Resumen Reporte Ventas"
-          className="p-button-info"
-          onClick={handleGenerateSalesSummary}
-        />
+        <div className="flex items-center gap-2">
+          <Checkbox
+            inputId="includeSalesSummary"
+            checked={includeSalesSummary}
+            onChange={(e) => setIncludeSalesSummary(e.checked)}
+          />
+          <label htmlFor="includeSalesSummary">
+            Incluir Resumen Reporte Ventas
+          </label>
+        </div>
         <Button
           label="Cerrar Caja"
           className="p-button-danger"
-          onClick={handleCloseCashRegister}
+          onClick={handleCombinedClose}
         />
       </div>
 

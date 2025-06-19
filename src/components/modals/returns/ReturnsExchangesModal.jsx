@@ -308,15 +308,15 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
       shop_name: "",
       id_shop: 0,
     };
-    console.log("Producto de rectificación:", rectProduct);
+    // Guardar num_pedido e identificador_rts SOLO en la línea de rectificación
+    rectProduct.num_pedido = orderData.num_pedido || "";
+    rectProduct.identificador_rts = orderData.identificador_rts || "";
     onAddProduct(rectProduct, null, null, false, 1);
 
-    // 2) Añadir las líneas con cantidades negativas
-    console.log("Productos seleccionados:", selectedRows);
+    // 2) Añadir las líneas con cantidades negativas para cada producto a devolver
     selectedRows.forEach((prod) => {
       const key = prod.uniqueLineId;
       const qtyToReturn = returnQuantities[key] ?? prod.product_quantity;
-
       const productForCart = {
         id_product: prod.product_id,
         id_product_attribute: prod.product_attribute_id,

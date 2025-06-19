@@ -343,15 +343,18 @@ const TransferForm = forwardRef(
       setProductsToTransfer((prev) => {
         const found = prev.find((p) => getNonStockKey(p) === uniqueId);
         if (!found) return prev;
-        const maxStock = found.stock_origin;
         let val = parseInt(newQty, 10) || 1;
-        if (val > maxStock) {
-          toast.current.show({
-            severity: "error",
-            summary: "Error",
-            detail: "No dispones de más stock para añadir.",
-          });
-          return prev;
+        // Sólo restringir stock si el tipo no es 'entrada'
+        if (type !== "entrada") {
+          const maxStock = found.stock_origin;
+          if (val > maxStock) {
+            toast.current.show({
+              severity: "error",
+              summary: "Error",
+              detail: "No dispones de más stock para añadir.",
+            });
+            return prev;
+          }
         }
         return prev.map((p) =>
           getNonStockKey(p) === uniqueId ? { ...p, quantity: val } : p
@@ -677,6 +680,33 @@ const TransferForm = forwardRef(
             groups[0].combinations.length > 0
           ) {
             productInfo = groups[0].combinations[0];
+            // Si product_name contiene "Victoria Secret", se elimina esa parte
+            if (
+              productInfo.product_name &&
+              productInfo.product_name.includes("Victoria Secret")
+            ) {
+              productInfo.product_name = productInfo.product_name
+                .replace(/Victoria Secret/g, "")
+                .replace(/\s+/g, " ")
+                .trim();
+            }
+            // Aplicar transformación al property "combination_name"
+            if (productInfo.combination_name) {
+              if (productInfo.combination_name.includes("2XL - 40 - Piel")) {
+                productInfo.combination_name =
+                  productInfo.combination_name.replace(
+                    "2XL - 40 - Piel",
+                    "2XL - Piel"
+                  );
+              }
+              if (productInfo.combination_name.includes("XL - 38 - Piel")) {
+                productInfo.combination_name =
+                  productInfo.combination_name.replace(
+                    "XL - 38 - Piel",
+                    "XL - Piel"
+                  );
+              }
+            }
           }
           return { detail, productInfo };
         })
@@ -1045,7 +1075,7 @@ const TransferForm = forwardRef(
             )
           }
           min={1}
-          disabled={true}
+          disabled={!isNewMovement} // Editable solo en creación
         />
       );
     }
