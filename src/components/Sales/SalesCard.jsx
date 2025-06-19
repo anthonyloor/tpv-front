@@ -45,14 +45,12 @@ function SalesCard({
   const {
     selectedClient,
     setSelectedClient,
-    selectedAddress,
     setSelectedAddress,
     resetToDefaultClientAndAddress,
   } = useContext(ClientContext);
   const {
     isDevolution,
     setIsDevolution,
-    isDiscount,
     setIsDiscount,
     setOriginalPaymentMethods,
     setOriginalPaymentAmounts,

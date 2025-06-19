@@ -44,6 +44,7 @@ const ProductSearchCard = ({
     forceAdd = false,
     quantity = 1
   ) => {
+    setIsDevolution(false);
     onAddProduct(
       product,
       stockQuantity,
@@ -59,9 +60,7 @@ const ProductSearchCard = ({
     groupedProducts,
     isLoading,
     confirmModalOpen,
-    productToConfirm,
     handleSearch,
-    addProductToCart,
     handleCancelAdd,
     handleConfirmAdd,
     foreignConfirmDialogOpen,

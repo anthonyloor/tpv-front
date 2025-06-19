@@ -68,12 +68,8 @@ function SalesCardActions({
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [isFinalSaleModalOpen, setFinalSaleModalOpen] = useState(false);
-  const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketOrderId, setTicketOrderId] = useState(null);
-  const [ticketOrderOrigin, setTicketOrderOrigin] = useState(null);
-  const [printOnOpen, setPrintOnOpen] = useState(false);
   const [giftTicket, setGiftTicket] = useState(false);
-  const [giftTicketTM, setGiftTicketTM] = useState(false);
   const [cartRuleModalOpen, setCartRuleModalOpen] = useState(false);
   const [newCartRuleCode, setNewCartRuleCode] = useState(null);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -279,11 +275,7 @@ function SalesCardActions({
         }) => {
           showAlert("Venta finalizada correctamente", true);
           setTicketOrderId(orderId);
-          setTicketOrderOrigin(orderOrigin);
-          setGiftTicketTM(giftTicket);
           setChangeAmount(changeAmount);
-          setTicketModalOpen(true);
-          setPrintOnOpen(print);
 
           // Si se generó un vale descuento, activar el modal (no mostrar botón en el layout principal)
           if (newCartRuleCode) {
