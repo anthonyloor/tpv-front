@@ -4,6 +4,58 @@ Este proyecto es una aplicación de TPV (Terminal Punto de Venta) desarrollada e
 
 ---
 
+## TPV Frontend
+
+Aplicación React para gestionar un TPV (Terminal Punto de Venta) multi-tienda:
+
+### Características principales
+
+- Gestión de licencias y autenticación de empleados.
+- Flujo POS: apertura, continuación o cierre de caja.
+- Movimientos de inventario: entrada, salida y traspasos entre tiendas.
+- Impresión de etiquetas de precio con código de barras.
+- Gestión de configuración (impresoras, permisos) vía modales.
+
+### Tecnologías
+
+- React, React Router, Context API.
+- Tailwind CSS, PrimeReact, PrimeFlex, PrimeIcons.
+- Hooks personalizados: `useApiFetch`, `useProductSearch`, `useTokenExpiryWarning`, etc.
+- Librerías: `jsbarcode`, `react-device-detect`.
+
+### Estructura del proyecto
+
+src/
+├─ components/
+│  ├─ pages/            # LoginPage, PinPage, dashboards
+│  ├─ base/             # PrivateRoute
+│  ├─ modals/           # License, POS, session, transfers, configuración
+│  └─ ThemeSwitcher.jsx
+├─ contexts/            # Auth, Config, Client, Pin, Cart
+├─ hooks/               # useApiFetch, useEmployeesDictionary, ...
+├─ utils/               # getApiBaseUrl, generatePriceLabels, ...
+├─ App.jsx, index.js
+└─ index.css
+
+### Flujo de uso
+
+1. **Licencia**: validación en `LicenseModal`.
+2. **Login**: selección de empleado y contraseña.
+3. **POS**: comprobación de sesión (`check_pos_session`), apertura (`OpenPosModal`) o continuación (`PosSessionOpenModal`).
+4. **Movimientos**: creación/edición/ejecución de entradas, salidas y traspasos en `TransferForm`.
+5. **Etiquetas**: generación vía `/get_product_price_tag` y `generatePriceLabels`.
+6. **Temas y sesión**: detección móvil, cambio de tema y aviso de expiración de token.
+
+### Instalación y ejecución
+
+```bash
+npm install
+npm start       # modo desarrollo
+npm run build   # producción
+```
+
+---
+
 ## Tecnologías Utilizadas
 
 - **React**: Biblioteca para construir interfaces de usuario.
@@ -12,20 +64,6 @@ Este proyecto es una aplicación de TPV (Terminal Punto de Venta) desarrollada e
 - **React Router**: Gestión de la navegación entre páginas.
 - **Context API & Hooks Personalizados**: Para gestionar estados globales (Autenticación, Configuración, Clientes, PIN) y lógica de negocio (carrito, descuentos, finalización de ventas, etc.).
 - **Otras bibliotecas**: Sonner (notificaciones), entre otras.
-
----
-
-## Estructura del Proyecto
-
-El proyecto se organiza de la siguiente manera:
-
-- **`src/`**  
-  - **`components/`**: Contiene componentes reutilizables, modales, páginas (Login, NotFound, Pin, etc.) y reportes.
-  - **`contexts/`**: Define los contextos para la autenticación, configuración, clientes y PIN.
-  - **`hooks/`**: Hooks personalizados como `useCart`, `useDiscounts`, `useFinalizeSale`, `useApiFetch`, etc.
-  - **`data/`**: Archivos estáticos con datos de empleados, tiendas y configuraciones (ej. ticket).
-- **`public/`**  
-  - Archivos estáticos, assets y hojas de estilos de temas (por ejemplo, para modo claro y oscuro).
 
 ---
 
@@ -51,4 +89,7 @@ El diseño de la aplicación se centra en la integración de PrimeReact y Tailwi
   2. **Seguir la Estructura Modular:** Ubicar nuevos componentes en la carpeta `components/` y, en caso de ser modales o diálogos, basarse en el componente `Modal.jsx`.
   3. **Aplicar Clases de Tailwind y PrimeReact:** Usar las clases ya establecidas en el proyecto (por ejemplo, `p-button`, `p-datatable`, etc.) para lograr el mismo tamaño, espaciado y estilo.
   4. **Pruebas de Responsividad:** Verificar que los nuevos componentes se comporten de manera consistente en dispositivos móviles y de escritorio.
-  
+
+---
+
+Licencia MIT.
