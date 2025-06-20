@@ -1,6 +1,6 @@
 // src/components/modals/customer/CreateAddressModal.jsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { useApiFetch } from "../../../utils/useApiFetch";
@@ -12,6 +12,8 @@ export default function CreateAddressModal({
   isOpen,
   onClose,
   clientId,
+  firstname = "",
+  lastname = "",
   onAddressCreated,
 }) {
   const apiFetch = useApiFetch();
@@ -33,6 +35,15 @@ export default function CreateAddressModal({
     dni: "",
     isCompanyInvoice: false,
   });
+  useEffect(() => {
+    if (isOpen) {
+      setAddressData((prev) => ({
+        ...prev,
+        firstname: firstname || prev.firstname,
+        lastname: lastname || prev.lastname,
+      }));
+    }
+  }, [isOpen, firstname, lastname]);
   const [errorMessage, setErrorMessage] = useState("");
   const API_BASE_URL = getApiBaseUrl();
 

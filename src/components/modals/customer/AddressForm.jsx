@@ -5,40 +5,42 @@ export default function AddressForm({ addressData, onChange, setAddressData, err
   return (
     <div className="p-fluid">
       {/* Primera fila: Calle / Avenida y Piso/puerta */}
-      <div className="p-grid">
+      <div className="p-grid" style={{ marginBottom: "1rem" }}>
         <div className="p-col-6">
-          <span className="p-float-label">
-            <InputText name="address1" value={addressData.address1} onChange={onChange} />
-            <label>Calle, Avenida, etc.</label>
+          <span className="p-float-label w-full">
+            <InputText id="address1" className="w-full" name="address1" value={addressData.address1} onChange={onChange} />
+            <label htmlFor="address1">Calle, Avenida, etc.</label>
           </span>
         </div>
         <div className="p-col-6">
-          <span className="p-float-label">
-            <InputText name="address2" value={addressData.address2} onChange={onChange} />
-            <label>Piso, puerta, etc.</label>
+          <span className="p-float-label w-full">
+            <InputText id="address2" className="w-full" name="address2" value={addressData.address2} onChange={onChange} />
+            <label htmlFor="address2">Piso, puerta, etc.</label>
           </span>
         </div>
       </div>
       {/* Segunda fila: Código Postal y Ciudad */}
-      <div className="p-grid" style={{ marginTop: "1rem" }}>
+      <div className="p-grid" style={{ marginBottom: "1rem" }}>
         <div className="p-col-6">
-          <span className="p-float-label">
-            <InputText name="postcode" value={addressData.postcode} onChange={onChange} />
-            <label>Código Postal</label>
+          <span className="p-float-label w-full">
+            <InputText id="postcode" className="w-full" name="postcode" value={addressData.postcode} onChange={onChange} />
+            <label htmlFor="postcode">Código Postal</label>
           </span>
         </div>
         <div className="p-col-6">
-          <span className="p-float-label">
-            <InputText name="city" value={addressData.city} onChange={onChange} />
-            <label>Ciudad</label>
+          <span className="p-float-label w-full">
+            <InputText id="city" className="w-full" name="city" value={addressData.city} onChange={onChange} />
+            <label htmlFor="city">Ciudad</label>
           </span>
         </div>
       </div>
       {/* Tercera fila: Teléfono/Móvil */}
-      <div className="p-grid" style={{ marginTop: "1rem" }}>
+      <div className="p-grid" style={{ marginBottom: "1rem" }}>
         <div className="p-col-12">
-          <span className="p-float-label">
+          <span className="p-float-label w-full">
             <InputText
+              id="phone_combined"
+              className="w-full"
               name="phone_combined"
               value={addressData.phone || addressData.phone_mobile}
               onChange={(e) => {
@@ -46,27 +48,27 @@ export default function AddressForm({ addressData, onChange, setAddressData, err
                 setAddressData((prev) => ({ ...prev, phone: value, phone_mobile: value }));
               }}
             />
-            <label>Teléfono / Móvil</label>
+            <label htmlFor="phone_combined">Teléfono / Móvil</label>
           </span>
         </div>
       </div>
       {addressData.isCompanyInvoice && (
-        <div className="p-grid" style={{ marginTop: "1rem" }}>
+        <div className="p-grid" style={{ marginBottom: "1rem" }}>
           <div className="p-col-6">
-            <span className="p-float-label">
-              <InputText name="company" value={addressData.company || ""} onChange={onChange} />
-              <label>Nombre de la empresa</label>
+            <span className="p-float-label w-full">
+              <InputText id="company" className="w-full" name="company" value={addressData.company || ""} onChange={onChange} />
+              <label htmlFor="company">Nombre de la empresa</label>
             </span>
           </div>
           <div className="p-col-6">
-            <span className="p-float-label">
-              <InputText name="dni" value={addressData.dni || ""} onChange={onChange} />
-              <label>DNI / CIF</label>
+            <span className="p-float-label w-full">
+              <InputText id="dni" className="w-full" name="dni" value={addressData.dni || ""} onChange={onChange} />
+              <label htmlFor="dni">DNI / CIF</label>
             </span>
           </div>
         </div>
       )}
-      <div className="p-d-flex p-ai-center p-mb-3" style={{ gap: "0.5rem", marginTop: "1rem" }}>
+      <div className="p-d-flex p-ai-center p-mb-3" style={{ gap: "0.5rem", marginBottom: "1rem" }}>
         <input
           type="checkbox"
           name="isCompanyInvoice"
@@ -76,11 +78,6 @@ export default function AddressForm({ addressData, onChange, setAddressData, err
         />
         <span>Empresa/Factura</span>
       </div>
-      {errorMessage && (
-        <div className="p-mb-3" style={{ color: "var(--red-500)" }}>
-          {errorMessage}
-        </div>
-      )}
       <div className="mt-4">
         <h3 className="font-bold mb-2">Ubicación</h3>
         <label htmlFor="id_state" className="block mb-1">

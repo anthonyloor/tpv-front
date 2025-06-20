@@ -62,6 +62,7 @@ export default function CustomerStepperModal({
     setSelectedRow(null);
     setSelectedClient(null);
     setAddresses([]);
+    setStoreAddress(null);
     setErrorMessage("");
   };
 
@@ -408,6 +409,8 @@ export default function CustomerStepperModal({
           isOpen
           onClose={() => setShowCreateAddressModal(false)}
           clientId={selectedClient?.id_customer}
+          firstname={selectedClient?.firstname}
+          lastname={selectedClient?.lastname}
           onAddressCreated={(newAddr) => {
             setShowCreateAddressModal(false);
             // Recargamos direcciones
