@@ -28,6 +28,7 @@ import JsBarcode from "jsbarcode";
 import useProductSearch from "../../../hooks/useProductSearch";
 import { ClientContext } from "../../../contexts/ClientContext";
 import { generatePriceLabels } from "../../../utils/generatePriceLabels";
+import { formatShortDate } from "../../../utils/dateUtils";
 
 const TransferForm = forwardRef(
   ({ type, onSave, movementData, onFooterChange }, ref) => {
@@ -1121,14 +1122,6 @@ const TransferForm = forwardRef(
       0
     );
 
-    const formatDateDDMMYYYY = (dateStr) => {
-      if (!dateStr) return "";
-      const parts = dateStr.split("-");
-      if (parts.length === 3) {
-        return `${parts[2]}-${parts[1]}-${parts[0]}`;
-      }
-      return dateStr;
-    };
 
     return (
       <div className="p-2">
@@ -1226,7 +1219,7 @@ const TransferForm = forwardRef(
             <div className="p-inputgroup flex-1">
               <FloatLabel>
                 <label>Fecha creación</label>
-                <InputText value={formatDateDDMMYYYY(createDate)} readOnly />
+                <InputText value={formatShortDate(createDate)} readOnly />
               </FloatLabel>
             </div>
             <div className="p-inputgroup flex-1">
