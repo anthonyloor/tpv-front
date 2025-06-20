@@ -6,6 +6,7 @@ import { Column } from "primereact/column";
 import { Toolbar } from "primereact/toolbar";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
+import { Card } from "primereact/card";
 import CreateCustomerModal from "./CreateCustomerModal";
 import CreateAddressModal from "./CreateAddressModal";
 import { useApiFetch } from "../../../utils/useApiFetch";
@@ -298,30 +299,34 @@ export default function CustomerStepperModal({
       <div className="grid gap-3">
         {/* Dirección de tienda */}
         {storeAddress && (
-          <div
-            className="border rounded p-3 cursor-pointer"
+          <Card
+            title={storeAddress.alias}
+            subTitle={storeAddress.address1}
+            style={{ cursor: "pointer" }}
+            className="mb-2"
             onClick={() => handleSelectAddress(storeAddress)}
           >
-            <h3 className="font-bold m-0">{storeAddress.alias}</h3>
-            <p className="mt-1 mb-0">{storeAddress.address1}</p>
-          </div>
+            <p className="m-0">
+              {storeAddress.postcode} {storeAddress.city}
+            </p>
+            <p className="m-0">{storeAddress.phone}</p>
+          </Card>
         )}
         {/* Resto de direcciones */}
         {addresses.map((addr) => (
-          <div
+          <Card
             key={addr.id_address}
-            className="border rounded p-3 cursor-pointer"
+            title={addr.alias}
+            subTitle={`${addr.address1} ${addr.address2 || ""}`}
+            style={{ cursor: "pointer" }}
+            className="mb-2"
             onClick={() => handleSelectAddress(addr)}
           >
-            <h3 className="font-bold m-0">{addr.alias}</h3>
-            <p className="mt-1 mb-0">
-              {addr.address1} {addr.address2}
-            </p>
             <p className="m-0">
               {addr.postcode} {addr.city}
             </p>
             <p className="m-0">{addr.phone}</p>
-          </div>
+          </Card>
         ))}
       </div>
     </div>
