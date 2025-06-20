@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { useApiFetch } from "../../../utils/useApiFetch";
+import useAddresses from "../../../hooks/useAddresses";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
@@ -58,17 +59,10 @@ const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
   };
 
   // Fetch Direcciones
+  const { getAddresses } = useAddresses();
   const fetchAddresses = async (customerId) => {
-    try {
-      const data = await apiFetch(
-        `${API_BASE_URL}/get_addresses?customer=${customerId}`,
-        { method: "POST", body: JSON.stringify({}) }
-      );
-      setAddresses(data);
-    } catch (error) {
-      console.error("Error al obtener direcciones:", error);
-      setAddresses([]);
-    }
+    const data = await getAddresses(customerId);
+    setAddresses(data);
   };
 
   useEffect(() => {

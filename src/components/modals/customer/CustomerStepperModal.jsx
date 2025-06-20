@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import useToggle from "../../../hooks/useToggle";
+import useAddresses from "../../../hooks/useAddresses";
 import { Dialog } from "primereact/dialog";
 import { Steps } from "primereact/steps";
 import { DataTable } from "primereact/datatable";
@@ -43,8 +45,8 @@ export default function CustomerStepperModal({
   const dt = useRef(null);
 
   // Para abrir/cerrar modales “crear”
-  const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
-  const [showCreateAddressModal, setShowCreateAddressModal] = useState(false);
+  const showCreateCustomerModal = useToggle();
+  const showCreateAddressModal = useToggle();
 
   const API_BASE_URL = getApiBaseUrl();
 
@@ -114,32 +116,11 @@ export default function CustomerStepperModal({
     }
   };
 
-  const fetchAddressesForClient = (client) => {
-    const token = localStorage.getItem("token");
-    fetch(`${API_BASE_URL}/get_addresses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        id_customer: client.id_customer,
-        origin: client.origin,
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Error al obtener direcciones");
-        return res.json();
-      })
-      .then((data) => {
-        const valid = data
-          .filter((addr) => !addr.deleted && addr.active)
-          .sort((a, b) => new Date(b.date_upd) - new Date(a.date_upd));
-        setAddresses(valid);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
+  const { getAddresses } = useAddresses();
+
+  const fetchAddressesForClient = async (client) => {
+    const data = await getAddresses(client.id_customer, client.origin);
+    setAddresses(data);
   };
 
   const stepsItems = [
@@ -181,7 +162,7 @@ export default function CustomerStepperModal({
               severity="success"
               tooltip="Crear Cliente"
               tooltipOptions={{ position: "bottom" }}
-              onClick={() => setShowCreateCustomerModal(true)}
+              onClick={showCreateCustomerModal.open}
             />
             <Button
               icon="pi pi-pencil"
@@ -292,7 +273,7 @@ export default function CustomerStepperModal({
           <Button
             label="Nueva Dirección"
             icon="pi pi-plus"
-            onClick={() => setShowCreateAddressModal(true)}
+            onClick={showCreateAddressModal.open}
           />
         </div>
       )}
@@ -368,10 +349,10 @@ export default function CustomerStepperModal({
         <div className="mt-4">{renderCurrentStep()}</div>
       </Dialog>
 
-      {showCreateCustomerModal && (
+      {showCreateCustomerModal.isOpen && (
         <CreateCustomerModal
           isOpen
-          onClose={() => setShowCreateCustomerModal(false)}
+          onClose={showCreateCustomerModal.close}
           onComplete={(newClient, newAddr) => {
             // Asigna el cliente y la dirección en curso
             setSelectedClient({ ...newClient });
@@ -397,22 +378,22 @@ export default function CustomerStepperModal({
             // Llama al callback para notificar al componente padre y cierra el modal
             onSelectClientAndAddress(newClient, newAddr);
             onClose();
-            setShowCreateCustomerModal(false);
+            showCreateCustomerModal.close();
             // Recarga la tabla de clientes (si es necesario)
             fetchAllClients();
           }}
         />
       )}
 
-      {showCreateAddressModal && (
+      {showCreateAddressModal.isOpen && (
         <CreateAddressModal
           isOpen
-          onClose={() => setShowCreateAddressModal(false)}
+          onClose={showCreateAddressModal.close}
           clientId={selectedClient?.id_customer}
           firstname={selectedClient?.firstname}
           lastname={selectedClient?.lastname}
           onAddressCreated={(newAddr) => {
-            setShowCreateAddressModal(false);
+            showCreateAddressModal.close();
             // Recargamos direcciones
             if (selectedClient) fetchAddressesForClient(selectedClient);
           }}

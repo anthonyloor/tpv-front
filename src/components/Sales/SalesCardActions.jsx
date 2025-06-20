@@ -29,6 +29,7 @@ import { useApiFetch } from "../../utils/useApiFetch";
 import { openCashRegister } from "../../utils/ticket";
 import { generateDiscountVoucherTicket } from "../../utils/ticket";
 import ManualProductModal from "../modals/manual/ManualProductModal";
+import useToggle from "../../hooks/useToggle";
 
 function SalesCardActions({
   cartItems,
@@ -63,20 +64,20 @@ function SalesCardActions({
   const toast = useRef(null);
 
   // Modales
-  const [isReturnsModalOpen, setIsReturnsModalOpen] = useState(false);
-  const [isReprintModalOpen, setIsReprintModalOpen] = useState(false);
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
-  const [isFinalSaleModalOpen, setFinalSaleModalOpen] = useState(false);
-  const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const returnsModal = useToggle();
+  const reprintModal = useToggle();
+  const pinModal = useToggle();
+  const discountModal = useToggle();
+  const finalSaleModal = useToggle();
+  const ticketModal = useToggle();
   const [ticketOrderId, setTicketOrderId] = useState(null);
   const [ticketOrderOrigin, setTicketOrderOrigin] = useState(null);
   const [printOnOpen, setPrintOnOpen] = useState(false);
   const [giftTicket, setGiftTicket] = useState(false);
   const [giftTicketTM, setGiftTicketTM] = useState(false);
-  const [cartRuleModalOpen, setCartRuleModalOpen] = useState(false);
+  const cartRuleModal = useToggle();
   const [newCartRuleCode, setNewCartRuleCode] = useState(null);
-  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const manualModal = useToggle();
   const apiFetch = useApiFetch();
 
   // Métodos de pago
@@ -89,13 +90,12 @@ function SalesCardActions({
   const [changeAmount, setChangeAmount] = useState(0);
 
   // NUEVOS ESTADOS para control de impresión fallida
-  const [printOptionModalVisible, setPrintOptionModalVisible] = useState(false);
+  const printOptionModal = useToggle();
   const [manualPdfDataUrl, setManualPdfDataUrl] = useState(null);
   const [orderDataForPrint, setOrderDataForPrint] = useState(null);
 
   // NUEVOS estados para impresión del vale
-  const [voucherPrintOptionModalVisible, setVoucherPrintOptionModalVisible] =
-    useState(false);
+  const voucherPrintOptionModal = useToggle();
   const [voucherManualPdfDataUrl, setVoucherManualPdfDataUrl] = useState(null);
 
   useEffect(() => {
@@ -147,12 +147,12 @@ function SalesCardActions({
   };
 
   // Abrir/Cerrar modales
-  const openReturnsModal = () => setIsReturnsModalOpen(true);
-  const closeReturnsModal = () => setIsReturnsModalOpen(false);
-  const openReprintModal = () => setIsReprintModalOpen(true);
-  const closeReprintModal = () => setIsReprintModalOpen(false);
+  const openReturnsModal = () => returnsModal.open();
+  const closeReturnsModal = () => returnsModal.close();
+  const openReprintModal = () => reprintModal.open();
+  const closeReprintModal = () => reprintModal.close();
   const handleAddManual = () => {
-    setIsManualModalOpen(true);
+    manualModal.open();
   };
 
   const handleDescuentoClick = () => {
@@ -208,24 +208,24 @@ function SalesCardActions({
       }
     }
     if (idProfile === 1) {
-      setIsDiscountModalOpen(true);
+      discountModal.open();
     } else {
-      setIsPinModalOpen(true);
+      pinModal.open();
     }
   };
 
   const handlePinSuccess = () => {
-    setIsPinModalOpen(false);
-    setIsDiscountModalOpen(true);
+    pinModal.close();
+    discountModal.open();
   };
 
   const handleFinalSale = () => {
     if (cartItems.length === 0) return;
-    setFinalSaleModalOpen(true);
+    finalSaleModal.open();
   };
 
   const handleCloseFinalSaleModal = () => {
-    setFinalSaleModalOpen(false);
+    finalSaleModal.close();
     setSelectedMethods([]);
     setAmounts({ efectivo: "", tarjeta: "", bizum: "" });
     setChangeAmount(0);
@@ -275,13 +275,13 @@ function SalesCardActions({
           setTicketOrderOrigin(orderOrigin);
           setGiftTicketTM(giftTicket);
           setChangeAmount(changeAmount);
-          setTicketModalOpen(true);
+          ticketModal.open();
           setPrintOnOpen(print);
 
           // Si se generó un vale descuento, activar el modal (no mostrar botón en el layout principal)
           if (newCartRuleCode) {
             setNewCartRuleCode(newCartRuleCode);
-            setVoucherPrintOptionModalVisible(true);
+            voucherPrintOptionModal.open();
           }
           // Limpiar carrito y descuentos y asignar el cliente por defecto
           setCartItems([]);
@@ -292,7 +292,7 @@ function SalesCardActions({
           setAmounts({ efectivo: "", tarjeta: "", bizum: "" });
           setChangeAmount(0);
           setGiftTicket(false);
-          setFinalSaleModalOpen(false);
+          finalSaleModal.close();
           setIsDevolution(false);
           setIsDiscount(false);
           // Limpiar los valores originales de pago en CartContext
@@ -597,7 +597,7 @@ function SalesCardActions({
       updateDiscountsForIdentifier(discObj);
     }
     setIsDiscount(true);
-    setIsDiscountModalOpen(false);
+    discountModal.close();
   };
 
   // Agregar variable para definir los métodos de pago según modo de devolución
@@ -643,7 +643,7 @@ function SalesCardActions({
               console.log("Ticket impreso remotamente correctamente");
             } else if (response.manual) {
               setManualPdfDataUrl(response.pdfDataUrl);
-              setPrintOptionModalVisible(true);
+              printOptionModal.open();
             } else {
               console.error("Error al imprimir ticket:", response.message);
             }
@@ -670,7 +670,7 @@ function SalesCardActions({
         );
         printWindow.document.close();
         printWindow.focus();
-        setPrintOptionModalVisible(false);
+        printOptionModal.close();
       } else {
         console.warn("No se pudo abrir la ventana de previsualización");
       }
@@ -690,7 +690,7 @@ function SalesCardActions({
         );
         if (response.success) {
           console.log("Reimpresión remota exitosa");
-          setPrintOptionModalVisible(false);
+          printOptionModal.close();
         } else if (response.manual) {
           setManualPdfDataUrl(response.pdfDataUrl);
           // El modal permanece abierto para nueva elección
@@ -719,7 +719,7 @@ function SalesCardActions({
         );
         printWindow.document.close();
         printWindow.focus();
-        setVoucherPrintOptionModalVisible(false);
+        voucherPrintOptionModal.close();
       } else {
         console.warn(
           "No se pudo abrir la ventana de previsualización para el vale"
@@ -749,10 +749,10 @@ function SalesCardActions({
             detail: "Vale descuento impreso correctamente",
           });
           setNewCartRuleCode(null);
-          setVoucherPrintOptionModalVisible(false);
+          voucherPrintOptionModal.close();
         } else if (voucherResponse.manual) {
           setVoucherManualPdfDataUrl(voucherResponse.pdfDataUrl);
-          setVoucherPrintOptionModalVisible(true);
+          voucherPrintOptionModal.open();
         } else {
           console.error(
             "Error al reintentar impresión del vale:",
@@ -766,7 +766,7 @@ function SalesCardActions({
   };
 
   useEffect(() => {
-    if (cartRuleModalOpen && newCartRuleCode) {
+    if (cartRuleModal.isOpen && newCartRuleCode) {
       (async () => {
         const ticketData = { cartRuleCode: newCartRuleCode };
         const response = await generateTicket(
@@ -778,10 +778,10 @@ function SalesCardActions({
         if (!response.success) {
           console.error("Error al imprimir vale:", response.message);
         }
-        setCartRuleModalOpen(false);
+        cartRuleModal.close();
       })();
     }
-  }, [cartRuleModalOpen, newCartRuleCode, configData, employeesDict]);
+  }, [cartRuleModal.isOpen, newCartRuleCode, configData, employeesDict]);
 
   // Nueva función para abrir caja (ticket vacío)
   const handleOpenCashRegister = async () => {
@@ -878,7 +878,7 @@ function SalesCardActions({
       {/* Dialog: Finalizar Venta */}
       <Dialog
         header="Finalizar Venta"
-        visible={isFinalSaleModalOpen}
+        visible={finalSaleModal.isOpen}
         onHide={handleCloseFinalSaleModal}
         modal
         draggable={false}
@@ -1037,34 +1037,34 @@ function SalesCardActions({
       />
       {/* Modales varios */}
       <ReturnsExchangesModal
-        isOpen={isReturnsModalOpen}
+        isOpen={returnsModal.isOpen}
         onClose={closeReturnsModal}
         onAddProduct={handleAddProduct}
       />
-      <ReprintModal isOpen={isReprintModalOpen} onClose={closeReprintModal} />
+      <ReprintModal isOpen={reprintModal.isOpen} onClose={closeReprintModal} />
       <PinValidationModal
-        isOpen={isPinModalOpen}
-        onClose={() => setIsPinModalOpen(false)}
+        isOpen={pinModal.isOpen}
+        onClose={pinModal.close}
         onSuccess={handlePinSuccess}
         reason="descuento"
       />
       <DiscountModal
-        isOpen={isDiscountModalOpen}
-        onClose={() => setIsDiscountModalOpen(false)}
+        isOpen={discountModal.isOpen}
+        onClose={discountModal.close}
         onDiscountApplied={handleDiscountApplied}
         onProductDiscountApplied={updateProductDiscount}
         targetProduct={selectedProductForDiscount}
         cartTotal={total}
       />
       <ManualProductModal
-        isOpen={isManualModalOpen}
-        onClose={() => setIsManualModalOpen(false)}
+        isOpen={manualModal.isOpen}
+        onClose={manualModal.close}
         onAddProduct={handleAddProduct}
       />
       <Dialog
         header="Error de impresión"
-        visible={printOptionModalVisible}
-        onHide={() => setPrintOptionModalVisible(false)}
+        visible={printOptionModal.isOpen}
+        onHide={printOptionModal.close}
         modal
         draggable={false}
         resizable={false}
@@ -1091,8 +1091,8 @@ function SalesCardActions({
       {/* NUEVO modal para vale descuento */}
       <Dialog
         header="Error de impresión del vale"
-        visible={voucherPrintOptionModalVisible}
-        onHide={() => setVoucherPrintOptionModalVisible(false)}
+        visible={voucherPrintOptionModal.isOpen}
+        onHide={voucherPrintOptionModal.close}
         modal
         draggable={false}
         resizable={false}

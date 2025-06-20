@@ -21,6 +21,7 @@ import CreateCustomerModal from "../modals/customer/CreateCustomerModal";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { useIsCompact } from "../../utils/responsive";
+import useToggle from "../../hooks/useToggle";
 
 function SalesCard({
   cartItems,
@@ -59,15 +60,14 @@ function SalesCard({
   } = useContext(CartContext);
   const { idProfile } = useContext(AuthContext);
 
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-  const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] =
-    useState(false);
-  const [isStepperOpen, setIsStepperOpen] = useState(false);
-  const [isClientInfoOpen, setIsClientInfoOpen] = useState(false);
-  const [isParkedCartsModalOpen, setIsParkedCartsModalOpen] = useState(false);
-  const [isNameModalOpen, setIsNameModalOpen] = useState(false);
+  const addressModal = useToggle();
+  const createCustomerModal = useToggle();
+  const stepperModal = useToggle();
+  const clientInfoModal = useToggle();
+  const parkedCartsModal = useToggle();
+  const nameModal = useToggle();
   const [ticketName, setTicketName] = useState(null);
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const pinModal = useToggle();
   const defaultClientId = configData?.id_customer_default;
 
   const isDefaultClient =
@@ -83,16 +83,16 @@ function SalesCard({
   const handleClientSplitButtonClick = () => {
     if (isDefaultClient) {
       // Abrir stepper 2 pasos
-      setIsStepperOpen(true);
+      stepperModal.open();
     } else {
       // Abrir info
-      setIsClientInfoOpen(true);
+      clientInfoModal.open();
     }
   };
 
   // Menú: “Buscar Cliente”
   const handleSearchClient = () => {
-    setIsStepperOpen(true);
+    stepperModal.open();
   };
 
   // Callback final del Stepper (step 0->1-> done)
@@ -108,14 +108,14 @@ function SalesCard({
     setSelectedAddress(addr);
     localStorage.setItem("selectedClient", JSON.stringify(newClient));
     localStorage.setItem("selectedAddress", JSON.stringify(addr));
-    setIsStepperOpen(false);
+    stepperModal.close();
   };
 
   // Botón de crear cliente (dentro del Stepper)
   const handleCreateNewCustomer = () => {
     // Cerrar stepper, abrir CreateCustomer
-    setIsStepperOpen(false);
-    setIsCreateCustomerModalOpen(true);
+    stepperModal.close();
+    createCustomerModal.open();
   };
 
   // Una vez creado, se asigna
@@ -130,7 +130,7 @@ function SalesCard({
     setSelectedAddress(newAddress);
     localStorage.setItem("selectedClient", JSON.stringify(cliData));
     localStorage.setItem("selectedAddress", JSON.stringify(newAddress));
-    setIsCreateCustomerModalOpen(false);
+    createCustomerModal.close();
   };
 
   const handleParkCart = () => {
@@ -138,7 +138,7 @@ function SalesCard({
       alert("No hay productos en el carrito para aparcar.");
       return;
     }
-    setIsNameModalOpen(true);
+    nameModal.open();
   };
 
   const handleSaveParkedCart = () => {
@@ -157,7 +157,7 @@ function SalesCard({
     };
     saveCurrentCartAsParked(ticketName.trim(), extraData);
     setTicketName("");
-    setIsNameModalOpen(false);
+    nameModal.close();
     handleClearCart();
   };
 
@@ -173,7 +173,7 @@ function SalesCard({
   const parkedCarts = getParkedCarts();
   const handleLoadCart = (cartId) => {
     loadParkedCart(cartId);
-    setIsParkedCartsModalOpen(false);
+    parkedCartsModal.close();
   };
   const handleDeleteCart = (cartId) => {
     if (window.confirm("¿Estás seguro de eliminar este ticket aparcado?")) {
@@ -190,7 +190,7 @@ function SalesCard({
         if (input) input.blur();
         setIsEditing(true);
       } else {
-        setIsPinModalOpen(true);
+        pinModal.open();
       }
     } else {
       setIsEditing(false);
@@ -203,7 +203,7 @@ function SalesCard({
     );
     if (input) input.blur();
     setIsEditing(true);
-    setIsPinModalOpen(false);
+    pinModal.close();
   };
 
   const handlePriceChange = (id, value) => {
@@ -437,27 +437,27 @@ function SalesCard({
         </div>
         <div>
           <div className="flex space-x-2">
-          <Button
-            icon={isEditing ? "pi pi-save" : "pi pi-pencil"}
-            tooltip={isEditing ? "Guardar edición" : "Editar Ticket"}
-            tooltipOptions={{ position: "top" }}
-            severity="warning"
-            onClick={handleEditTicket}
-          />
-          <Button
-            icon="pi pi-file-plus"
-            tooltip="Guardar Ticket"
-            tooltipOptions={{ position: "top" }}
-            severity="warning"
-            onClick={handleParkCart}
-          />
+            <Button
+              icon={isEditing ? "pi pi-save" : "pi pi-pencil"}
+              tooltip={isEditing ? "Guardar edición" : "Editar Ticket"}
+              tooltipOptions={{ position: "top" }}
+              severity="warning"
+              onClick={handleEditTicket}
+            />
+            <Button
+              icon="pi pi-file-plus"
+              tooltip="Guardar Ticket"
+              tooltipOptions={{ position: "top" }}
+              severity="warning"
+              onClick={handleParkCart}
+            />
             <Button
               label={isCompact ? "" : "Tickets"}
               tooltip={isCompact ? "Tickets" : ""}
               tooltipOptions={isCompact ? { position: "top" } : {}}
               icon="pi pi-list"
               severity="warning"
-              onClick={() => setIsParkedCartsModalOpen(true)}
+              onClick={parkedCartsModal.open}
             />
             <Button
               icon="pi pi-trash"
@@ -775,8 +775,8 @@ function SalesCard({
 
       {/* =========== TICKETS APARCADOS =========== */}
       <ParkedCartsModal
-        isOpen={isParkedCartsModalOpen}
-        onClose={() => setIsParkedCartsModalOpen(false)}
+        isOpen={parkedCartsModal.isOpen}
+        onClose={parkedCartsModal.close}
         parkedCarts={parkedCarts}
         onLoadCart={handleLoadCart}
         onDeleteCart={handleDeleteCart}
@@ -785,8 +785,8 @@ function SalesCard({
       {/* =========== NOMBRE TICKET APARCADO =========== */}
       <Dialog
         header="Guardar Ticket"
-        visible={isNameModalOpen}
-        onHide={() => setIsNameModalOpen(false)}
+        visible={nameModal.isOpen}
+        onHide={nameModal.close}
         modal
         draggable={false}
         resizable={false}
@@ -812,7 +812,7 @@ function SalesCard({
             <Button
               label="Cancelar"
               className="p-button-secondary"
-              onClick={() => setIsNameModalOpen(false)}
+              onClick={nameModal.close}
             />
             <Button
               label="Guardar"
@@ -824,43 +824,43 @@ function SalesCard({
       </Dialog>
 
       <PinValidationModal
-        isOpen={isPinModalOpen}
-        onClose={() => setIsPinModalOpen(false)}
+        isOpen={pinModal.isOpen}
+        onClose={pinModal.close}
         onSuccess={handlePinSuccess}
         reason="edición ticket"
       />
 
       {/* =========== MODAL ADDRESS (por si solo cambias dirección) =========== */}
       <AddressModal
-        isOpen={isAddressModalOpen}
-        onClose={() => setIsAddressModalOpen(false)}
+        isOpen={addressModal.isOpen}
+        onClose={addressModal.close}
         clientId={selectedClient?.id_customer}
         handleSelectAddress={(addr) => {
           setSelectedAddress(addr);
-          setIsAddressModalOpen(false);
+          addressModal.close();
           localStorage.setItem("selectedAddress", JSON.stringify(addr));
         }}
       />
 
       {/* =========== MODAL INFO CLIENTE =========== */}
       <ClientInfoDialog
-        isOpen={isClientInfoOpen}
-        onClose={() => setIsClientInfoOpen(false)}
+        isOpen={clientInfoModal.isOpen}
+        onClose={clientInfoModal.close}
         client={selectedClient}
       />
 
       {/* =========== MODAL STEPPER (2 pasos) =========== */}
       <CustomerStepperModal
-        isOpen={isStepperOpen}
-        onClose={() => setIsStepperOpen(false)}
+        isOpen={stepperModal.isOpen}
+        onClose={stepperModal.close}
         onSelectClientAndAddress={handleStepperSelectClientAndAddress}
         onCreateNewCustomer={handleCreateNewCustomer}
       />
 
       {/* =========== MODAL CREAR CLIENTE + DIRECCIÓN =========== */}
       <CreateCustomerModal
-        isOpen={isCreateCustomerModalOpen}
-        onClose={() => setIsCreateCustomerModalOpen(false)}
+        isOpen={createCustomerModal.isOpen}
+        onClose={createCustomerModal.close}
         onComplete={handleCreateNewCustomerComplete}
       />
     </div>

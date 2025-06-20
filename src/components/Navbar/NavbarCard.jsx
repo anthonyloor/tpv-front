@@ -21,6 +21,7 @@ import OnlineOrdersModal from "../modals/online/OnlineOrdersModal";
 import InventoryModal from "../modals/inventory/InventoryModal";
 import ListCashRegisterModal from "../modals/cashRegister/ListCashRegisterModal";
 import ControlStockModal from "../modals/controlStock/ControlStockModal";
+import useToggle from "../../hooks/useToggle";
 
 const NavbarCard = () => {
   const navigate = useNavigate();
@@ -35,35 +36,37 @@ const NavbarCard = () => {
 
   const shop = JSON.parse(localStorage.getItem("shop"));
 
-  const [isTransfersModalOpen, setTransfersModalOpen] = useState(false);
-  const [isConfigurationModalOpen, setConfigurationModalOpen] = useState(false);
-  const [isSalesReportModalOpen, setIsSalesReportModalOpen] = useState(false);
-  const [isCashRegisterModalOpen, setIsCashRegisterModalOpen] = useState(false);
-  const [isListCashRegisterModalOpen, setIsListCashRegisterModalOpen] =
-    useState(false);
+  const transfersModal = useToggle();
+  const configurationModal = useToggle();
+  const salesReportModal = useToggle();
+  const cashRegisterModal = useToggle();
+  const listCashRegisterModal = useToggle();
 
   const [showPricesTags, setShowPricesTags] = useState(false);
-  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const pinDialog = useToggle();
   const [configModalView] = useState("config");
   const [version, setVersion] = useState("");
-  const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
-  const [isOnlineOrdersModalOpen, setOnlineOrdersModalOpen] = useState(false);
-  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
-  const [isControlStockModalOpen, setIsControlStockModalOpen] = useState(false);
+  const versionModal = useToggle();
+  const onlineOrdersModal = useToggle();
+  const inventoryModal = useToggle();
+  const controlStockModal = useToggle();
 
   const closeAllModals = () => {
-    setTransfersModalOpen(false);
-    setConfigurationModalOpen(false);
-    setIsSalesReportModalOpen(false);
-    setIsCashRegisterModalOpen(false);
-    setIsPinDialogOpen(false);
-    setIsListCashRegisterModalOpen(false);
-    setIsControlStockModalOpen(false);
+    transfersModal.close();
+    configurationModal.close();
+    salesReportModal.close();
+    cashRegisterModal.close();
+    pinDialog.close();
+    listCashRegisterModal.close();
+    controlStockModal.close();
+    inventoryModal.close();
+    onlineOrdersModal.close();
+    versionModal.close();
   };
 
   const openTransfers = () => {
     closeAllModals();
-    setTransfersModalOpen(true);
+    transfersModal.open();
   };
   /*
   const openConfig = (view = "config") => {
@@ -75,36 +78,36 @@ const NavbarCard = () => {
 
   const openCashRegister = () => {
     closeAllModals();
-    setIsCashRegisterModalOpen(true);
+    cashRegisterModal.open();
   };
 
   const openListCashRegisterModal = () => {
     closeAllModals();
-    setIsListCashRegisterModalOpen(true);
+    listCashRegisterModal.open();
   };
 
   const openSalesReport = () => {
     closeAllModals();
-    setIsSalesReportModalOpen(true);
+    salesReportModal.open();
   };
 
   const openInventoryModal = () => {
     closeAllModals();
-    setIsInventoryModalOpen(true);
+    inventoryModal.open();
   };
 
   const openControlStock = () => {
     closeAllModals();
-    setIsControlStockModalOpen(true);
+    controlStockModal.open();
   };
 
   useEffect(() => {
     if (openCloseCashModal) {
       closeAllModals();
-      setIsCashRegisterModalOpen(true);
+      cashRegisterModal.open();
       setOpenCloseCashModal(false);
     }
-  }, [openCloseCashModal, setOpenCloseCashModal]);
+  }, [openCloseCashModal, setOpenCloseCashModal, cashRegisterModal]);
 
   useEffect(() => {
     const fetchVersion = async () => {
@@ -177,7 +180,7 @@ const NavbarCard = () => {
           {
             label: "Pedidos Online",
             icon: "pi pi-shopping-cart",
-            command: () => setOnlineOrdersModalOpen(true),
+            command: onlineOrdersModal.open,
           },
           {
             label: "Reportes",
@@ -187,7 +190,7 @@ const NavbarCard = () => {
           {
             label: "PIN",
             icon: "pi pi-key",
-            command: () => setIsPinDialogOpen(true),
+            command: pinDialog.open,
           },
           {
             label: "Inventario",
@@ -241,7 +244,7 @@ const NavbarCard = () => {
     [setTheme]
   );
 
-  // Opciones del SplitButton
+  // Cambio en el menú de opciones (SplitButton)
   const menuItems = [
     {
       label: (
@@ -253,7 +256,7 @@ const NavbarCard = () => {
     },
     {
       label: `Versión TPV: ${version || "N/A"}`,
-      command: () => setIsVersionModalOpen(true),
+      command: () => versionModal.open(),
     },
     {
       label: "Cerrar sesión",
@@ -289,57 +292,54 @@ const NavbarCard = () => {
       />
 
       {/* (1) TransfersModal */}
-      {isTransfersModalOpen && (
+      {transfersModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <TransfersModal
             isOpen
             inlineMode={isMobile}
-            onClose={() => setTransfersModalOpen(false)}
+            onClose={transfersModal.close}
           />
         </PortalOrNormal>
       )}
 
       {/* (2) ConfigurationModal */}
-      {isConfigurationModalOpen && (
+      {configurationModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <ConfigurationModal
             isOpen
             inlineMode={isMobile}
             initialView={configModalView}
-            onClose={() => setConfigurationModalOpen(false)}
+            onClose={configurationModal.close}
           />
         </PortalOrNormal>
       )}
 
       {/* (3) SalesReportModal */}
-      {isSalesReportModalOpen && (
+      {salesReportModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <SalesReportModal
             isOpen
             inlineMode={isMobile}
-            onClose={() => setIsSalesReportModalOpen(false)}
+            onClose={salesReportModal.close}
           />
         </PortalOrNormal>
       )}
 
       {/* (4) CloseCashRegisterModal */}
-      {isCashRegisterModalOpen && (
+      {cashRegisterModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <CloseCashRegisterModal
             isOpen
             inlineMode={isMobile}
-            onClose={() => setIsCashRegisterModalOpen(false)}
+            onClose={cashRegisterModal.close}
           />
         </PortalOrNormal>
       )}
 
       {/* Nuevo Modal para Lista de Cajas */}
-      {isListCashRegisterModalOpen && (
+      {listCashRegisterModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
-          <ListCashRegisterModal
-            isOpen
-            onClose={() => setIsListCashRegisterModalOpen(false)}
-          />
+          <ListCashRegisterModal isOpen onClose={listCashRegisterModal.close} />
         </PortalOrNormal>
       )}
 
@@ -353,8 +353,8 @@ const NavbarCard = () => {
 
       {/* Modal para PIN */}
       <Dialog
-        visible={isPinDialogOpen}
-        onHide={() => setIsPinDialogOpen(false)}
+        visible={pinDialog.isOpen}
+        onHide={pinDialog.close}
         modal
         draggable={false}
         resizable={false}
@@ -369,38 +369,35 @@ const NavbarCard = () => {
       </Dialog>
 
       {/* Modal de Versión y Resolución */}
-      {isVersionModalOpen && (
+      {versionModal.isOpen && (
         <VersionInfoModal
-          isOpen={isVersionModalOpen}
+          isOpen={versionModal.isOpen}
           version={version}
-          onClose={() => setIsVersionModalOpen(false)}
+          onClose={versionModal.close}
         />
       )}
 
       {/* Modal de Pedidos Online */}
-      {isOnlineOrdersModalOpen && (
+      {onlineOrdersModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
-          <OnlineOrdersModal
-            isOpen
-            onClose={() => setOnlineOrdersModalOpen(false)}
-          />
+          <OnlineOrdersModal isOpen onClose={onlineOrdersModal.close} />
         </PortalOrNormal>
       )}
 
       {/* Nuevo Dialog para Inventario */}
-      {isInventoryModalOpen && (
+      {inventoryModal.isOpen && (
         <InventoryModal
-          isOpen={isInventoryModalOpen}
-          onClose={() => setIsInventoryModalOpen(false)}
+          isOpen={inventoryModal.isOpen}
+          onClose={inventoryModal.close}
           shop={shop}
         />
       )}
 
       {/* Nuevo modal de Control Stock */}
-      {isControlStockModalOpen && (
+      {controlStockModal.isOpen && (
         <ControlStockModal
-          isOpen={isControlStockModalOpen}
-          onClose={() => setIsControlStockModalOpen(false)}
+          isOpen={controlStockModal.isOpen}
+          onClose={controlStockModal.close}
         />
       )}
     </>

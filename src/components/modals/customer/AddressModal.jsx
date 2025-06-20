@@ -1,6 +1,8 @@
 // src/components/modals/customer/AddressModal.jsx
 
 import React, { useState, useEffect } from "react";
+import useToggle from "../../../hooks/useToggle";
+import useAddresses from "../../../hooks/useAddresses";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { Card } from "primereact/card";
@@ -12,58 +14,23 @@ const AddressModal = ({
   onClose,
   clientId,
   handleSelectAddress,
-  shop,
 }) => {
   const [addresses, setAddresses] = useState([]);
-  const [storeAddress, setStoreAddress] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isCreateAddressOpen, setIsCreateAddressOpen] = useState(false);
+  const createAddressModal = useToggle();
   const API_BASE_URL = getApiBaseUrl();
+  const { getAddresses } = useAddresses();
 
   // Al abrir, cargamos direcciones
   useEffect(() => {
-    if (isOpen) {
-      fetchClientAddresses(clientId);
-    }
-  }, [isOpen, clientId]);
-
-  const fetchClientAddresses = (id_customer) => {
-    const token = localStorage.getItem("token");
-    fetch(`${API_BASE_URL}/get_addresses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        id_customer: id_customer,
-        origin,
-      }),
-    })
-      .then((response) => {
-        if (response.status === 404) {
-          // Significa que no hay direcciones
-          setAddresses([]);
-          return Promise.resolve([]);
-        }
-        if (!response.ok) {
-          throw new Error("Error al obtener direcciones");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        const validAddresses = (data || [])
-          .filter((address) => !address.deleted && address.active)
-          .sort((a, b) => new Date(b.date_upd) - new Date(a.date_upd));
-        setAddresses(validAddresses);
-        setErrorMessage("");
-      })
-      .catch((error) => {
-        console.error("Error direcciones:", error);
-        setErrorMessage("No se pudo cargar la lista de direcciones.");
-        setAddresses([]);
-      });
-  };
+    const loadAddresses = async () => {
+      if (!isOpen) return;
+      const data = await getAddresses(clientId);
+      setAddresses(data);
+      setErrorMessage(data.length ? "" : "No se pudo cargar la lista de direcciones.");
+    };
+    loadAddresses();
+  }, [isOpen, clientId, getAddresses]);
 
   // Seleccionar
   const handleAddressSelectInternal = (address) => {
@@ -73,18 +40,15 @@ const AddressModal = ({
 
   // Abrir createAddress
   const handleOpenCreateAddress = () => {
-    setIsCreateAddressOpen(true);
+    createAddressModal.open();
   };
 
   // Al crear dirección => refrescamos la lista
-  const handleAddressCreated = (newAddressData) => {
-    setIsCreateAddressOpen(false);
+  const handleAddressCreated = async (newAddressData) => {
+    createAddressModal.close();
     if (newAddressData) {
-      // Opcional: si quieres seleccionar la dirección recién creada al volver:
-      // handleSelectAddress(newAddressData);
-      // onClose();
-      // O si prefieres recargar la lista:
-      fetchClientAddresses(clientId);
+      const refreshed = await getAddresses(clientId);
+      setAddresses(refreshed);
     }
   };
 
@@ -125,22 +89,6 @@ const AddressModal = ({
             </div>
           )}
 
-          {/* Dirección de tienda */}
-          {storeAddress && (
-            <Card
-              title={storeAddress.alias}
-              subTitle={storeAddress.address1}
-              style={{ cursor: "pointer" }}
-              className="mb-3"
-              onClick={() => handleAddressSelectInternal(storeAddress)}
-            >
-              <p className="m-0">
-                {storeAddress.postcode} {storeAddress.city}
-              </p>
-              <p className="m-0">{storeAddress.phone}</p>
-            </Card>
-          )}
-
           {/* Lista de direcciones en Card */}
           {addresses.map((addr) => (
             <Card
@@ -160,10 +108,10 @@ const AddressModal = ({
       </Dialog>
 
       {/* Dialog para Crear Direccion */}
-      {isCreateAddressOpen && (
+      {createAddressModal.isOpen && (
         <CreateAddressModal
           isOpen
-          onClose={() => setIsCreateAddressOpen(false)}
+          onClose={createAddressModal.close}
           clientId={clientId}
           onAddressCreated={handleAddressCreated}
         />

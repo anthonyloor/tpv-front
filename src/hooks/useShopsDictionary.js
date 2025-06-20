@@ -1,29 +1,5 @@
-import { useState, useEffect } from "react";
-import { useApiFetch } from "../utils/useApiFetch";
-import getApiBaseUrl from "../utils/getApiBaseUrl";
+import { useDictionary } from "./useDictionary";
 
-export const useShopsDictionary = () => {
-  const apiFetch = useApiFetch();
-  const [shopsDict, setShopsDict] = useState({});
-  const API_BASE_URL = getApiBaseUrl();
+export const useShopsDictionary = () =>
+  useDictionary("shops", "id_shop", "name");
 
-  useEffect(() => {
-    const fetchShops = async () => {
-      try {
-        const data = await apiFetch(`${API_BASE_URL}/shops`, { method: "GET" });
-        if (Array.isArray(data)) {
-          const dict = {};
-          data.forEach((shop) => {
-            dict[shop.id_shop] = shop.name;
-          });
-          setShopsDict(dict);
-        }
-      } catch (error) {
-        console.error("Error fetching shops:", error);
-      }
-    };
-    fetchShops();
-  }, [apiFetch, API_BASE_URL]);
-
-  return shopsDict;
-};
