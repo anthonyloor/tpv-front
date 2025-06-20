@@ -131,13 +131,6 @@ function SalesCardActions({
   // Si es devolución, se muestran valores en negativo
   const displayTotal = isDevolution ? Math.abs(total) : total;
 
-  // Agregar el efecto para desactivar isDevolution cuando total >= 0
-  useEffect(() => {
-    if (total >= 0 && isDevolution) {
-      setIsDevolution(false);
-    }
-  }, [total, isDevolution, setIsDevolution]);
-
   // Estados para alertas
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
