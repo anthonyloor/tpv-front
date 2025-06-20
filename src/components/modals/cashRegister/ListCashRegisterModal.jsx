@@ -11,6 +11,7 @@ import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { generateClosureTicket } from "../../../utils/ticket";
+import { formatLongDate } from "../../../utils/dateUtils";
 
 const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
   const [sessions, setSessions] = useState([]);
@@ -100,17 +101,7 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
         total,
         iva,
       };
-      const formatDate = (dateStr) => {
-        const d = new Date(dateStr);
-        const weekday = d.toLocaleDateString("es-ES", { weekday: "long" });
-        const day = d.toLocaleDateString("es-ES", { day: "2-digit" });
-        const month = d.toLocaleDateString("es-ES", { month: "long" });
-        const year = d.toLocaleDateString("es-ES", { year: "numeric" });
-        const capitalizedWeekday =
-          weekday.charAt(0).toUpperCase() + weekday.slice(1);
-        return `${capitalizedWeekday} ${day} de ${month} de ${year}`;
-      };
-      const formattedDate = formatDate(date_add);
+      const formattedDate = formatLongDate(date_add);
       const pdfName = `${closureData.shop_name} - ${formattedDate}`;
       const result = generateSalesPdf(
         saleReportData,

@@ -8,6 +8,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import getApiBaseUrl from "../../utils/getApiBaseUrl";
 import "jspdf-autotable";
+import { formatDate } from "../../utils/dateUtils";
 
 const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
   const apiFetch = useApiFetch();
@@ -60,23 +61,6 @@ const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
       payment: order.payment,
     }))
   );
-
-  // Función para formatear fecha => dd-mm-yyyy hh:mm
-  const formatDate = (dateString) => {
-    if (!dateString) return "";
-    const dateObj = new Date(dateString);
-    if (isNaN(dateObj)) return dateString; // Si no es fecha válida, devuelves la cadena original
-
-    const dd = String(dateObj.getDate()).padStart(2, "0");
-    const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const yyyy = dateObj.getFullYear();
-
-    const hh = String(dateObj.getHours()).padStart(2, "0");
-    const min = String(dateObj.getMinutes()).padStart(2, "0");
-
-    return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
-  };
-
   // Mostrar cliente => "TPV" si coincide con configData.id_customer_default, en otro caso el id
   const getCustomerDisplay = (id_customer) => {
     if (
@@ -100,18 +84,15 @@ const SalesReportSearch = ({ initialDateFrom, initialDateTo }) => {
     return methods.join(", ");
   };
 
-  // Calcular totales globales
-  const totalCash = orders.reduce(
-    (acc, order) => acc + (order.total_cash || 0),
-    0
-  );
-  const totalCard = orders.reduce(
-    (acc, order) => acc + (order.total_card || 0),
-    0
-  );
-  const totalBizum = orders.reduce(
-    (acc, order) => acc + (order.total_bizum || 0),
-    0
+  // Calcular totales globales en una sola iteración
+  const { totalCash, totalCard, totalBizum } = orders.reduce(
+    (acc, order) => {
+      acc.totalCash += order.total_cash || 0;
+      acc.totalCard += order.total_card || 0;
+      acc.totalBizum += order.total_bizum || 0;
+      return acc;
+    },
+    { totalCash: 0, totalCard: 0, totalBizum: 0 }
   );
   const showBizumColumn = totalBizum > 0;
 

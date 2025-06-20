@@ -14,6 +14,7 @@ import { Toast } from "primereact/toast";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import useProductSearch from "../../../hooks/useProductSearch";
+import { formatDate } from "../../../utils/dateUtils";
 import { AuthContext } from "../../../contexts/AuthContext";
 import ActionResultDialog from "../../common/ActionResultDialog";
 import generateTicket from "../../../utils/ticket";
@@ -63,20 +64,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     selectedClient,
   });
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "";
-    const dateObj = new Date(dateString);
-    if (isNaN(dateObj)) return dateString;
-
-    const dd = String(dateObj.getDate()).padStart(2, "0");
-    const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const yyyy = dateObj.getFullYear();
-
-    const hh = String(dateObj.getHours()).padStart(2, "0");
-    const min = String(dateObj.getMinutes()).padStart(2, "0");
-
-    return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
-  };
 
   const loadOnlineOrders = useCallback(async () => {
     try {

@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { formatLongDate } from "./dateUtils";
 
 export const generateSalesPdf = (data, shopName, closureData, configData) => {
   try {
@@ -7,19 +8,13 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
     const margin = 40;
     let yPos = margin;
 
-    // Función auxiliar para formatear fecha
-    function formatDateTime(date) {
+    // Función auxiliar para formatear fecha y hora
+    const formatDateTime = (date) => {
       const d = new Date(date);
-      const weekday = d.toLocaleDateString("es-ES", { weekday: "long" });
-      const day = d.toLocaleDateString("es-ES", { day: "2-digit" });
-      const month = d.toLocaleDateString("es-ES", { month: "long" });
-      const year = d.toLocaleDateString("es-ES", { year: "numeric" });
-      const capitalizedWeekday =
-        weekday.charAt(0).toUpperCase() + weekday.slice(1);
       const hh = ("0" + d.getHours()).slice(-2);
       const min = ("0" + d.getMinutes()).slice(-2);
-      return `${hh}:${min} - ${capitalizedWeekday} ${day} de ${month} de ${year}`;
-    }
+      return `${hh}:${min} - ${formatLongDate(d)}`;
+    };
 
     doc.setFontSize(18);
     doc.text(`Reporte de ventas: ${shopName}`, margin, yPos);
