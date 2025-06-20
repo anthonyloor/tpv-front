@@ -143,51 +143,63 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
             {/* Primera fila: Nombre y Apellidos */}
             <div className="p-grid">
               <div className="p-col-6">
-                <span className="p-float-label">
+                <div className="p-inputgroup">
+                  <span className="p-inputgroup-addon">
+                    <i className="pi pi-user" />
+                  </span>
                   <InputText
                     name="firstname"
                     value={customerData.firstname}
                     onChange={handleCustomerChange}
+                    placeholder="Nombre"
                   />
-                  <label>Nombre</label>
-                </span>
+                </div>
               </div>
               <div className="p-col-6">
-                <span className="p-float-label">
+                <div className="p-inputgroup">
+                  <span className="p-inputgroup-addon">
+                    <i className="pi pi-user" />
+                  </span>
                   <InputText
                     name="lastname"
                     value={customerData.lastname}
                     onChange={handleCustomerChange}
+                    placeholder="Apellidos"
                   />
-                  <label>Apellidos</label>
-                </span>
+                </div>
               </div>
             </div>
             {/* Segunda fila: Email y Contraseña */}
             <div className="p-grid" style={{ marginTop: "1rem" }}>
               <div className="p-col-6">
-                <span className="p-float-label">
+                <div className="p-inputgroup">
+                  <span className="p-inputgroup-addon">
+                    <i className="pi pi-envelope" />
+                  </span>
                   <InputText
                     type="email"
                     name="email"
                     value={customerData.email}
                     onChange={handleCustomerChange}
                     disabled={isNoWeb}
+                    placeholder="Email"
                   />
-                  <label>Email</label>
-                </span>
+                </div>
               </div>
               <div className="p-col-6">
-                <span className="p-float-label">
+                <div className="p-inputgroup">
+                  <span className="p-inputgroup-addon">
+                    <i className="pi pi-lock" />
+                  </span>
                   <InputText
                     type="password"
                     name="password"
                     value={customerData.password}
                     onChange={handleCustomerChange}
                     disabled={isNoWeb}
+                    placeholder="Contraseña"
                   />
-                  <label>Contraseña</label>
-                </span>
+                </div>
               </div>
             </div>
             {/* Checkbox "Cliente no web" usando PrimeReact */}

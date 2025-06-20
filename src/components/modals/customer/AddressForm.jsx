@@ -7,37 +7,76 @@ export default function AddressForm({ addressData, onChange, setAddressData, err
       {/* Primera fila: Calle / Avenida y Piso/puerta */}
       <div className="p-grid" style={{ marginBottom: "1rem" }}>
         <div className="p-col-6">
-          <span className="p-float-label w-full">
-            <InputText id="address1" className="w-full" name="address1" value={addressData.address1} onChange={onChange} />
-            <label htmlFor="address1">Calle, Avenida, etc.</label>
-          </span>
+          <div className="p-inputgroup w-full">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-home" />
+            </span>
+            <InputText
+              id="address1"
+              className="w-full"
+              name="address1"
+              value={addressData.address1}
+              onChange={onChange}
+              placeholder="Calle, Avenida, etc."
+            />
+          </div>
         </div>
         <div className="p-col-6">
-          <span className="p-float-label w-full">
-            <InputText id="address2" className="w-full" name="address2" value={addressData.address2} onChange={onChange} />
-            <label htmlFor="address2">Piso, puerta, etc.</label>
-          </span>
+          <div className="p-inputgroup w-full">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-building" />
+            </span>
+            <InputText
+              id="address2"
+              className="w-full"
+              name="address2"
+              value={addressData.address2}
+              onChange={onChange}
+              placeholder="Piso, puerta, etc."
+            />
+          </div>
         </div>
       </div>
       {/* Segunda fila: Código Postal y Ciudad */}
       <div className="p-grid" style={{ marginBottom: "1rem" }}>
         <div className="p-col-6">
-          <span className="p-float-label w-full">
-            <InputText id="postcode" className="w-full" name="postcode" value={addressData.postcode} onChange={onChange} />
-            <label htmlFor="postcode">Código Postal</label>
-          </span>
+          <div className="p-inputgroup w-full">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-map-marker" />
+            </span>
+            <InputText
+              id="postcode"
+              className="w-full"
+              name="postcode"
+              value={addressData.postcode}
+              onChange={onChange}
+              placeholder="Código Postal"
+            />
+          </div>
         </div>
         <div className="p-col-6">
-          <span className="p-float-label w-full">
-            <InputText id="city" className="w-full" name="city" value={addressData.city} onChange={onChange} />
-            <label htmlFor="city">Ciudad</label>
-          </span>
+          <div className="p-inputgroup w-full">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-map" />
+            </span>
+            <InputText
+              id="city"
+              className="w-full"
+              name="city"
+              value={addressData.city}
+              onChange={onChange}
+              placeholder="Ciudad"
+            />
+          </div>
         </div>
       </div>
       {/* Tercera fila: Teléfono/Móvil */}
       <div className="p-grid" style={{ marginBottom: "1rem" }}>
         <div className="p-col-12">
-          <span className="p-float-label w-full">
+          <div className="p-inputgroup w-full">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-phone" />
+            </span>
             <InputText
               id="phone_combined"
               className="w-full"
@@ -47,24 +86,42 @@ export default function AddressForm({ addressData, onChange, setAddressData, err
                 const value = e.target.value;
                 setAddressData((prev) => ({ ...prev, phone: value, phone_mobile: value }));
               }}
+              placeholder="Teléfono / Móvil"
             />
-            <label htmlFor="phone_combined">Teléfono / Móvil</label>
-          </span>
+          </div>
         </div>
       </div>
       {addressData.isCompanyInvoice && (
         <div className="p-grid" style={{ marginBottom: "1rem" }}>
           <div className="p-col-6">
-            <span className="p-float-label w-full">
-              <InputText id="company" className="w-full" name="company" value={addressData.company || ""} onChange={onChange} />
-              <label htmlFor="company">Nombre de la empresa</label>
-            </span>
+            <div className="p-inputgroup w-full">
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-briefcase" />
+              </span>
+              <InputText
+                id="company"
+                className="w-full"
+                name="company"
+                value={addressData.company || ""}
+                onChange={onChange}
+                placeholder="Nombre de la empresa"
+              />
+            </div>
           </div>
           <div className="p-col-6">
-            <span className="p-float-label w-full">
-              <InputText id="dni" className="w-full" name="dni" value={addressData.dni || ""} onChange={onChange} />
-              <label htmlFor="dni">DNI / CIF</label>
-            </span>
+            <div className="p-inputgroup w-full">
+              <span className="p-inputgroup-addon">
+                <i className="pi pi-id-card" />
+              </span>
+              <InputText
+                id="dni"
+                className="w-full"
+                name="dni"
+                value={addressData.dni || ""}
+                onChange={onChange}
+                placeholder="DNI / CIF"
+              />
+            </div>
           </div>
         </div>
       )}
