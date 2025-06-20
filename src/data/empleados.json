@@ -1,9 +1,0 @@
-[
-    {
-      "id_empleado": 1,
-      "nombre": "Juan Pérez",
-      "correo": "juan@empresa.com",
-      "nivel_permisos": "Admin"
-    }
-  ]
-  
