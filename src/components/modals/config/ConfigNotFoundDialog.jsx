@@ -1,6 +1,7 @@
 // src/components/modals/config/ConfigNotFoundDialog.jsx
 
 import React, { useState } from "react";
+import useToggle from "../../../hooks/useToggle";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
@@ -23,11 +24,11 @@ const ConfigNotFoundDialog = ({
   const [ticketTextFooter2, setTicketTextFooter2] = useState("");
 
   // Estado para controlar la visibilidad del diálogo de búsqueda
-  const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
+  const searchDialog = useToggle();
 
   // Handler para abrir el diálogo de búsqueda
   const handleOpenSearchDialog = () => {
-    setIsSearchDialogOpen(true);
+    searchDialog.open();
   };
 
   // Handler para seleccionar un cliente y dirección desde el diálogo
@@ -50,7 +51,7 @@ const ConfigNotFoundDialog = ({
       "Plazo de cambio máximo 15 días. Cambio por otro artículo o emisión de un vale."
     );
     setTicketTextFooter2("www.mayret.com");
-    setIsSearchDialogOpen(false);
+    searchDialog.close();
   };
 
   // Estado para almacenar el cliente seleccionado
@@ -201,8 +202,8 @@ const ConfigNotFoundDialog = ({
 
       {/* Diálogo de búsqueda de cliente */}
       <CustomerSearchDialog
-        isOpen={isSearchDialogOpen}
-        onClose={() => setIsSearchDialogOpen(false)}
+        isOpen={searchDialog.isOpen}
+        onClose={searchDialog.close}
         onSelect={handleSelectClientAndAddress}
       />
     </>

@@ -1,6 +1,7 @@
 // src/components/modals/customer/AddressModal.jsx
 
 import React, { useState, useEffect } from "react";
+import useToggle from "../../../hooks/useToggle";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { Card } from "primereact/card";
@@ -17,7 +18,7 @@ const AddressModal = ({
   const [addresses, setAddresses] = useState([]);
   const [storeAddress, setStoreAddress] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isCreateAddressOpen, setIsCreateAddressOpen] = useState(false);
+  const createAddressModal = useToggle();
   const API_BASE_URL = getApiBaseUrl();
 
   // Al abrir, cargamos direcciones
@@ -73,12 +74,12 @@ const AddressModal = ({
 
   // Abrir createAddress
   const handleOpenCreateAddress = () => {
-    setIsCreateAddressOpen(true);
+    createAddressModal.open();
   };
 
   // Al crear dirección => refrescamos la lista
   const handleAddressCreated = (newAddressData) => {
-    setIsCreateAddressOpen(false);
+    createAddressModal.close();
     if (newAddressData) {
       // Opcional: si quieres seleccionar la dirección recién creada al volver:
       // handleSelectAddress(newAddressData);
@@ -160,10 +161,10 @@ const AddressModal = ({
       </Dialog>
 
       {/* Dialog para Crear Direccion */}
-      {isCreateAddressOpen && (
+      {createAddressModal.isOpen && (
         <CreateAddressModal
           isOpen
-          onClose={() => setIsCreateAddressOpen(false)}
+          onClose={createAddressModal.close}
           clientId={clientId}
           onAddressCreated={handleAddressCreated}
         />
