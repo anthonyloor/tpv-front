@@ -1,17 +1,19 @@
 // src/components/modals/customer/CreateAddressModal.jsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
-import { InputText } from "primereact/inputtext";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import { Steps } from "primereact/steps";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import AddressForm from "./AddressForm";
 
 export default function CreateAddressModal({
   isOpen,
   onClose,
   clientId,
+  firstname = "",
+  lastname = "",
   onAddressCreated,
 }) {
   const apiFetch = useApiFetch();
@@ -33,19 +35,21 @@ export default function CreateAddressModal({
     dni: "",
     isCompanyInvoice: false,
   });
+  useEffect(() => {
+    if (isOpen) {
+      setAddressData((prev) => ({
+        ...prev,
+        firstname: firstname || prev.firstname,
+        lastname: lastname || prev.lastname,
+      }));
+    }
+  }, [isOpen, firstname, lastname]);
   const [errorMessage, setErrorMessage] = useState("");
   const API_BASE_URL = getApiBaseUrl();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setAddressData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleToggleCompany = (e) => {
-    setAddressData((prev) => ({
-      ...prev,
-      isCompanyInvoice: e.target.checked,
-    }));
   };
 
   const handleSubmitAddress = async (e) => {
@@ -93,108 +97,12 @@ export default function CreateAddressModal({
     >
       <Steps model={items} activeIndex={0} readOnly className="mb-3" />
 
-      <div className="p-fluid">
-        {errorMessage && <p className="text-red-500">{errorMessage}</p>}
-
-        <div className="field mb-3">
-          <label className="font-bold" htmlFor="address1">
-            Calle / Avenida
-          </label>
-          <InputText
-            id="address1"
-            name="address1"
-            value={addressData.address1}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="field mb-3">
-          <label className="font-bold" htmlFor="address2">
-            Piso / Puerta
-          </label>
-          <InputText
-            id="address2"
-            name="address2"
-            value={addressData.address2}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="field mb-3">
-          <label className="font-bold" htmlFor="postcode">
-            Código Postal
-          </label>
-          <InputText
-            id="postcode"
-            name="postcode"
-            value={addressData.postcode}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="field mb-3">
-          <label className="font-bold" htmlFor="city">
-            Ciudad
-          </label>
-          <InputText
-            id="city"
-            name="city"
-            value={addressData.city}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div className="field mb-3">
-          <label className="font-bold" htmlFor="phone">
-            Teléfono / Móvil
-          </label>
-          <InputText
-            id="phone"
-            name="phone"
-            value={addressData.phone || ""}
-            onChange={(e) =>
-              setAddressData((prev) => ({
-                ...prev,
-                phone: e.target.value,
-                phone_mobile: e.target.value,
-              }))
-            }
-          />
-        </div>
-
-        {/* Checkbox "Es empresa" */}
-        <div className="field mb-3 flex align-items-center gap-2">
-          <input
-            type="checkbox"
-            checked={addressData.isCompanyInvoice}
-            onChange={handleToggleCompany}
-          />
-          <label className="font-bold m-0">¿Es Facturación de Empresa?</label>
-        </div>
-
-        {addressData.isCompanyInvoice && (
-          <div className="field mb-3">
-            <label className="font-bold" htmlFor="company">
-              Nombre Empresa
-            </label>
-            <InputText
-              id="company"
-              name="company"
-              value={addressData.company}
-              onChange={handleChange}
-            />
-            <label className="font-bold mt-3" htmlFor="dni">
-              CIF / DNI
-            </label>
-            <InputText
-              id="dni"
-              name="dni"
-              value={addressData.dni}
-              onChange={handleChange}
-            />
-          </div>
-        )}
-      </div>
+      <AddressForm
+        addressData={addressData}
+        onChange={handleChange}
+        setAddressData={setAddressData}
+        errorMessage={errorMessage}
+      />
     </Dialog>
   );
 }
