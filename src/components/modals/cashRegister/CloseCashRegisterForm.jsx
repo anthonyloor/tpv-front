@@ -17,6 +17,7 @@ import { ConfigContext } from "../../../contexts/ConfigContext";
 import { Dialog } from "primereact/dialog";
 import { generateSalesPdf } from "../../../utils/generateSalesPdf";
 import "jspdf-autotable";
+import { formatLongDate } from "../../../utils/dateUtils";
 
 function formatNumber(value) {
   return isNaN(Number(value)) || value === "" ? "0" : value;
@@ -341,17 +342,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
         total,
         iva,
       };
-      const formatDate = (dateStr) => {
-        const d = new Date(dateStr);
-        const weekday = d.toLocaleDateString("es-ES", { weekday: "long" });
-        const day = d.toLocaleDateString("es-ES", { day: "2-digit" });
-        const month = d.toLocaleDateString("es-ES", { month: "long" });
-        const year = d.toLocaleDateString("es-ES", { year: "numeric" });
-        const capitalizedWeekday =
-          weekday.charAt(0).toUpperCase() + weekday.slice(1);
-        return `${capitalizedWeekday} ${day} de ${month} de ${year}`;
-      };
-      const formattedDate = formatDate(reportDateAdd);
+      const formattedDate = formatLongDate(reportDateAdd);
       const pdfName = `${closureData.shop_name} - ${formattedDate}`;
       const result = generateSalesPdf(
         saleReportData,

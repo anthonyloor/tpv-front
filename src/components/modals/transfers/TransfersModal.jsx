@@ -22,6 +22,7 @@ import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Toast } from "primereact/toast";
+import { formatDate } from "../../../utils/dateUtils";
 
 // Definir filtros iniciales para global y para cada columna
 const initialFilters = {
@@ -136,14 +137,6 @@ const TransfersModal = ({ isOpen, onClose }) => {
     setLoading(true);
     setSelectedMovements([]);
 
-    const formatDate = (dateStr) => {
-      if (!dateStr) return dateStr;
-      const [datePart, timePart] = dateStr.split(" ");
-      if (!datePart || !timePart) return dateStr;
-      const [year, month, day] = datePart.split("-");
-      const [hour, minute] = timePart.split(":");
-      return `${day}-${month}-${year} ${hour}:${minute}`;
-    };
 
     try {
       const data = await apiFetch(`${API_BASE_URL}/get_warehouse_movements`, {
