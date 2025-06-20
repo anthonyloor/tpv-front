@@ -1158,61 +1158,65 @@ const TransferForm = forwardRef(
               </FloatLabel>
             </div>
 
-            <div className="p-inputgroup flex-1">
-              {type === "traspaso" || type === "salida" ? (
-                isLoadingShops ? (
-                  <p>Cargando tiendas...</p>
-                ) : errorLoadingShops ? (
-                  <p className="text-red-500">{errorLoadingShops}</p>
+            {type !== "entrada" && (
+              <div className="p-inputgroup flex-1">
+                {type === "traspaso" || type === "salida" ? (
+                  isLoadingShops ? (
+                    <p>Cargando tiendas...</p>
+                  ) : errorLoadingShops ? (
+                    <p className="text-red-500">{errorLoadingShops}</p>
+                  ) : (
+                    <FloatLabel>
+                      <label>Tienda Origen</label>
+                      <Dropdown
+                        showClear
+                        value={selectedOriginStore}
+                        options={shopDropdownOptions}
+                        onChange={(e) => setSelectedOriginStore(e.value)}
+                        disabled={!canEditStores}
+                      />
+                    </FloatLabel>
+                  )
                 ) : (
                   <FloatLabel>
                     <label>Tienda Origen</label>
-                    <Dropdown
-                      showClear
-                      value={selectedOriginStore}
-                      options={shopDropdownOptions}
-                      onChange={(e) => setSelectedOriginStore(e.value)}
-                      disabled={!canEditStores}
-                    />
+                    <Dropdown value={selectedOriginStore || ""} />
                   </FloatLabel>
-                )
-              ) : (
-                <FloatLabel>
-                  <label>Tienda Origen</label>
-                  <Dropdown value={selectedOriginStore || ""} />
-                </FloatLabel>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
-            <div className="p-inputgroup flex-1">
-              {type === "traspaso" || type === "entrada" ? (
-                isLoadingShops ? (
-                  <p>Cargando tiendas...</p>
-                ) : errorLoadingShops ? (
-                  <p className="text-red-500">{errorLoadingShops}</p>
+            {type !== "salida" && (
+              <div className="p-inputgroup flex-1">
+                {type === "traspaso" || type === "entrada" ? (
+                  isLoadingShops ? (
+                    <p>Cargando tiendas...</p>
+                  ) : errorLoadingShops ? (
+                    <p className="text-red-500">{errorLoadingShops}</p>
+                  ) : (
+                    <FloatLabel>
+                      <label>Tienda Destino</label>
+                      <Dropdown
+                        showClear
+                        value={selectedDestinationStore}
+                        options={
+                          type === "traspaso"
+                            ? destinationShopDropdownOptions
+                            : shopDropdownOptions
+                        }
+                        onChange={(e) => setSelectedDestinationStore(e.value)}
+                        disabled={!canEditStores}
+                      />
+                    </FloatLabel>
+                  )
                 ) : (
                   <FloatLabel>
                     <label>Tienda Destino</label>
-                    <Dropdown
-                      showClear
-                      value={selectedDestinationStore}
-                      options={
-                        type === "traspaso"
-                          ? destinationShopDropdownOptions
-                          : shopDropdownOptions
-                      }
-                      onChange={(e) => setSelectedDestinationStore(e.value)}
-                      disabled={!canEditStores}
-                    />
+                    <Dropdown value={selectedDestinationStore || ""} />
                   </FloatLabel>
-                )
-              ) : (
-                <FloatLabel>
-                  <label>Tienda Destino</label>
-                  <Dropdown value={selectedDestinationStore || ""} />
-                </FloatLabel>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="card flex flex-column md:flex-row gap-3 mt-6">
