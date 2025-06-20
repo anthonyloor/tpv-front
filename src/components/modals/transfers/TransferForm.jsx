@@ -63,6 +63,7 @@ const TransferForm = forwardRef(
     const [createDate, setCreateDate] = useState("");
     const [movementStatus, setMovementStatus] = useState("en creacion");
     const [employeeIdV, setEmployeeId] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const API_BASE_URL = getApiBaseUrl();
     const { selectedClient } = useContext(ClientContext);
 
@@ -424,6 +425,17 @@ const TransferForm = forwardRef(
     };
 
     const handleSaveCreate = async () => {
+      if (isSubmitting) return;
+      if (!description.trim()) {
+        toast.current.show({
+          severity: "error",
+          summary: "Error",
+          detail: "La descripción es obligatoria.",
+        });
+        playSound("error");
+        return;
+      }
+      setIsSubmitting(true);
       try {
         const payload = {
           description,
@@ -459,11 +471,24 @@ const TransferForm = forwardRef(
           summary: "Error",
           detail: "Error al crear el movimiento",
         });
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
     const handleUpdateMovement = async () => {
+      if (isSubmitting) return;
       if (!movementData?.id_warehouse_movement) return;
+      if (!description.trim()) {
+        toast.current.show({
+          severity: "error",
+          summary: "Error",
+          detail: "La descripción es obligatoria.",
+        });
+        playSound("error");
+        return;
+      }
+      setIsSubmitting(true);
 
       const currentDate = new Date().toLocaleString();
       const payload = {
@@ -499,11 +524,24 @@ const TransferForm = forwardRef(
           summary: "Error",
           detail: "Error al actualizar movimiento",
         });
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
     const handleExecuteMovement = async () => {
+      if (isSubmitting) return;
       if (!movementData?.id_warehouse_movement) return;
+      if (!description.trim()) {
+        toast.current.show({
+          severity: "error",
+          summary: "Error",
+          detail: "La descripción es obligatoria.",
+        });
+        playSound("error");
+        return;
+      }
+      setIsSubmitting(true);
 
       try {
         const payload = {
@@ -529,12 +567,25 @@ const TransferForm = forwardRef(
           summary: "Error",
           detail: "Error al ejecutar movimiento",
         });
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
     const handleUpdateMovementStatus = async (newStatus) => {
+      if (isSubmitting) return;
       console.log("movementData", movementData);
       if (!movementData?.id_warehouse_movement) return;
+      if (!description.trim()) {
+        toast.current.show({
+          severity: "error",
+          summary: "Error",
+          detail: "La descripción es obligatoria.",
+        });
+        playSound("error");
+        return;
+      }
+      setIsSubmitting(true);
       const currentDate = new Date().toLocaleString();
       const payload = {
         id_warehouse_movement: movementData.id_warehouse_movement,
@@ -569,6 +620,8 @@ const TransferForm = forwardRef(
           summary: "Error",
           detail: "Error al actualizar movimiento",
         });
+      } finally {
+        setIsSubmitting(false);
       }
     };
 
@@ -809,7 +862,8 @@ const TransferForm = forwardRef(
           <Button
             label="Guardar"
             className="w-full"
-            disabled={isSameStore || noProducts}
+            disabled={isSameStore || noProducts || isSubmitting}
+            loading={isSubmitting}
             onClick={handleSaveCreate}
           />
         );
@@ -826,6 +880,8 @@ const TransferForm = forwardRef(
                 <Button
                   label="Marcar como Recibido"
                   className="w-1/2 p-button-warning"
+                  disabled={isSubmitting}
+                  loading={isSubmitting}
                   onClick={() => handleUpdateMovementStatus("Recibido")}
                 />
               )}
@@ -833,6 +889,8 @@ const TransferForm = forwardRef(
                 <Button
                   label="Revisar"
                   className="w-1/2 p-button-help"
+                  disabled={isSubmitting}
+                  loading={isSubmitting}
                   onClick={() => handleUpdateMovementStatus("En revision")}
                 />
               )}
@@ -840,7 +898,8 @@ const TransferForm = forwardRef(
                 <Button
                   label="Guardar"
                   className="w-1/2"
-                  disabled={isSameStore || noProducts}
+                  disabled={isSameStore || noProducts || isSubmitting}
+                  loading={isSubmitting}
                   onClick={() => handleUpdateMovementStatus("En revision")}
                 />
               )}
@@ -848,8 +907,10 @@ const TransferForm = forwardRef(
                 label="Ejecutar"
                 className="w-1/2 p-button-primary"
                 disabled={
-                  st === "en revision" ? !canExecute : isSameStore || noProducts
+                  isSubmitting ||
+                  (st === "en revision" ? !canExecute : isSameStore || noProducts)
                 }
+                loading={isSubmitting}
                 onClick={handleExecuteMovement}
               />
             </div>
@@ -860,7 +921,11 @@ const TransferForm = forwardRef(
               <Button
                 label="Marcar como Recibido"
                 className="w-full p-button-warning"
-                disabled={String(shopId) !== String(selectedDestinationStore)}
+                disabled={
+                  isSubmitting ||
+                  String(shopId) !== String(selectedDestinationStore)
+                }
+                loading={isSubmitting}
                 onClick={() => handleUpdateMovementStatus("Recibido")}
               />
             );
@@ -869,6 +934,8 @@ const TransferForm = forwardRef(
               <Button
                 label="Revisar"
                 className="w-full p-button-help"
+                disabled={isSubmitting}
+                loading={isSubmitting}
                 onClick={() => handleUpdateMovementStatus("En revision")}
               />
             );
@@ -878,13 +945,15 @@ const TransferForm = forwardRef(
                 <Button
                   label="Guardar"
                   className="w-full"
-                  disabled={isSameStore || noProducts}
+                  disabled={isSameStore || noProducts || isSubmitting}
+                  loading={isSubmitting}
                   onClick={() => handleUpdateMovementStatus("En revision")}
                 />
                 <Button
                   label="Ejecutar"
                   className="w-full p-button-primary"
-                  disabled={!canExecute}
+                  disabled={isSubmitting || !canExecute}
+                  loading={isSubmitting}
                   onClick={handleExecuteMovement}
                 />
               </div>
@@ -901,13 +970,15 @@ const TransferForm = forwardRef(
                 <Button
                   label="Guardar"
                   className="p-button-secondary w-1/2"
-                  disabled={noProducts}
+                  disabled={noProducts || isSubmitting}
+                  loading={isSubmitting}
                   onClick={handleUpdateMovement}
                 />
                 <Button
                   label="Enviar"
                   className="p-button-success w-1/2"
-                  disabled={noProducts}
+                  disabled={noProducts || isSubmitting}
+                  loading={isSubmitting}
                   onClick={() => handleUpdateMovementStatus("Enviado")}
                 />
               </div>
@@ -918,13 +989,15 @@ const TransferForm = forwardRef(
                 <Button
                   label="Guardar"
                   className="p-button-secondary w-1/2"
-                  disabled={isSameStore || noProducts}
+                  disabled={isSameStore || noProducts || isSubmitting}
+                  loading={isSubmitting}
                   onClick={handleUpdateMovement}
                 />
                 <Button
                   label="Enviar"
                   className="p-button-success w-1/2"
-                  disabled={isSameStore || noProducts}
+                  disabled={isSameStore || noProducts || isSubmitting}
+                  loading={isSubmitting}
                   onClick={() => handleUpdateMovementStatus("Enviado")}
                 />
               </div>
@@ -936,14 +1009,16 @@ const TransferForm = forwardRef(
               <Button
                 label="Guardar"
                 className="p-button-secondary w-1/2"
-                disabled={noProducts}
+                disabled={noProducts || isSubmitting}
+                loading={isSubmitting}
                 onClick={handleUpdateMovement}
               />
               {idProfile === 1 && (
                 <Button
                   label="Ejecutar"
                   className="p-button-primary w-1/2"
-                  disabled={noProducts}
+                  disabled={noProducts || isSubmitting}
+                  loading={isSubmitting}
                   onClick={handleExecuteMovement}
                 />
               )}
@@ -973,6 +1048,7 @@ const TransferForm = forwardRef(
       st,
       type,
       description,
+      isSubmitting,
     ]);
 
     useImperativeHandle(ref, () => ({
@@ -985,7 +1061,7 @@ const TransferForm = forwardRef(
       .join("-");
     const computedFooterKey = `${
       productsToTransfer.length
-    }-${movementStatus}-${isSameStoreSelected}-${!noProducts}-${type}-${idProfile}-${revisionKey}-${description}`;
+    }-${movementStatus}-${isSameStoreSelected}-${!noProducts}-${type}-${idProfile}-${revisionKey}-${description}-${isSubmitting}`;
     const footerKeyRef = useRef("");
     useEffect(() => {
       if (onFooterChange) {
@@ -1146,10 +1222,13 @@ const TransferForm = forwardRef(
           <div className="card flex flex-column md:flex-row gap-3">
             <div className="p-inputgroup flex-1">
               <FloatLabel>
-                <label>Descripción</label>
+                <label>
+                  Descripción <span className="text-red-500">*</span>
+                </label>
                 <InputText
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  required
                   disabled={
                     !isNewMovement &&
                     currentStatus.toLowerCase() !== "en creacion"
