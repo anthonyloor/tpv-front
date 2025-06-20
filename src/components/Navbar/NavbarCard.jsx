@@ -244,7 +244,7 @@ const NavbarCard = () => {
     [setTheme]
   );
 
-  // Opciones del SplitButton
+  // Cambio en el menú de opciones (SplitButton)
   const menuItems = [
     {
       label: (
@@ -256,7 +256,7 @@ const NavbarCard = () => {
     },
     {
       label: `Versión TPV: ${version || "N/A"}`,
-      command: () => setIsVersionModalOpen(true),
+      command: () => versionModal.open(),
     },
     {
       label: "Cerrar sesión",
@@ -292,24 +292,24 @@ const NavbarCard = () => {
       />
 
       {/* (1) TransfersModal */}
-      {isTransfersModalOpen && (
+      {transfersModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <TransfersModal
             isOpen
             inlineMode={isMobile}
-            onClose={() => setTransfersModalOpen(false)}
+            onClose={transfersModal.close}
           />
         </PortalOrNormal>
       )}
 
       {/* (2) ConfigurationModal */}
-      {isConfigurationModalOpen && (
+      {configurationModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
           <ConfigurationModal
             isOpen
             inlineMode={isMobile}
             initialView={configModalView}
-            onClose={() => setConfigurationModalOpen(false)}
+            onClose={configurationModal.close}
           />
         </PortalOrNormal>
       )}
@@ -339,10 +339,7 @@ const NavbarCard = () => {
       {/* Nuevo Modal para Lista de Cajas */}
       {listCashRegisterModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
-          <ListCashRegisterModal
-            isOpen
-            onClose={listCashRegisterModal.close}
-          />
+          <ListCashRegisterModal isOpen onClose={listCashRegisterModal.close} />
         </PortalOrNormal>
       )}
 
@@ -383,10 +380,7 @@ const NavbarCard = () => {
       {/* Modal de Pedidos Online */}
       {onlineOrdersModal.isOpen && (
         <PortalOrNormal isInlineMode={isMobile}>
-          <OnlineOrdersModal
-            isOpen
-            onClose={onlineOrdersModal.close}
-          />
+          <OnlineOrdersModal isOpen onClose={onlineOrdersModal.close} />
         </PortalOrNormal>
       )}
 

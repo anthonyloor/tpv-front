@@ -437,27 +437,27 @@ function SalesCard({
         </div>
         <div>
           <div className="flex space-x-2">
-          <Button
-            icon={isEditing ? "pi pi-save" : "pi pi-pencil"}
-            tooltip={isEditing ? "Guardar edición" : "Editar Ticket"}
-            tooltipOptions={{ position: "top" }}
-            severity="warning"
-            onClick={handleEditTicket}
-          />
-          <Button
-            icon="pi pi-file-plus"
-            tooltip="Guardar Ticket"
-            tooltipOptions={{ position: "top" }}
-            severity="warning"
-            onClick={handleParkCart}
-          />
+            <Button
+              icon={isEditing ? "pi pi-save" : "pi pi-pencil"}
+              tooltip={isEditing ? "Guardar edición" : "Editar Ticket"}
+              tooltipOptions={{ position: "top" }}
+              severity="warning"
+              onClick={handleEditTicket}
+            />
+            <Button
+              icon="pi pi-file-plus"
+              tooltip="Guardar Ticket"
+              tooltipOptions={{ position: "top" }}
+              severity="warning"
+              onClick={handleParkCart}
+            />
             <Button
               label={isCompact ? "" : "Tickets"}
               tooltip={isCompact ? "Tickets" : ""}
               tooltipOptions={isCompact ? { position: "top" } : {}}
               icon="pi pi-list"
               severity="warning"
-              onClick={() => setIsParkedCartsModalOpen(true)}
+              onClick={parkedCartsModal.open}
             />
             <Button
               icon="pi pi-trash"
