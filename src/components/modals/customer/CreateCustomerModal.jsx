@@ -1,6 +1,6 @@
 // src/components/modals/customer/CreateCustomerModal.jsx
 
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { useApiFetch } from "../../../utils/useApiFetch";
@@ -11,7 +11,14 @@ import { Checkbox } from "primereact/checkbox";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import AddressForm from "./AddressForm";
 
-const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
+const CreateCustomerModal = ({
+  isOpen,
+  onClose,
+  onComplete,
+  clientId = null,
+  firstname = "",
+  lastname = "",
+}) => {
   const [step, setStep] = useState(1);
   const apiFetch = useApiFetch();
   const { shopId } = useContext(AuthContext);
@@ -46,6 +53,46 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   const [newCustomerId, setNewCustomerId] = useState(null);
   const [isNoWeb, setIsNoWeb] = useState(false);
   const API_BASE_URL = getApiBaseUrl();
+
+  useEffect(() => {
+    if (isOpen) {
+      if (clientId) {
+        setStep(1);
+        setNewCustomerId(clientId);
+        setAddressData((prev) => ({
+          ...prev,
+          firstname: firstname || prev.firstname,
+          lastname: lastname || prev.lastname,
+        }));
+      } else {
+        setStep(1);
+        setNewCustomerId(null);
+        setCustomerData((prev) => ({
+          ...prev,
+          firstname: "",
+          lastname: "",
+          email: "",
+          password: "",
+          id_shop: shopId,
+          id_default_group: 3,
+        }));
+        setAddressData((prev) => ({
+          ...prev,
+          firstname: "",
+          lastname: "",
+          address1: "",
+          address2: "",
+          postcode: "",
+          city: "",
+          phone: "",
+          phone_mobile: "",
+          company: "",
+          dni: "",
+        }));
+        setIsNoWeb(false);
+      }
+    }
+  }, [isOpen, clientId, firstname, lastname, shopId]);
 
   const generateRandomString = (length) => {
     const chars =
@@ -117,13 +164,16 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
   const handleCreateAddress = async (e) => {
     e.preventDefault();
     try {
-      const addressPayload = { ...addressData, id_customer: newCustomerId };
+      const customerId = clientId || newCustomerId;
+      const addressPayload = { ...addressData, id_customer: customerId };
       const createdAddress = await apiFetch(`${API_BASE_URL}/create_address`, {
         method: "POST",
         body: JSON.stringify(addressPayload),
       });
       if (onComplete) {
-        const createdClient = { ...customerData, id_customer: newCustomerId };
+        const createdClient = clientId
+          ? null
+          : { ...customerData, id_customer: newCustomerId };
         onComplete(createdClient, createdAddress);
       }
       onClose();
@@ -133,10 +183,12 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
     }
   };
 
-  const items = [{ label: "Crear Cliente" }, { label: "Crear Dirección" }];
+  const items = clientId
+    ? [{ label: "Crear Dirección" }]
+    : [{ label: "Crear Cliente" }, { label: "Crear Dirección" }];
 
   const renderStepContent = () => {
-    if (step === 1) {
+    if (step === 1 && !clientId) {
       return (
         <form onSubmit={handleCreateCustomer}>
           <div className="p-fluid">
@@ -225,14 +277,14 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
           </div>
         </form>
       );
-    } else if (step === 2) {
+    } else {
       return (
         <form onSubmit={handleCreateAddress}>
           <h3
             className="p-mb-3"
             style={{ fontWeight: "bold", fontSize: "1.25rem" }}
           >
-            Paso 2: Crear Dirección
+            {clientId ? "Crear Dirección" : "Paso 2: Crear Dirección"}
           </h3>
           <AddressForm
             addressData={addressData}
@@ -250,7 +302,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
       className="p-d-flex p-jc-end"
       style={{ gap: "0.5rem", marginTop: "1rem" }}
     >
-      {step === 2 && (
+      {step === 2 && !clientId && (
         <Button
           label="Atrás"
           icon="pi pi-arrow-left"
@@ -259,8 +311,8 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
         />
       )}
       <Button
-        label={step === 1 ? "Crear Cliente" : "Crear Dirección"}
-        onClick={step === 1 ? handleCreateCustomer : handleCreateAddress}
+        label={step === 1 && !clientId ? "Crear Cliente" : "Crear Dirección"}
+        onClick={step === 1 && !clientId ? handleCreateCustomer : handleCreateAddress}
         className="p-button-success"
       />
     </div>
@@ -268,7 +320,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
 
   return (
     <Dialog
-      header={step === 1 ? "Crear Cliente" : "Crear Dirección"}
+      header={step === 1 && !clientId ? "Crear Cliente" : "Crear Dirección"}
       visible={isOpen}
       onHide={onClose}
       footer={footer}
@@ -282,10 +334,15 @@ const CreateCustomerModal = ({ isOpen, onClose, onComplete }) => {
         color: "var(--text-color)",
       }}
     >
-      <Steps model={items} activeIndex={step - 1} readOnly className="mb-3" />
+      <Steps
+        model={items}
+        activeIndex={clientId ? 0 : step - 1}
+        readOnly
+        className="mb-3"
+      />
 
       {/* Botón Atrás arriba */}
-      {step === 2 && (
+      {step === 2 && !clientId && (
         <Button
           label="Atrás"
           icon="pi pi-arrow-left"

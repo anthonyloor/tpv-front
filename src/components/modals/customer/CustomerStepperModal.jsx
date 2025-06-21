@@ -10,7 +10,6 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { Card } from "primereact/card";
 import CreateCustomerModal from "./CreateCustomerModal";
-import CreateAddressModal from "./CreateAddressModal";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import { Toast } from "primereact/toast";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
@@ -386,15 +385,14 @@ export default function CustomerStepperModal({
       )}
 
       {showCreateAddressModal.isOpen && (
-        <CreateAddressModal
+        <CreateCustomerModal
           isOpen
           onClose={showCreateAddressModal.close}
           clientId={selectedClient?.id_customer}
           firstname={selectedClient?.firstname}
           lastname={selectedClient?.lastname}
-          onAddressCreated={(newAddr) => {
+          onComplete={(_client, newAddr) => {
             showCreateAddressModal.close();
-            // Recargamos direcciones
             if (selectedClient) fetchAddressesForClient(selectedClient);
           }}
         />

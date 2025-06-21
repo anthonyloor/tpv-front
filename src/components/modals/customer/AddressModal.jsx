@@ -6,7 +6,7 @@ import useAddresses from "../../../hooks/useAddresses";
 import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { Card } from "primereact/card";
-import CreateAddressModal from "./CreateAddressModal";
+import CreateCustomerModal from "./CreateCustomerModal";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const AddressModal = ({
@@ -44,7 +44,7 @@ const AddressModal = ({
   };
 
   // Al crear dirección => refrescamos la lista
-  const handleAddressCreated = async (newAddressData) => {
+  const handleAddressCreated = async (_client, newAddressData) => {
     createAddressModal.close();
     if (newAddressData) {
       const refreshed = await getAddresses(clientId);
@@ -109,11 +109,11 @@ const AddressModal = ({
 
       {/* Dialog para Crear Direccion */}
       {createAddressModal.isOpen && (
-        <CreateAddressModal
+        <CreateCustomerModal
           isOpen
           onClose={createAddressModal.close}
           clientId={clientId}
-          onAddressCreated={handleAddressCreated}
+          onComplete={handleAddressCreated}
         />
       )}
     </>
