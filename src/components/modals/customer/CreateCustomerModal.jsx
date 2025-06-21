@@ -78,6 +78,7 @@ const CreateCustomerModal = ({
         }));
         setAddressData((prev) => ({
           ...prev,
+          id_country: 6,
           firstname: "",
           lastname: "",
           address1: "",
@@ -312,7 +313,9 @@ const CreateCustomerModal = ({
       )}
       <Button
         label={step === 1 && !clientId ? "Crear Cliente" : "Crear Dirección"}
-        onClick={step === 1 && !clientId ? handleCreateCustomer : handleCreateAddress}
+        onClick={
+          step === 1 && !clientId ? handleCreateCustomer : handleCreateAddress
+        }
         className="p-button-success"
       />
     </div>
