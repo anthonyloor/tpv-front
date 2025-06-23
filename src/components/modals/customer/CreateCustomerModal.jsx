@@ -168,11 +168,7 @@ const CreateCustomerModal = ({
     e.preventDefault();
     try {
       const customerId = clientId || newCustomerId;
-      const addressPayload = { ...addressData, id_customer: customerId };
-      const createdAddress = await apiFetch(`${API_BASE_URL}/create_address`, {
-        method: "POST",
-        body: JSON.stringify(addressPayload),
-      });
+      const createdAddress = await createAddress(customerId, addressData);
       if (onComplete) {
         const createdClient = clientId
           ? null
