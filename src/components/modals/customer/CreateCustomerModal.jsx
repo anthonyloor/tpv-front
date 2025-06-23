@@ -10,6 +10,7 @@ import { Steps } from "primereact/steps";
 import { Checkbox } from "primereact/checkbox";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import AddressForm from "./AddressForm";
+import useAddresses from "../../../hooks/useAddresses";
 
 const CreateCustomerModal = ({
   isOpen,
@@ -21,6 +22,7 @@ const CreateCustomerModal = ({
 }) => {
   const [step, setStep] = useState(1);
   const apiFetch = useApiFetch();
+  const { createAddress } = useAddresses();
   const { shopId } = useContext(AuthContext);
 
   const [customerData, setCustomerData] = useState({
@@ -140,11 +142,7 @@ const CreateCustomerModal = ({
     try {
       const data = await apiFetch(`${API_BASE_URL}/create_customer`, {
         method: "POST",
-        body: JSON.stringify(customerData),
-      });
-      if (data && data.id_customer) {
-        setNewCustomerId(data.id_customer);
-        // Se asume que los nombres y apellidos de la dirección deben coincidir con los del cliente
+      const createdAddress = await createAddress(customerId, addressData);
         setAddressData((prev) => ({
           ...prev,
           firstname: customerData.firstname,

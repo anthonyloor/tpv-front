@@ -31,7 +31,24 @@ export const useAddresses = () => {
     [apiFetch, API_BASE_URL]
   );
 
-  return { getAddresses };
+  const createAddress = useCallback(
+    async (customerId, addressData) => {
+      try {
+        const payload = { ...addressData, id_customer: customerId };
+        const data = await apiFetch(`${API_BASE_URL}/create_address`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        return data;
+      } catch (err) {
+        console.error("Error al crear dirección:", err);
+        return null;
+      }
+    },
+    [apiFetch, API_BASE_URL]
+  );
+
+  return { getAddresses, createAddress };
 };
 
 export default useAddresses;
