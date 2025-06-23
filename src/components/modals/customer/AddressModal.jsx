@@ -7,7 +7,6 @@ import { Dialog } from "primereact/dialog";
 import { Button } from "primereact/button";
 import { Card } from "primereact/card";
 import CreateCustomerModal from "./CreateCustomerModal";
-import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 const AddressModal = ({
   isOpen,
@@ -18,7 +17,6 @@ const AddressModal = ({
   const [addresses, setAddresses] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const createAddressModal = useToggle();
-  const API_BASE_URL = getApiBaseUrl();
   const { getAddresses } = useAddresses();
 
   // Al abrir, cargamos direcciones

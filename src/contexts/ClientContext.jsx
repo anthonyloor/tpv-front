@@ -7,9 +7,9 @@ import React, {
   useCallback,
   useContext,
 } from "react";
-import { useApiFetch } from "../utils/useApiFetch";
 import { ConfigContext } from "./ConfigContext";
-import getApiBaseUrl from "../utils/getApiBaseUrl";
+import useCustomers from "../hooks/useCustomers";
+import useAddresses from "../hooks/useAddresses";
 
 export const ClientContext = createContext();
 
@@ -17,25 +17,18 @@ export const ClientProvider = ({ children }) => {
   const [selectedClient, setSelectedClient] = useState({});
   const [selectedAddress, setSelectedAddress] = useState(null);
   const { configData } = useContext(ConfigContext);
-  const apiFetch = useApiFetch();
-  const API_BASE_URL = getApiBaseUrl();
+  const { getFilteredCustomers } = useCustomers();
+  const { getAddresses } = useAddresses();
 
   const fetchDefaultClientAndAddress = useCallback(async () => {
     try {
       const idCustomerDefault = configData.id_customer_default;
       const idAddressDefault = configData.id_address_delivery_default;
 
-      const clientsResponse = await apiFetch(
-        `${API_BASE_URL}/get_customers_filtered`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            filter: "",
-            id_customer: idCustomerDefault,
-            origin: "mayret",
-          }),
-        }
-      );
+      const clientsResponse = await getFilteredCustomers({
+        filter: "",
+        id_customer: idCustomerDefault,
+      });
       if (!clientsResponse || clientsResponse.length === 0) {
         console.error("No se encontró el cliente predeterminado");
         return;
@@ -49,16 +42,7 @@ export const ClientProvider = ({ children }) => {
         full_name: `${clientResponse.firstname} ${clientResponse.lastname}`,
       };
 
-      const addressesResponse = await apiFetch(
-        `${API_BASE_URL}/get_addresses?customer=${idCustomerDefault}`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            id_customer: idCustomerDefault,
-            origin: "mayret",
-          }),
-        }
-      );
+      const addressesResponse = await getAddresses(idCustomerDefault, "mayret");
       const validAddresses = addressesResponse.filter(
         (address) => !address.deleted && address.active
       );
@@ -84,7 +68,7 @@ export const ClientProvider = ({ children }) => {
         error
       );
     }
-  }, [apiFetch, configData, API_BASE_URL]);
+  }, [configData, getFilteredCustomers, getAddresses]);
 
   useEffect(() => {
     const storedClient = JSON.parse(localStorage.getItem("selectedClient"));

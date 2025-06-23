@@ -10,9 +10,8 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { Card } from "primereact/card";
 import CreateCustomerModal from "./CreateCustomerModal";
-import { useApiFetch } from "../../../utils/useApiFetch";
+import useCustomers from "../../../hooks/useCustomers";
 import { Toast } from "primereact/toast";
-import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 
 export default function CustomerStepperModal({
   isOpen,
@@ -23,7 +22,7 @@ export default function CustomerStepperModal({
 }) {
   const [activeIndex, setActiveIndex] = useState(0); // 0 => Cliente, 1 => Dirección
   const toast = useRef(null);
-  const apiFetch = useApiFetch();
+  const { getAllCustomers, getFilteredCustomers } = useCustomers();
 
   // Listas de datos
   const [clients, setClients] = useState([]);
@@ -47,7 +46,6 @@ export default function CustomerStepperModal({
   const showCreateCustomerModal = useToggle();
   const showCreateAddressModal = useToggle();
 
-  const API_BASE_URL = getApiBaseUrl();
 
   // Al abrir este wizard
   useEffect(() => {
@@ -68,50 +66,25 @@ export default function CustomerStepperModal({
   };
 
   // ================== FECTHS ==================
-  const fetchAllClients = () => {
-    const token = localStorage.getItem("token");
-    fetch(`${API_BASE_URL}/get_all_customers`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Error al obtener clientes");
-        return res.json();
-      })
-      .then((data) => {
-        setClients(data);
-      })
-      .catch((err) => {
-        console.error(err);
-        setErrorMessage("No se pudieron cargar los clientes.");
-      });
+  const fetchAllClients = async () => {
+    const data = await getAllCustomers();
+    if (data === null) {
+      setErrorMessage("No se pudieron cargar los clientes.");
+      setClients([]);
+    } else {
+      setErrorMessage("");
+      setClients(data);
+    }
   };
 
   const fetchFilteredClients = async (filter) => {
-    try {
-      const data = await apiFetch(`${API_BASE_URL}/get_customers_filtered`, {
-        method: "POST",
-        body: JSON.stringify({ filter, origin: "mayret" }),
-      });
+    const data = await getFilteredCustomers({ filter });
+    if (data === null) {
+      setClients([]);
+      setErrorMessage("Error al buscar clientes.");
+    } else {
       setClients(data);
       setErrorMessage("");
-    } catch (error) {
-      console.error(error);
-      if (
-        (error.status && error.status === 404) ||
-        (error instanceof SyntaxError &&
-          error.message.includes("Unexpected token"))
-      ) {
-        setClients([]);
-        setErrorMessage("");
-      } else {
-        setErrorMessage("Error al buscar clientes.");
-        setClients([]);
-      }
     }
   };
 

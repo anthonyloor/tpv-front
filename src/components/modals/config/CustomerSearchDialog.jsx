@@ -6,12 +6,11 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
-import { useApiFetch } from "../../../utils/useApiFetch";
 import useAddresses from "../../../hooks/useAddresses";
-import getApiBaseUrl from "../../../utils/getApiBaseUrl";
+import useCustomers from "../../../hooks/useCustomers";
 
 const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
-  const apiFetch = useApiFetch();
+  const { getFilteredCustomers } = useCustomers();
   const [searchTerm, setSearchTerm] = useState("");
   const [customers, setCustomers] = useState([]);
   const [addresses, setAddresses] = useState([]);
@@ -20,41 +19,16 @@ const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
   const [step, setStep] = useState(1); // 1: Buscar Cliente, 2: Seleccionar Dirección
   const dt = useRef(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const API_BASE_URL = getApiBaseUrl();
 
   // Fetch Clientes
   const fetchCustomers = async (filter) => {
-    try {
-      const response = await apiFetch(
-        `${API_BASE_URL}/get_customers_filtered?filter=${encodeURIComponent(
-          filter
-        )}`,
-        { method: "POST", body: JSON.stringify({}) }
-      );
-      // Si response tiene "message", se considera sin resultados.
-      if (response && response.message) {
-        setCustomers([]);
-        setErrorMessage("");
-      } else if (Array.isArray(response) && response.length === 0) {
-        setCustomers([]);
-        setErrorMessage("");
-      } else {
-        setCustomers(response);
-        setErrorMessage("");
-      }
-    } catch (error) {
-      console.error("Error al buscar clientes:", error);
-      if (
-        (error.status && error.status === 404) ||
-        (error instanceof SyntaxError &&
-          error.message.includes("Unexpected token"))
-      ) {
-        setCustomers([]);
-        setErrorMessage("");
-      } else {
-        setCustomers([]);
-        setErrorMessage("Error al buscar clientes.");
-      }
+    const data = await getFilteredCustomers({ filter });
+    if (data === null) {
+      setCustomers([]);
+      setErrorMessage("Error al buscar clientes.");
+    } else {
+      setCustomers(data);
+      setErrorMessage("");
     }
   };
 
@@ -75,7 +49,7 @@ const CustomerSearchDialog = ({ isOpen, onClose, onSelect }) => {
       setSelectedAddress(null);
       setStep(1);
     }
-  }, [isOpen, searchTerm, apiFetch, API_BASE_URL]);
+  }, [isOpen, searchTerm, getFilteredCustomers]);
 
   const handleCustomerSelect = (customer) => {
     setSelectedCustomer(customer);
