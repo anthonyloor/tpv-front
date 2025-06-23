@@ -80,7 +80,7 @@ const CreateCustomerModal = ({
         }));
         setAddressData((prev) => ({
           ...prev,
-          id_country: 6,
+      chars.charAt(Math.floor(Math.random() * chars.length)),
           firstname: "",
           lastname: "",
           address1: "",
@@ -285,7 +285,9 @@ const CreateCustomerModal = ({
           >
             {clientId ? "Crear Dirección" : "Paso 2: Crear Dirección"}
           </h3>
-          <AddressForm
+        onClick={
+          step === 1 && !clientId ? handleCreateCustomer : handleCreateAddress
+        }
             addressData={addressData}
             onChange={handleAddressChange}
             setAddressData={setAddressData}
