@@ -80,7 +80,7 @@ const CreateCustomerModal = ({
         }));
         setAddressData((prev) => ({
           ...prev,
-      chars.charAt(Math.floor(Math.random() * chars.length)),
+      chars.charAt(Math.floor(Math.random() * chars.length))
           firstname: "",
           lastname: "",
           address1: "",
