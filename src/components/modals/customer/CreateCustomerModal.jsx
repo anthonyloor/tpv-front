@@ -12,6 +12,33 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import AddressForm from "./AddressForm";
 import useAddresses from "../../../hooks/useAddresses";
 
+const getInitialCustomerState = (shopId) => ({
+  firstname: "",
+  lastname: "",
+  email: "",
+  password: "",
+  id_shop: shopId,
+  id_default_group: 3,
+});
+
+const getInitialAddressState = () => ({
+  id_country: 6,
+  id_state: "",
+  alias: "direccion-tpv",
+  company: "",
+  lastname: "",
+  firstname: "",
+  address1: "",
+  address2: "",
+  postcode: "",
+  city: "",
+  other: "",
+  phone: "",
+  phone_mobile: "",
+  vat_number: "",
+  dni: "",
+});
+
 const CreateCustomerModal = ({
   isOpen,
   onClose,
@@ -25,32 +52,11 @@ const CreateCustomerModal = ({
   const { createAddress } = useAddresses();
   const { shopId } = useContext(AuthContext);
 
-  const [customerData, setCustomerData] = useState({
-    firstname: "",
-    lastname: "",
-    email: "",
-    password: "",
-    id_shop: shopId,
-    id_default_group: 3,
-  });
+  const [customerData, setCustomerData] = useState(() =>
+    getInitialCustomerState(shopId)
+  );
 
-  const [addressData, setAddressData] = useState({
-    id_country: 6,
-    id_state: "",
-    alias: "direccion-tpv",
-    company: "",
-    lastname: "",
-    firstname: "",
-    address1: "",
-    address2: "",
-    postcode: "",
-    city: "",
-    other: "",
-    phone: "",
-    phone_mobile: "",
-    vat_number: "",
-    dni: "",
-  });
+  const [addressData, setAddressData] = useState(getInitialAddressState);
   const [errorMessage, setErrorMessage] = useState("");
   const [newCustomerId, setNewCustomerId] = useState(null);
   const [isNoWeb, setIsNoWeb] = useState(false);
@@ -69,29 +75,8 @@ const CreateCustomerModal = ({
       } else {
         setStep(1);
         setNewCustomerId(null);
-        setCustomerData((prev) => ({
-          ...prev,
-          firstname: "",
-          lastname: "",
-          email: "",
-          password: "",
-          id_shop: shopId,
-          id_default_group: 3,
-        }));
-        setAddressData((prev) => ({
-          ...prev,
-          id_country: 6,
-          firstname: "",
-          lastname: "",
-          address1: "",
-          address2: "",
-          postcode: "",
-          city: "",
-          phone: "",
-          phone_mobile: "",
-          company: "",
-          dni: "",
-        }));
+        setCustomerData(getInitialCustomerState(shopId));
+        setAddressData(getInitialAddressState());
         setIsNoWeb(false);
       }
     }
