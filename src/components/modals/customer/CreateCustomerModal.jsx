@@ -80,7 +80,7 @@ const CreateCustomerModal = ({
         }));
         setAddressData((prev) => ({
           ...prev,
-      chars.charAt(Math.floor(Math.random() * chars.length))
+          id_country: 6,
           firstname: "",
           lastname: "",
           address1: "",
@@ -142,7 +142,11 @@ const CreateCustomerModal = ({
     try {
       const data = await apiFetch(`${API_BASE_URL}/create_customer`, {
         method: "POST",
-      const createdAddress = await createAddress(customerId, addressData);
+        body: JSON.stringify(customerData),
+      });
+      if (data && data.id_customer) {
+        setNewCustomerId(data.id_customer);
+        // Se asume que los nombres y apellidos de la dirección deben coincidir con los del cliente
         setAddressData((prev) => ({
           ...prev,
           firstname: customerData.firstname,
@@ -285,13 +289,12 @@ const CreateCustomerModal = ({
           >
             {clientId ? "Crear Dirección" : "Paso 2: Crear Dirección"}
           </h3>
-        onClick={
-          step === 1 && !clientId ? handleCreateCustomer : handleCreateAddress
-        }
-            addressData={addressData}
-            onChange={handleAddressChange}
-            setAddressData={setAddressData}
-            errorMessage={errorMessage}
+          onClick=
+          {step === 1 && !clientId ? handleCreateCustomer : handleCreateAddress}
+          addressData={addressData}
+          onChange={handleAddressChange}
+          setAddressData={setAddressData}
+          errorMessage={errorMessage}
           />
         </form>
       );
