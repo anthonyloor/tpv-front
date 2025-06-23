@@ -46,7 +46,6 @@ export default function CustomerStepperModal({
   const showCreateCustomerModal = useToggle();
   const showCreateAddressModal = useToggle();
 
-
   // Al abrir este wizard
   useEffect(() => {
     if (isOpen) {

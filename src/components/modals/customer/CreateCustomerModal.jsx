@@ -285,12 +285,11 @@ const CreateCustomerModal = ({
           >
             {clientId ? "Crear Dirección" : "Paso 2: Crear Dirección"}
           </h3>
-          onClick=
-          {step === 1 && !clientId ? handleCreateCustomer : handleCreateAddress}
-          addressData={addressData}
-          onChange={handleAddressChange}
-          setAddressData={setAddressData}
-          errorMessage={errorMessage}
+          <AddressForm
+            addressData={addressData}
+            onChange={handleAddressChange}
+            setAddressData={setAddressData}
+            errorMessage={errorMessage}
           />
         </form>
       );

@@ -1,7 +1,12 @@
 import React from "react";
 import { InputText } from "primereact/inputtext";
 
-export default function AddressForm({ addressData, onChange, setAddressData, errorMessage }) {
+export default function AddressForm({
+  addressData,
+  onChange,
+  setAddressData,
+  errorMessage,
+}) {
   return (
     <div className="p-fluid">
       {/* Primera fila: Calle / Avenida y Piso/puerta */}
@@ -84,7 +89,11 @@ export default function AddressForm({ addressData, onChange, setAddressData, err
               value={addressData.phone || addressData.phone_mobile}
               onChange={(e) => {
                 const value = e.target.value;
-                setAddressData((prev) => ({ ...prev, phone: value, phone_mobile: value }));
+                setAddressData((prev) => ({
+                  ...prev,
+                  phone: value,
+                  phone_mobile: value,
+                }));
               }}
               placeholder="Teléfono / Móvil"
             />
@@ -125,12 +134,20 @@ export default function AddressForm({ addressData, onChange, setAddressData, err
           </div>
         </div>
       )}
-      <div className="p-d-flex p-ai-center p-mb-3" style={{ gap: "0.5rem", marginBottom: "1rem" }}>
+      <div
+        className="p-d-flex p-ai-center p-mb-3"
+        style={{ gap: "0.5rem", marginBottom: "1rem" }}
+      >
         <input
           type="checkbox"
           name="isCompanyInvoice"
           checked={addressData.isCompanyInvoice || false}
-          onChange={(e) => setAddressData((prev) => ({ ...prev, isCompanyInvoice: e.target.checked }))}
+          onChange={(e) =>
+            setAddressData((prev) => ({
+              ...prev,
+              isCompanyInvoice: e.target.checked,
+            }))
+          }
           style={{ cursor: "pointer" }}
         />
         <span>Empresa/Factura</span>
@@ -145,15 +162,12 @@ export default function AddressForm({ addressData, onChange, setAddressData, err
           value={addressData.id_state || ""}
           onChange={(e) => {
             const newIdState = e.target.value;
-            let id_country = "";
-            switch (newIdState) {
-              case "313":
-                id_country = "ES";
-                break;
-              default:
-                id_country = addressData.id_country || "";
-            }
-            setAddressData((prev) => ({ ...prev, id_state: newIdState, id_country }));
+            // Mantener id_country por defecto en 6 (España)
+            setAddressData((prev) => ({
+              ...prev,
+              id_state: newIdState,
+              id_country: prev.id_country || 6,
+            }));
           }}
           className="w-full p-2 border rounded mb-2"
         >
