@@ -8,16 +8,14 @@ import { Column } from "primereact/column";
 import { useApiFetch } from "../../utils/useApiFetch";
 import getApiBaseUrl from "../../utils/getApiBaseUrl";
 import { useShopsDictionary } from "../../hooks/useShopsDictionary";
-import { useEmployeesDictionary } from "../../hooks/useEmployeesDictionary";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { formatShortDate } from "../../utils/dateUtils";
-import { generateSalesPdf } from "../../utils/generateSalesPdf";
+import generateSessionsPdf from "../../utils/generateSessionsPdf";
 
 const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
   const shopsDict = useShopsDictionary();
-  const employeesDict = useEmployeesDictionary();
   const { configData } = useContext(ConfigContext);
 
   const [shopsOptions, setShopsOptions] = useState([]);
@@ -27,7 +25,6 @@ const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
 
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedSession, setSelectedSession] = useState(null);
 
   useEffect(() => {
     const opts = Object.keys(shopsDict).map((key) => ({ id: Number(key), name: shopsDict[key] }));
@@ -61,58 +58,22 @@ const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
     }
   };
 
-  const getEmployeeName = (id) => employeesDict[id] || id;
-
-  const handleGenerateSessionPdf = async () => {
-    if (!selectedSession) {
-      alert("Seleccione primero una caja.");
+  const handleGeneratePdf = () => {
+    if (!sessions.length) {
+      alert("Realice primero una búsqueda.");
       return;
     }
-    try {
-      const saleReportData = await apiFetch(`${API_BASE_URL}/get_pos_session_sale_report_orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id_pos_session: selectedSession.id_pos_session }),
-      });
-      if (!Array.isArray(saleReportData)) {
-        alert("Datos del reporte no válidos.");
-        return;
-      }
-      const { date_add, date_close, id_employee_open, id_employee_close, total_cash, total_card, total_bizum, id_shop } = selectedSession;
-      const tc = parseFloat(total_cash) || 0;
-      const tcard = parseFloat(total_card) || 0;
-      const tbizum = parseFloat(total_bizum) || 0;
-      const total = tc + tcard + tbizum;
-      const iva = total - total / 1.21;
-      const closureDate = date_close && date_close !== "" ? new Date(date_close) : new Date();
-      const closureData = {
-        date_add,
-        date_close: closureDate,
-        employee_open: getEmployeeName(id_employee_open),
-        employee_close: getEmployeeName(id_employee_close),
-        total_cash: tc,
-        total_card: tcard,
-        total_bizum: tbizum,
-        shop_name: shopsDict[id_shop],
-        total,
-        iva,
-      };
-      const formattedDate = formatShortDate(date_add);
-      const pdfName = `${closureData.shop_name} - ${formattedDate}`;
-      const result = generateSalesPdf(saleReportData, pdfName, closureData, configData);
-      if (!result) {
-        alert("Error generando el PDF.");
-      }
-    } catch (error) {
-      console.error("Error generando PDF para la sesión:", error);
-      alert("Error al generar el PDF.");
+    const shopName = selectedShop?.name || shopsDict[selectedShop] || "Tienda";
+    const result = generateSessionsPdf(sessions, shopName, configData);
+    if (!result) {
+      alert("Error generando el PDF.");
     }
   };
 
   const footer = (
     <div className="flex justify-content-end gap-2">
       <Button label="Buscar" icon="pi pi-search" onClick={handleSearch} />
-      <Button label="Generar reporte ventas PDF" icon="pi pi-file-pdf" onClick={handleGenerateSessionPdf} />
+      <Button label="Generar reporte ventas PDF" icon="pi pi-file-pdf" onClick={handleGeneratePdf} />
     </div>
   );
 
@@ -160,9 +121,6 @@ const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
         paginator
         rows={7}
         className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
-        selectionMode="single"
-        selection={selectedSession}
-        onSelectionChange={(e) => setSelectedSession(e.value)}
         dataKey="id_pos_session"
         responsiveLayout="scroll"
         emptyMessage={loading ? "Cargando..." : "No hay resultados"}
