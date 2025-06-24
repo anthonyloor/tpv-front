@@ -46,7 +46,30 @@ const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
           const sessionDate = new Date(s.date_add);
           return sessionDate >= fromTime && sessionDate <= toTime;
         });
-        setSessions(filtered);
+
+        const grouped = {};
+        filtered.forEach((s) => {
+          const key = formatShortDate(s.date_add);
+          if (!grouped[key]) {
+            grouped[key] = {
+              date_add: key,
+              total_cash: 0,
+              total_card: 0,
+              total_bizum: 0,
+            };
+          }
+          grouped[key].total_cash += parseFloat(s.total_cash) || 0;
+          grouped[key].total_card += parseFloat(s.total_card) || 0;
+          grouped[key].total_bizum += parseFloat(s.total_bizum) || 0;
+        });
+
+        const aggregated = Object.values(grouped).sort((a, b) => {
+          const da = a.date_add.split('-').reverse().join('-');
+          const db = b.date_add.split('-').reverse().join('-');
+          return new Date(da) - new Date(db);
+        });
+
+        setSessions(aggregated);
       } else {
         setSessions([]);
       }
@@ -85,12 +108,43 @@ const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
     return document.body;
   };
 
-  const dataWithTotals = sessions.map((s) => {
-    const tc = parseFloat(s.total_cash) || 0;
-    const tcard = parseFloat(s.total_card) || 0;
-    const tbizum = parseFloat(s.total_bizum) || 0;
-    return { ...s, total: tc + tcard + tbizum };
-  });
+  const dataWithTotals = React.useMemo(() => {
+    const rows = sessions.map((s) => {
+      const tc = parseFloat(s.total_cash) || 0;
+      const tcard = parseFloat(s.total_card) || 0;
+      const tbizum = parseFloat(s.total_bizum) || 0;
+      return {
+        ...s,
+        total_cash: tc,
+        total_card: tcard,
+        total_bizum: tbizum,
+        total: tc + tcard + tbizum,
+      };
+    });
+
+    const totals = rows.reduce(
+      (acc, r) => {
+        acc.total_cash += r.total_cash;
+        acc.total_card += r.total_card;
+        acc.total_bizum += r.total_bizum;
+        return acc;
+      },
+      { total_cash: 0, total_card: 0, total_bizum: 0 }
+    );
+
+    if (rows.length) {
+      rows.push({
+        date_add: "TOTAL",
+        total_cash: totals.total_cash,
+        total_card: totals.total_card,
+        total_bizum: totals.total_bizum,
+        total: totals.total_cash + totals.total_card + totals.total_bizum,
+        isTotal: true,
+      });
+    }
+
+    return rows;
+  }, [sessions]);
 
   return (
     <Dialog
@@ -121,14 +175,14 @@ const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
         paginator
         rows={7}
         className="p-datatable-sm p-datatable-striped p-datatable-gridlines"
-        dataKey="id_pos_session"
+        dataKey="date_add"
         responsiveLayout="scroll"
         emptyMessage={loading ? "Cargando..." : "No hay resultados"}
+        rowClassName={(row) => (row.isTotal ? "font-bold" : "")}
       >
         <Column
           field="date_add"
           header="Fecha"
-          body={(row) => formatShortDate(row.date_add)}
           style={{ textAlign: "center", width: "120px" }}
           alignHeader="center"
         ></Column>

@@ -4,6 +4,23 @@ import { formatShortDate, formatLongDate } from "./dateUtils";
 
 export const generateSessionsPdf = (sessions, shopName, configData) => {
   try {
+    const grouped = {};
+    sessions.forEach((s) => {
+      const key = formatShortDate(s.date_add);
+      if (!grouped[key]) {
+        grouped[key] = { date: key, cash: 0, card: 0, bizum: 0 };
+      }
+      grouped[key].cash += parseFloat(s.total_cash) || 0;
+      grouped[key].card += parseFloat(s.total_card) || 0;
+      grouped[key].bizum += parseFloat(s.total_bizum) || 0;
+    });
+
+    const aggregated = Object.values(grouped).sort((a, b) => {
+      const da = a.date.split("-").reverse().join("-");
+      const db = b.date.split("-").reverse().join("-");
+      return new Date(da) - new Date(db);
+    });
+
     const doc = new jsPDF("p", "pt", "a4");
     const margin = 40;
     let yPos = margin;
@@ -26,12 +43,12 @@ export const generateSessionsPdf = (sessions, shopName, configData) => {
       "Total",
     ];
 
-    const tableRows = sessions.map((s) => {
-      const cash = parseFloat(s.total_cash) || 0;
-      const card = parseFloat(s.total_card) || 0;
-      const bizum = parseFloat(s.total_bizum) || 0;
+    const tableRows = aggregated.map((s) => {
+      const cash = s.cash;
+      const card = s.card;
+      const bizum = s.bizum;
       return [
-        formatShortDate(s.date_add),
+        s.date,
         cash.toFixed(2) + "€",
         card.toFixed(2) + "€",
         bizum.toFixed(2) + "€",
@@ -39,21 +56,25 @@ export const generateSessionsPdf = (sessions, shopName, configData) => {
       ];
     });
 
-    const totals = sessions.reduce(
+    const totals = aggregated.reduce(
       (acc, s) => {
-        acc.cash += parseFloat(s.total_cash) || 0;
-        acc.card += parseFloat(s.total_card) || 0;
-        acc.bizum += parseFloat(s.total_bizum) || 0;
+        acc.cash += s.cash;
+        acc.card += s.card;
+        acc.bizum += s.bizum;
         return acc;
       },
       { cash: 0, card: 0, bizum: 0 }
     );
+    const boldStyle = { fontStyle: "bold" };
     const totalRow = [
-      "TOTAL",
-      totals.cash.toFixed(2) + "€",
-      totals.card.toFixed(2) + "€",
-      totals.bizum.toFixed(2) + "€",
-      (totals.cash + totals.card + totals.bizum).toFixed(2) + "€",
+      { content: "TOTAL", styles: boldStyle },
+      { content: totals.cash.toFixed(2) + "€", styles: boldStyle },
+      { content: totals.card.toFixed(2) + "€", styles: boldStyle },
+      { content: totals.bizum.toFixed(2) + "€", styles: boldStyle },
+      {
+        content: (totals.cash + totals.card + totals.bizum).toFixed(2) + "€",
+        styles: boldStyle,
+      },
     ];
     if (tableRows.length > 0) {
       tableRows.push(totalRow);
