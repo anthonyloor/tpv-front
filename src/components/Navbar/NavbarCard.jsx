@@ -9,6 +9,7 @@ import PortalOrNormal from "../../components/PortalOrNormal";
 import TransfersModal from "../modals/transfers/TransfersModal";
 import ConfigurationModal from "../modals/configuration/ConfigurationModal";
 import SalesReportModal from "../reports/SalesReportModal";
+import NewSalesReportModal from "../reports/NewSalesReportModal";
 import CloseCashRegisterModal from "../modals/cashRegister/CloseCashRegisterModal";
 import { useTheme } from "../ThemeSwitcher";
 import { SplitButton } from "primereact/splitbutton";
@@ -39,6 +40,7 @@ const NavbarCard = () => {
   const transfersModal = useToggle();
   const configurationModal = useToggle();
   const salesReportModal = useToggle();
+  const newSalesReportModal = useToggle();
   const cashRegisterModal = useToggle();
   const listCashRegisterModal = useToggle();
 
@@ -55,6 +57,7 @@ const NavbarCard = () => {
     transfersModal.close();
     configurationModal.close();
     salesReportModal.close();
+    newSalesReportModal.close();
     cashRegisterModal.close();
     pinDialog.close();
     listCashRegisterModal.close();
@@ -89,6 +92,11 @@ const NavbarCard = () => {
   const openSalesReport = () => {
     closeAllModals();
     salesReportModal.open();
+  };
+
+  const openNewSalesReport = () => {
+    closeAllModals();
+    newSalesReportModal.open();
   };
 
   const openInventoryModal = () => {
@@ -185,7 +193,18 @@ const NavbarCard = () => {
           {
             label: "Reportes",
             icon: "pi pi-chart-bar",
-            command: openSalesReport,
+            items: [
+              {
+                label: "Reporte de ventas",
+                icon: "pi pi-file",
+                command: openSalesReport,
+              },
+              {
+                label: "Reporte de ventas (Nuevo)",
+                icon: "pi pi-file",
+                command: openNewSalesReport,
+              },
+            ],
           },
           {
             label: "PIN",
@@ -321,6 +340,17 @@ const NavbarCard = () => {
             isOpen
             inlineMode={isMobile}
             onClose={salesReportModal.close}
+          />
+        </PortalOrNormal>
+      )}
+
+      {/* (3b) NewSalesReportModal */}
+      {newSalesReportModal.isOpen && (
+        <PortalOrNormal isInlineMode={isMobile}>
+          <NewSalesReportModal
+            isOpen
+            inlineMode={isMobile}
+            onClose={newSalesReportModal.close}
           />
         </PortalOrNormal>
       )}
