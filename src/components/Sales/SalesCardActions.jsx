@@ -232,8 +232,8 @@ function SalesCardActions({
   };
 
   const handleConfirmSale = async () => {
-    // Validación: Si no hay ningún método de pago seleccionado, se muestra error y se detiene la función.
-    if (selectedMethods.length === 0) {
+    // Validación: Se verifica método de pago solo si el total es mayor a 0
+    if (total > 0 && selectedMethods.length === 0) {
       toast.current.show({
         severity: "error",
         summary: "Error",
