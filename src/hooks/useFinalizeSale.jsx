@@ -155,6 +155,8 @@ export default function useFinalizeSale() {
         total_discounts_tax_excl: parseFloat(
           total_discounts_tax_excl.toFixed(2)
         ),
+        cash_recived: parseFloat(amounts.efectivo || 0),
+        cash_returned: parseFloat(changeAmount.toFixed(2)),
         order_details,
       };
 

@@ -64,7 +64,6 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
     selectedClient,
   });
 
-
   const loadOnlineOrders = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -259,6 +258,8 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
       total_cash,
       total_card,
       total_bizum,
+      cash_recived: 0,
+      cash_returned: 0,
       status: 43,
       origin: selectedOrderForStock.origin,
       id_employee: employeeId,
