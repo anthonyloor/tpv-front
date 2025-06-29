@@ -131,7 +131,9 @@ const useProductSearch = ({
             const matches = list.filter(
               (cs) => Number(cs.id_shop) === Number(stock.id_shop)
             );
-            if (matches.length === 0) return stock;
+            if (matches.length === 0) {
+              return { ...stock, control_stock: [] };
+            }
             return {
               ...stock,
               control_stock: matches.map((cs) => ({
@@ -371,7 +373,8 @@ const useProductSearch = ({
             body: JSON.stringify({ ean13: eanCode }),
           }
         );
-        const controlMatch = controlList.find(
+        const matchList = Array.isArray(controlList) ? controlList : [];
+        const controlMatch = matchList.find(
           (c) => Number(c.id_control_stock) === Number(controlId)
         );
         if (!controlMatch) {
