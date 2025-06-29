@@ -10,7 +10,7 @@ import { ConfigContext } from "../../contexts/ConfigContext";
 import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import useProductSearch from "../../hooks/useProductSearch";
+import useProductSearch from "../../hooks/useProductSearchNew";
 import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
 import { OverlayPanel } from "primereact/overlaypanel";
