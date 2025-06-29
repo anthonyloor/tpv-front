@@ -111,6 +111,41 @@ const useProductSearch = ({
     }));
   };
 
+  // Obtener control stock por código de barras y actualizar groupedProducts
+  const fetchControlStock = async (ean13) => {
+    const list = await apiFetch(`${API_BASE_URL}/get_controll_stock_filtered`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ean13 }),
+    });
+    if (!Array.isArray(list)) return;
+    setGroupedProducts((prev) =>
+      prev.map((group) => ({
+        ...group,
+        combinations: group.combinations.map((comb) => {
+          const code = comb.id_product_attribute
+            ? comb.ean13_combination
+            : comb.ean13_combination_0;
+          if (code !== ean13) return comb;
+          const updatedStocks = comb.stocks.map((stock) => {
+            const matches = list.filter(
+              (cs) => Number(cs.id_shop) === Number(stock.id_shop)
+            );
+            if (matches.length === 0) return stock;
+            return {
+              ...stock,
+              control_stock: matches.map((cs) => ({
+                id_control_stock: cs.id_control_stock,
+                active_control_stock: cs.active,
+              })),
+            };
+          });
+          return { ...comb, stocks: updatedStocks };
+        }),
+      }))
+    );
+  };
+
   // Función para agregar el producto al carrito
   const addProductToCart = (product) => {
     console.log("Product to add to cart:", product);
@@ -278,11 +313,6 @@ const useProductSearch = ({
             product.ean13_combination !== null ||
             product.ean13_combination_0 !== null
         );
-        validResults = forStock
-          ? validResults
-          : validResults.map(
-              ({ id_control_stock, active_control_stock, ...rest }) => rest
-            );
         // Eliminar duplicados
         const uniqueMap = new Map();
         validResults = forStock
@@ -331,11 +361,20 @@ const useProductSearch = ({
           playSound("error");
           return;
         }
-        console.log("EAN13 con apóstrofe - resultados:", results);
-        let validResults = results.filter(
-          (p) => Number(p.id_control_stock) === Number(controlId)
+
+        // Obtener la información de control stock para el EAN
+        const controlList = await apiFetch(
+          `${API_BASE_URL}/get_controll_stock_filtered`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ean13: eanCode }),
+          }
         );
-        if (validResults.length === 0 && results.length > 0) {
+        const controlMatch = controlList.find(
+          (c) => Number(c.id_control_stock) === Number(controlId)
+        );
+        if (!controlMatch) {
           toast.current.show({
             severity: "error",
             summary: "Error",
@@ -344,16 +383,26 @@ const useProductSearch = ({
           playSound("error");
           return;
         }
+
+        let validResults = results.filter(
+          (p) => Number(p.id_shop) === Number(controlMatch.id_shop)
+        );
+        validResults = validResults.map((p) => ({
+          ...p,
+          id_control_stock: controlMatch.id_control_stock,
+          active_control_stock: controlMatch.active,
+        }));
+
         const filtered = forEan13
           ? validResults
           : filterProductsForShop(validResults, shopId);
         const groups = groupProductsByProductName(filtered, "idcontrolstock");
-        if (filtered.length === 1 && filtered[0].active_control_stock) {
+        if (filtered.length === 1 && controlMatch.active) {
           addProductToCart(filtered[0]);
           setGroupedProducts([]);
           return groups;
         } else if (validResults.length > 0) {
-          if (validResults[0].active_control_stock) {
+          if (controlMatch.active) {
             setForeignProductCandidate(validResults[0]);
             setForeignConfirmDialogOpen(true);
             setGroupedProducts([]);
@@ -495,6 +544,7 @@ const useProductSearch = ({
     soldLabelProductCandidate,
     handleSoldLabelConfirmAdd,
     handleSoldLabelCancelAdd,
+    fetchControlStock,
     toast,
   };
 };
