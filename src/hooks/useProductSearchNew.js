@@ -173,12 +173,48 @@ export default function useProductSearchNew({
         return groups;
       }
 
-      const products = await searchProducts(searchTerm, selectedClient.id_default_group);
-      const valid = products.map((p) => ({ ...p, id_product_attribute: p.id_product_attribute || 0 }));
-      const filtered = filterProductsForShop(valid.filter(isValidProduct), shopId);
-      const groups = groupProductsByName(filtered);
-      if (filtered.length === 1 && ean13Regex.test(searchTerm)) {
-        addProductToCart(filtered[0]);
+      const products = await searchProducts(
+        searchTerm,
+        selectedClient.id_default_group
+      );
+      const valid = products.map((p) => ({
+        ...p,
+        id_product_attribute: p.id_product_attribute || 0,
+      }));
+
+      const baseFiltered = filterProductsForShop(
+        valid.filter(isValidProduct),
+        shopId
+      );
+
+      let enriched = baseFiltered;
+      if (ean13Regex.test(searchTerm)) {
+        const controls = await getControlStock(searchTerm);
+        enriched = [];
+        baseFiltered.forEach((prod) => {
+          enriched.push(prod);
+          controls
+            .filter(
+              (c) =>
+                Number(c.id_product) === Number(prod.id_product) &&
+                Number(c.id_product_attribute) ===
+                  Number(prod.id_product_attribute) &&
+                Number(c.id_shop) === Number(prod.id_shop)
+            )
+            .forEach((c) =>
+              enriched.push({
+                ...prod,
+                id_control_stock: c.id_control_stock,
+                active_control_stock: c.active,
+              })
+            );
+        });
+      }
+
+      const groups = groupProductsByName(enriched);
+
+      if (baseFiltered.length === 1 && ean13Regex.test(searchTerm)) {
+        addProductToCart(baseFiltered[0]);
         setGroupedProducts([]);
       } else {
         setGroupedProducts(groups);
