@@ -5,6 +5,7 @@ import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useApiFetch } from "../../utils/useApiFetch";
+import useProductApi from "../../hooks/useProductApi";
 import { Divider } from "primereact/divider";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { Button } from "primereact/button";
@@ -35,6 +36,7 @@ const ProductSearchCard = ({
   const { shopId, idProfile } = useContext(AuthContext);
   const allowOutOfStockSales = configData?.allow_out_of_stock_sales || false;
   const apiFetch = useApiFetch();
+  const { getControlStock } = useProductApi();
 
   // Función wrapper: al añadir producto, marcar isDevolution a false
   const handleAddProductWrapper = (
@@ -181,8 +183,14 @@ const ProductSearchCard = ({
   };
 
   // Función para abrir el overlay panel con los seguimientos
-  const handleTrackingClick = (event, rowData) => {
-    setTrackingList(rowData.controlStockList || []);
+  const handleTrackingClick = async (event, rowData) => {
+    const ean = rowData.ean13_combination || rowData.ean13_combination_0;
+    try {
+      const controls = await getControlStock(ean);
+      setTrackingList(controls);
+    } catch (e) {
+      setTrackingList(rowData.controlStockList || []);
+    }
     overlayPanelRef.current.toggle(event);
   };
 
