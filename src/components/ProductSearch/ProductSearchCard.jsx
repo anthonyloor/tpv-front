@@ -184,7 +184,11 @@ const ProductSearchCard = ({
         })
       );
       for (const ean of eans) {
-        await fetchControlStock(ean);
+        try {
+          await fetchControlStock(ean);
+        } catch (err) {
+          console.error("Error loading control stock", err);
+        }
       }
     }
     setSearchTerm("");

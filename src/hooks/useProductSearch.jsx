@@ -113,12 +113,22 @@ const useProductSearch = ({
 
   // Obtener control stock por código de barras y actualizar groupedProducts
   const fetchControlStock = async (ean13) => {
-    const list = await apiFetch(`${API_BASE_URL}/get_controll_stock_filtered`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ean13 }),
-    });
-    if (!Array.isArray(list)) return;
+    let list = [];
+    try {
+      list = await apiFetch(`${API_BASE_URL}/get_controll_stock_filtered`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ean13 }),
+      });
+    } catch (error) {
+      if (error.status === 404) {
+        list = [];
+      } else {
+        console.error("Error fetching control stock:", error);
+        return;
+      }
+    }
+    if (!Array.isArray(list)) list = [];
     setGroupedProducts((prev) =>
       prev.map((group) => ({
         ...group,
@@ -365,14 +375,30 @@ const useProductSearch = ({
         }
 
         // Obtener la información de control stock para el EAN
-        const controlList = await apiFetch(
-          `${API_BASE_URL}/get_controll_stock_filtered`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ean13: eanCode }),
+        let controlList = [];
+        try {
+          controlList = await apiFetch(
+            `${API_BASE_URL}/get_controll_stock_filtered`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ean13: eanCode }),
+            }
+          );
+        } catch (err) {
+          if (err.status === 404) {
+            toast.current.show({
+              severity: "error",
+              summary: "Error",
+              detail: "ID control stock no existe.",
+            });
+            playSound("error");
+            return;
           }
-        );
+          console.error("Error fetching control stock:", err);
+          playSound("error");
+          return;
+        }
         const matchList = Array.isArray(controlList) ? controlList : [];
         const controlMatch = matchList.find(
           (c) => Number(c.id_control_stock) === Number(controlId)
