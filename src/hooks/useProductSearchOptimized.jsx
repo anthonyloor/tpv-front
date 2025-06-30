@@ -64,6 +64,10 @@ const useProductSearchOptimized = ({
   const [isLoading, setIsLoading] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [foreignConfirmDialogOpen, setForeignConfirmDialogOpen] = useState(false);
+  const [foreignProductCandidate, setForeignProductCandidate] = useState(null);
+  const [soldLabelConfirmDialogOpen, setSoldLabelConfirmDialogOpen] = useState(false);
+  const [soldLabelProductCandidate, setSoldLabelProductCandidate] = useState(null);
   const API_BASE_URL = getApiBaseUrl();
   const toast = useRef(null);
 
@@ -134,6 +138,25 @@ const useProductSearchOptimized = ({
     return groups;
   };
 
+  const handleConfirmQuantity = async (payload) => {
+    let response = await apiFetch(`${API_BASE_URL}/get_product_price_tag`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    let tags = [];
+    if (Array.isArray(response)) {
+      if (response[0].tags !== undefined) {
+        tags = response[0].tags;
+      } else {
+        tags = response;
+      }
+    } else if (response.printed !== undefined) {
+      tags = [response];
+    }
+    return tags;
+  };
+
   const addProductToCart = (product) => {
     let currentShopStock = null;
     if (Array.isArray(product.stocks)) {
@@ -191,11 +214,73 @@ const useProductSearchOptimized = ({
         playSound("success");
       }
     });
-  };
+  }; 
 
-  const handleSearch = async (searchTerm) => {
+  const handleSearch = async (
+    searchTerm,
+    forStock = false,
+    forEan13 = false
+  ) => {
+    if (forStock && searchTerm.length < 13) {
+      searchTerm = searchTerm.padStart(13, "0");
+    }
     if (!searchTerm) {
       setGroupedProducts([]);
+      return;
+    }
+    if (searchTerm.startsWith("#")) {
+      setIsLoading(true);
+      try {
+        const code = searchTerm.slice(1);
+        const data = await apiFetch(
+          `${API_BASE_URL}/get_cart_rule?code=${encodeURIComponent(code)}`,
+          { method: "GET" }
+        );
+        if (!data.active) {
+          alert("Vale descuento no válido, motivo: no activo");
+          return;
+        }
+        const client = JSON.parse(localStorage.getItem("selectedClient"));
+        if (client && data.id_customer && client.id_customer !== data.id_customer) {
+          alert(
+            "Vale descuento no válido, motivo: no pertenece al cliente seleccionado"
+          );
+          return;
+        }
+        let currentCartTotal = 0;
+        const licenseData = JSON.parse(localStorage.getItem("licenseData"));
+        const cartRaw = localStorage.getItem(`cart_shop_${licenseData?.id_shop}`);
+        if (cartRaw) {
+          const parsedCart = JSON.parse(cartRaw);
+          if (parsedCart && parsedCart.items) {
+            currentCartTotal = parsedCart.items.reduce(
+              (sum, item) => sum + item.final_price_incl_tax * item.quantity,
+              0
+            );
+          }
+        }
+        const discObj = {
+          name: data.name || "",
+          description: data.description ? data.description + " venta" : "venta",
+          code: data.code || "",
+          reduction_amount: data.reduction_amount
+            ? Math.min(data.reduction_amount, currentCartTotal)
+            : 0,
+          reduction_percent: data.reduction_percent || 0,
+        };
+        if (data && onAddDiscount) {
+          onAddDiscount(discObj);
+          window.dispatchEvent(
+            new CustomEvent("globalDiscountApplied", { detail: discObj })
+          );
+        }
+        setGroupedProducts([]);
+      } catch (error) {
+        console.error("Error al buscar vale descuento:", error);
+        alert("Error al buscar el vale. Inténtalo de nuevo.");
+      } finally {
+        setIsLoading(false);
+      }
       return;
     }
     setIsLoading(true);
@@ -208,12 +293,24 @@ const useProductSearchOptimized = ({
           id_default_group: selectedClient.id_default_group,
         };
         let results = await fetchProducts(payload);
-        const filtered = filterProductsForShop(results, shopId);
+        let validResults = results.filter(isValidProduct);
+        if (!forStock) {
+          const uniqueMap = new Map();
+          validResults = validResults.filter((product) => {
+            const key = `${product.id_product}_${product.id_product_attribute}_${product.id_stock_available}_${product.id_shop}`;
+            if (!uniqueMap.has(key)) {
+              uniqueMap.set(key, true);
+              return true;
+            }
+            return false;
+          });
+        }
+        const filtered = filterProductsForShop(validResults, shopId);
         let groups = groupProducts(filtered);
         setGroupedProducts(groups);
         groups = await attachControlStock(groups);
         setGroupedProducts([...groups]);
-        if (filtered.length === 1) {
+        if (filtered.length === 1 && !forStock) {
           addProductToCart(filtered[0]);
           setGroupedProducts([]);
         }
@@ -226,6 +323,15 @@ const useProductSearchOptimized = ({
           id_default_group: selectedClient.id_default_group,
         };
         const results = await fetchProducts(payload);
+        if (results.length === 0) {
+          toast.current.show({
+            severity: "error",
+            summary: "Error",
+            detail: "Producto no encontrado.",
+          });
+          playSound("error");
+          return;
+        }
         const controls = await fetchControlStock(eanCode);
         const match = controls.find(
           (c) => Number(c.id_control_stock) === Number(controlId)
@@ -257,12 +363,23 @@ const useProductSearchOptimized = ({
         }
         prod.id_control_stock = match.id_control_stock;
         prod.active_control_stock = match.active;
-        const groups = groupProducts([prod]);
-        attachControlStock(groups); // ensures stock added
-        if (match.active) {
+        const filtered = forEan13 ? [prod] : filterProductsForShop([prod], shopId);
+        let groups = groupProducts(filtered);
+        groups = await attachControlStock(groups);
+        if (filtered.length === 1 && match.active) {
           addProductToCart(prod);
           setGroupedProducts([]);
           return groups;
+        } else if (results.length > 0) {
+          if (match.active) {
+            setForeignProductCandidate(prod);
+            setForeignConfirmDialogOpen(true);
+            setGroupedProducts([]);
+          } else {
+            setSoldLabelProductCandidate(prod);
+            setSoldLabelConfirmDialogOpen(true);
+            setGroupedProducts([]);
+          }
         } else {
           setGroupedProducts(groups);
           return groups;
@@ -273,7 +390,10 @@ const useProductSearchOptimized = ({
         id_default_group: selectedClient.id_default_group,
       };
       const results = await fetchProducts(payload);
-      const filtered = filterProductsForShop(results, shopId);
+      let validResults = results.filter(isValidProduct);
+      const filtered = forEan13
+        ? validResults
+        : filterProductsForShop(validResults, shopId);
       let groups = groupProducts(filtered);
       setGroupedProducts(groups);
       groups = await attachControlStock(groups);
@@ -305,6 +425,43 @@ const useProductSearchOptimized = ({
     }
   };
 
+  const handleForeignConfirmAdd = () => {
+    if (foreignProductCandidate) {
+      addProductToCart(foreignProductCandidate);
+      toast.current.show({
+        severity: "success",
+        summary: "Éxito",
+        detail: "Producto añadido al ticket.",
+      });
+      playSound("success");
+      setForeignConfirmDialogOpen(false);
+      setForeignProductCandidate(null);
+    }
+  };
+
+  const handleForeignCancelAdd = () => {
+    setForeignConfirmDialogOpen(false);
+    setForeignProductCandidate(null);
+  };
+
+  const handleSoldLabelConfirmAdd = () => {
+    if (soldLabelProductCandidate) {
+      addProductToCart(soldLabelProductCandidate);
+      toast.current.show({
+        severity: "success",
+        summary: "Éxito",
+        detail: "Producto con etiqueta ya vendida añadido al ticket.",
+      });
+      setSoldLabelConfirmDialogOpen(false);
+      setSoldLabelProductCandidate(null);
+    }
+  };
+
+  const handleSoldLabelCancelAdd = () => {
+    setSoldLabelConfirmDialogOpen(false);
+    setSoldLabelProductCandidate(null);
+  };
+
   return {
     groupedProducts,
     isLoading,
@@ -314,6 +471,15 @@ const useProductSearchOptimized = ({
     addProductToCart,
     handleCancelAdd,
     handleConfirmAdd,
+    handleConfirmQuantity,
+    foreignConfirmDialogOpen,
+    foreignProductCandidate,
+    handleForeignConfirmAdd,
+    handleForeignCancelAdd,
+    soldLabelConfirmDialogOpen,
+    soldLabelProductCandidate,
+    handleSoldLabelConfirmAdd,
+    handleSoldLabelCancelAdd,
     toast,
   };
 };
