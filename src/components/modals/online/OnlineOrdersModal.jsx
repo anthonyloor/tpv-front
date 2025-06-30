@@ -13,7 +13,7 @@ import { useApiFetch } from "../../../utils/useApiFetch";
 import { Toast } from "primereact/toast";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
-import useProductSearch from "../../../hooks/useProductSearch";
+import useProductSearchOptimized from "../../../hooks/useProductSearchOptimized";
 import { formatDate } from "../../../utils/dateUtils";
 import { AuthContext } from "../../../contexts/AuthContext";
 import ActionResultDialog from "../../common/ActionResultDialog";
@@ -54,7 +54,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
 
   const API_BASE_URL = getApiBaseUrl();
 
-  const stockSearch = useProductSearch({
+  const stockSearch = useProductSearchOptimized({
     apiFetch,
     shopId: "all",
     allowOutOfStockSales: true,

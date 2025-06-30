@@ -4,7 +4,7 @@ import { ProgressSpinner } from "primereact/progressspinner";
 import { Button } from "primereact/button";
 import { Checkbox } from "primereact/checkbox";
 import ProductSelectionDialog from "./ProductSelectionDialog";
-import useProductSearch from "../../../hooks/useProductSearch";
+import useProductSearchOptimized from "../../../hooks/useProductSearchOptimized";
 import { ClientContext } from "../../../contexts/ClientContext";
 import { IconField } from "primereact/iconfield";
 import { InputIcon } from "primereact/inputicon";
@@ -78,7 +78,7 @@ const ProductSearchCardForTransfer = ({
       : type === "entrada"
       ? selectedDestinationStore
       : selectedOriginStore;
-  const { handleSearch: productSearch } = useProductSearch({
+  const { handleSearch: productSearch } = useProductSearchOptimized({
     apiFetch,
     shopId: searchShopId,
     allowOutOfStockSales: true,
