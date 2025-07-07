@@ -25,7 +25,7 @@ import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { FloatLabel } from "primereact/floatlabel";
 import { OverlayPanel } from "primereact/overlaypanel";
 import JsBarcode from "jsbarcode";
-import useProductSearch from "../../../hooks/useProductSearch";
+import useProductSearchOptimized from "../../../hooks/useProductSearchOptimized";
 import { ClientContext } from "../../../contexts/ClientContext";
 import { generatePriceLabels } from "../../../utils/generatePriceLabels";
 import { formatShortDate } from "../../../utils/dateUtils";
@@ -700,7 +700,7 @@ const TransferForm = forwardRef(
     };
 
     // Reemplazar la definición de handlePrintLabels por:
-    const { handleSearch } = useProductSearch({
+    const { handleSearch } = useProductSearchOptimized({
       apiFetch,
       shopId,
       allowOutOfStockSales: true,

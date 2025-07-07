@@ -10,7 +10,7 @@ import { ConfigContext } from "../../contexts/ConfigContext";
 import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import useProductSearch from "../../hooks/useProductSearch";
+import useProductSearchOptimized from "../../hooks/useProductSearchOptimized";
 import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
 import { OverlayPanel } from "primereact/overlaypanel";
@@ -73,7 +73,7 @@ const ProductSearchCard = ({
     handleSoldLabelConfirmAdd,
     handleSoldLabelCancelAdd,
     toast,
-  } = useProductSearch({
+  } = useProductSearchOptimized({
     apiFetch,
     shopId: ean13Regex.test(searchTerm) ? shopId : "all",
     allowOutOfStockSales,
