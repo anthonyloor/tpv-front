@@ -114,7 +114,7 @@ const generateTicket = async (
     }
 
     if (item.id_control_stock) {
-      displayName = `${item.id_control_stock} 🔗 ${displayName}`;
+      displayName = `[${item.id_control_stock}] ${displayName}`;
     }
 
     const quantity = item.product_quantity;
