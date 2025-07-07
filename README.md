@@ -26,6 +26,7 @@ src/
 ```
 
 Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para una descripción más detallada.
+El uso del hook optimizado para buscar productos se explica en [docs/PRODUCT_SEARCH.md](docs/PRODUCT_SEARCH.md).
 
 ## Instalación y uso
 
