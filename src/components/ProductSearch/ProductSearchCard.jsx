@@ -61,7 +61,6 @@ const ProductSearchCard = ({
     confirmModalOpen,
     productToConfirm,
     handleSearch,
-    fetchControlStock,
     addProductToCart,
     handleCancelAdd,
     handleConfirmAdd,
@@ -172,25 +171,7 @@ const ProductSearchCard = ({
 
   const handleKeyDown = async (event) => {
     if (event.key !== "Enter") return;
-    const groups = await handleSearch(searchTerm);
-    if (groups && groups.length) {
-      const eans = new Set();
-      groups.forEach((g) =>
-        g.combinations.forEach((c) => {
-          const code = c.id_product_attribute
-            ? c.ean13_combination
-            : c.ean13_combination_0;
-          if (code) eans.add(code);
-        })
-      );
-      for (const ean of eans) {
-        try {
-          await fetchControlStock(ean);
-        } catch (err) {
-          console.error("Error loading control stock", err);
-        }
-      }
-    }
+    await handleSearch(searchTerm);
     setSearchTerm("");
     setTimeout(() => {
       if (!disableAutoFocus && searchInputRef.current) {
