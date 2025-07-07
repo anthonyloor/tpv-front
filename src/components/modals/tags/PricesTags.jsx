@@ -9,7 +9,7 @@ import { Button } from "primereact/button";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import { AuthContext } from "../../../contexts/AuthContext";
-import useProductSearch from "../../../hooks/useProductSearch";
+import useProductSearchOptimized from "../../../hooks/useProductSearchOptimized";
 import JsBarcode from "jsbarcode";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
@@ -55,7 +55,7 @@ export default function PricesTags({ isOpen, onHide }) {
   };
 
   // Usar el hook de búsqueda (se usa onAddProduct para actualizar el producto seleccionado)
-  const { groupedProducts, isLoading, handleSearch } = useProductSearch({
+  const { groupedProducts, isLoading, handleSearch } = useProductSearchOptimized({
     apiFetch,
     shopId,
     allowOutOfStockSales: true,
