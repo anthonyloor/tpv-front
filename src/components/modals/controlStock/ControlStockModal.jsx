@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
@@ -8,20 +8,32 @@ import { useApiFetch } from "../../../utils/useApiFetch";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 
-const ControlStockModal = ({ isOpen, onClose, inlineMode = false }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+const ControlStockModal = ({
+  isOpen,
+  onClose,
+  inlineMode = false,
+  initialQuery = "",
+}) => {
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
   const shopsDict = useShopsDictionary();
 
-  const handleSearch = async () => {
+  useEffect(() => {
+    if (isOpen && initialQuery) {
+      setSearchQuery(initialQuery);
+      handleSearch(initialQuery);
+    }
+  }, [isOpen, initialQuery]);
+
+  const handleSearch = async (query) => {
     setLoading(true);
     try {
       const data = await apiFetch(
         `${API_BASE_URL}/get_controll_stock?id=${encodeURIComponent(
-          searchQuery
+          query ?? searchQuery
         )}`
       );
       // Si no hay resultados o el objeto está vacío, se limpia la data
