@@ -16,6 +16,7 @@ function StoreStockPanel({ product }) {
   const [trackingList, setTrackingList] = useState([]);
   const overlayPanelRef = useRef(null);
 
+
   useEffect(() => {
     apiFetch(`${API_BASE_URL}/shops`, { method: "GET" })
       .then((res) => {
@@ -37,6 +38,7 @@ function StoreStockPanel({ product }) {
   useEffect(() => {
     if (!product || !product.stocks) {
       setStocksByShop({});
+      setTrackingList([]);
       return;
     }
     const map = {};
@@ -55,6 +57,17 @@ function StoreStockPanel({ product }) {
     setTrackingList(details);
     overlayPanelRef.current.toggle(event);
   };
+
+  if (!product) {
+    return (
+      <div
+        className="h-full flex items-center justify-center p-3"
+        style={{ backgroundColor: "var(--surface-0)", color: "var(--text-color)" }}
+      >
+        <span>Seleccione un producto para ver stock</span>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -15,6 +15,7 @@ import { CartContext } from "../../contexts/CartContext";
 import { ClientContext } from "../../contexts/ClientContext";
 import { OverlayPanel } from "primereact/overlaypanel";
 import { Toast } from "primereact/toast";
+import ControlStockModal from "../modals/controlStock/ControlStockModal";
 
 const ProductSearchCard = ({
   onAddProduct,
@@ -30,6 +31,8 @@ const ProductSearchCard = ({
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [trackingList, setTrackingList] = useState([]);
   const overlayPanelRef = useRef(null);
+  const [controlStockModalOpen, setControlStockModalOpen] = useState(false);
+  const [controlStockQuery, setControlStockQuery] = useState("");
 
   const { configData } = useContext(ConfigContext);
   const { shopId, idProfile } = useContext(AuthContext);
@@ -172,6 +175,8 @@ const ProductSearchCard = ({
   const handleKeyDown = async (event) => {
     if (event.key !== "Enter") return;
     await handleSearch(searchTerm);
+    setSelectedProduct(null);
+    if (onClickProduct) onClickProduct(null);
     setSearchTerm("");
     setTimeout(() => {
       if (!disableAutoFocus && searchInputRef.current) {
@@ -184,6 +189,12 @@ const ProductSearchCard = ({
   const handleTrackingClick = (event, rowData) => {
     setTrackingList(rowData.controlStockList || []);
     overlayPanelRef.current.toggle(event);
+  };
+
+  const handleTrackingItemClick = (id) => {
+    setControlStockQuery(String(id));
+    setControlStockModalOpen(true);
+    overlayPanelRef.current.hide();
   };
 
   return (
@@ -426,7 +437,11 @@ const ProductSearchCard = ({
 
       <OverlayPanel ref={overlayPanelRef}>
         {trackingList.map((item, index) => (
-          <div key={index} className="flex items-center gap-2">
+          <div
+            key={index}
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => handleTrackingItemClick(item.id_control_stock)}
+          >
             <span className="flex items-center">
               {item.id_control_stock}
               <i className="pi pi-link" style={{ marginLeft: "0.5rem" }}></i>
@@ -442,8 +457,13 @@ const ProductSearchCard = ({
           </div>
         ))}
       </OverlayPanel>
+      <ControlStockModal
+        isOpen={controlStockModalOpen}
+        onClose={() => setControlStockModalOpen(false)}
+        initialQuery={controlStockQuery}
+      />
     </div>
   );
 };
 
-export default ProductSearchCard;
+export default ProductSearchCard

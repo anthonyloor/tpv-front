@@ -113,6 +113,10 @@ const generateTicket = async (
       displayName = item.product_name.substring(pos);
     }
 
+    if (item.id_control_stock) {
+      displayName = `[${item.id_control_stock}] ${displayName}`;
+    }
+
     const quantity = item.product_quantity;
     if (ticketGift) {
       // Para ticket regalo se ocultan columnas de precios y totales
