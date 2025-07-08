@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
@@ -7,6 +7,10 @@ import { Column } from "primereact/column";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
+import { ConfigContext } from "../../../contexts/ConfigContext";
+import generateTicket from "../../../utils/ticket";
+import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import MovementDetailModal from "../transfers/MovementDetailModal";
 
 const ControlStockModal = ({
   isOpen,
@@ -20,6 +24,14 @@ const ControlStockModal = ({
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
   const shopsDict = useShopsDictionary();
+  const { configData } = useContext(ConfigContext);
+  const employeesDict = useEmployeesDictionary();
+
+  const [printOptionModalVisible, setPrintOptionModalVisible] = useState(false);
+  const [manualPdfDataUrl, setManualPdfDataUrl] = useState(null);
+  const [orderDataForPrint, setOrderDataForPrint] = useState(null);
+  const [movementModalVisible, setMovementModalVisible] = useState(false);
+  const [movementData, setMovementData] = useState(null);
 
   useEffect(() => {
     if (isOpen && initialQuery) {
@@ -49,7 +61,102 @@ const ControlStockModal = ({
     setLoading(false);
   };
 
+  const handleTransactionClick = async (rowData) => {
+    const type = rowData.type ? rowData.type.toLowerCase() : "";
+    const isOrder = type === "venta" || type === "devolución";
+    try {
+      const origin = await apiFetch(`${API_BASE_URL}/get_transaction_origin`, {
+        method: "POST",
+        body: JSON.stringify({
+          id_transaction_detail: rowData.id_transaction_detail,
+          type: isOrder ? "order" : "movement",
+        }),
+      });
+      if (isOrder && origin && origin.id_order) {
+        const order = await apiFetch(`${API_BASE_URL}/get_order`, {
+          method: "POST",
+          body: JSON.stringify({ id_order: origin.id_order, origin: "mayret" }),
+        });
+        if (order && order.order_details) {
+          setOrderDataForPrint(order);
+          const response = await generateTicket(
+            "print",
+            order,
+            configData,
+            employeesDict
+          );
+          if (!response.success) {
+            if (response.manual) {
+              setManualPdfDataUrl(response.pdfDataUrl);
+              setPrintOptionModalVisible(true);
+            } else {
+              console.error("Error al imprimir ticket:", response.message);
+            }
+          }
+        } else {
+          console.error("Error al recuperar datos del ticket");
+        }
+      } else if (!isOrder && origin && origin.id_warehouse_movement) {
+        const movement = await apiFetch(
+          `${API_BASE_URL}/get_warehouse_movement?id_warehouse_movement=${origin.id_warehouse_movement}`,
+          { method: "GET" }
+        );
+        if (movement) {
+          setMovementData(movement);
+          setMovementModalVisible(true);
+        } else {
+          console.error("Error al obtener detalle del movimiento");
+        }
+      }
+    } catch (err) {
+      console.error("Error obteniendo origen de transacción:", err);
+    }
+  };
+
+  const handleManualPrint = () => {
+    if (manualPdfDataUrl) {
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(
+          `<html><head><title>Vista Previa del PDF</title></head>
+           <body style="margin:0">
+             <iframe width="100%" height="100%" src="${manualPdfDataUrl}" frameborder="0"></iframe>
+           </body></html>`
+        );
+        printWindow.document.close();
+        printWindow.focus();
+        setPrintOptionModalVisible(false);
+      } else {
+        console.warn("No se pudo abrir la ventana de previsualización");
+      }
+    }
+  };
+
+  const handleRetryPrint = async () => {
+    if (orderDataForPrint) {
+      try {
+        const response = await generateTicket(
+          "print",
+          orderDataForPrint,
+          configData,
+          employeesDict
+        );
+        if (response.success) {
+          console.log("Reimpresión remota exitosa");
+          setPrintOptionModalVisible(false);
+        } else if (response.manual) {
+          setManualPdfDataUrl(response.pdfDataUrl);
+        } else {
+          console.error("Error al reintentar imprimir ticket:", response.message);
+        }
+      } catch (err) {
+        console.error("Error al reintentar impresión:", err);
+      }
+    }
+  };
+
   return (
+    <>
     <Dialog
       header="Seguimiento de productos"
       visible={isOpen}
@@ -153,8 +260,31 @@ const ControlStockModal = ({
                     <Column
                       field="id_transaction_detail"
                       header="ID Transacción"
-                      style={{ textAlign: "center" }}
+                      style={{ textAlign: "center", cursor: "pointer" }}
                       alignHeader="center"
+                      body={(rowData) => {
+                        const type = rowData.type ? rowData.type.toLowerCase() : "";
+                        const icons = [];
+                        if (type === "venta") {
+                          icons.push(<i key="print" className="pi pi-print mr-1" />);
+                        } else if (type === "devolución") {
+                          icons.push(<i key="print" className="pi pi-print mr-1" />);
+                          icons.push(<i key="undo" className="pi pi-undo mr-1" />);
+                        } else if (type === "entrada") {
+                          icons.push(<i key="in" className="pi pi-download mr-1" />);
+                        } else if (type === "salida") {
+                          icons.push(<i key="out" className="pi pi-upload mr-1" />);
+                        } else if (type === "traspaso") {
+                          icons.push(
+                            <i key="move" className="pi pi-arrow-right-arrow-left mr-1" />
+                          );
+                        }
+                        return (
+                          <span onClick={() => handleTransactionClick(rowData)}>
+                            {icons} {rowData.id_transaction_detail}
+                          </span>
+                        );
+                      }}
                     />
                   </DataTable>
                 ) : (
@@ -166,6 +296,41 @@ const ControlStockModal = ({
         )}
       </div>
     </Dialog>
+    <MovementDetailModal
+      isOpen={movementModalVisible}
+      onClose={() => {
+        setMovementModalVisible(false);
+        setMovementData(null);
+      }}
+      movementData={movementData}
+    />
+    <Dialog
+      header="Error de impresión"
+      visible={printOptionModalVisible}
+      onHide={() => setPrintOptionModalVisible(false)}
+      modal
+      draggable={false}
+      resizable={false}
+      style={{ marginBottom: "150px" }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <span>
+          La impresión del ticket ha fallado. ¿Deseas imprimirlo manualmente o
+          reintentar?
+        </span>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: "0.5rem",
+          }}
+        >
+          <Button label="Imprimir manual" onClick={handleManualPrint} />
+          <Button label="Reintentar" onClick={handleRetryPrint} />
+        </div>
+      </div>
+    </Dialog>
+    </>
   );
 };
 
