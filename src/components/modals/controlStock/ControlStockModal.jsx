@@ -129,6 +129,16 @@ const ControlStockModal = ({
                       alignHeader="center"
                     />
                     <Column
+                      body={(rowData) => (
+                        <span>
+                          {shopsDict[rowData.id_shop] || "Tienda no encontrada"}
+                        </span>
+                      )}
+                      header="Tienda"
+                      style={{ textAlign: "center" }}
+                      alignHeader="center"
+                    />
+                    <Column
                       field="reason"
                       header="Movimiento"
                       style={{ textAlign: "left" }}
@@ -137,6 +147,12 @@ const ControlStockModal = ({
                     <Column
                       field="type"
                       header="Tipo"
+                      style={{ textAlign: "center" }}
+                      alignHeader="center"
+                    />
+                    <Column
+                      field="id_transaction_detail"
+                      header="ID Transacción"
                       style={{ textAlign: "center" }}
                       alignHeader="center"
                     />
