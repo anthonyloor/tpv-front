@@ -10,6 +10,7 @@ import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import generateTicket from "../../../utils/ticket";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import MovementDetailModal from "../transfers/MovementDetailModal";
 
 const ControlStockModal = ({
   isOpen,
@@ -29,6 +30,8 @@ const ControlStockModal = ({
   const [printOptionModalVisible, setPrintOptionModalVisible] = useState(false);
   const [manualPdfDataUrl, setManualPdfDataUrl] = useState(null);
   const [orderDataForPrint, setOrderDataForPrint] = useState(null);
+  const [movementModalVisible, setMovementModalVisible] = useState(false);
+  const [movementData, setMovementData] = useState(null);
 
   useEffect(() => {
     if (isOpen && initialQuery) {
@@ -92,6 +95,17 @@ const ControlStockModal = ({
           }
         } else {
           console.error("Error al recuperar datos del ticket");
+        }
+      } else if (!isOrder && origin && origin.id_warehouse_movement) {
+        const movement = await apiFetch(
+          `${API_BASE_URL}/get_warehouse_movement?id_warehouse_movement=${origin.id_warehouse_movement}`,
+          { method: "GET" }
+        );
+        if (movement) {
+          setMovementData(movement);
+          setMovementModalVisible(true);
+        } else {
+          console.error("Error al obtener detalle del movimiento");
         }
       }
     } catch (err) {
@@ -282,6 +296,14 @@ const ControlStockModal = ({
         )}
       </div>
     </Dialog>
+    <MovementDetailModal
+      isOpen={movementModalVisible}
+      onClose={() => {
+        setMovementModalVisible(false);
+        setMovementData(null);
+      }}
+      movementData={movementData}
+    />
     <Dialog
       header="Error de impresión"
       visible={printOptionModalVisible}
