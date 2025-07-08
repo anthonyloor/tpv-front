@@ -77,7 +77,11 @@ const ControlStockModal = ({
             }}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <Button icon="pi pi-search" label="Buscar" onClick={handleSearch} />
+          <Button
+            icon="pi pi-search"
+            label="Buscar"
+            onClick={() => handleSearch()}
+          />
         </div>
         {/* Visualización de resultados */}
         {loading ? (

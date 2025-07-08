@@ -126,6 +126,7 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       "Pago",
       "Importe",
     ];
+    const priceColumnIndex = tableColumn.indexOf("Importe");
 
     // Recalcular la propiedad "combination_name" para cada detalle si no está definida
     data.forEach((order) => {
@@ -288,7 +289,7 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           return;
         }
         if (
-          data.column.index === 6 &&
+          data.column.index === priceColumnIndex &&
           data.cell.raw &&
           data.cell.raw.discount
         ) {
@@ -308,7 +309,7 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         }
       },
       didDrawCell: function (data) {
-        if (data.row.section === "body" && data.column.index === 6) {
+        if (data.row.section === "body" && data.column.index === priceColumnIndex) {
           if (data.cell.raw && data.cell.raw.discount) {
             const originalText = data.cell.raw.original;
             const discountedText = data.cell.raw.discounted;
