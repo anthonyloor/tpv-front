@@ -96,21 +96,13 @@ const ProductSearchCard = ({
     document.querySelector('[role="dialog"]') !== null;
 
   const handleContainerClick = () => {
-    if (
-      !disableAutoFocus &&
-      !isAnyModalOpen() &&
-      searchInputRef.current
-    ) {
+    if (!disableAutoFocus && !isAnyModalOpen() && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   };
 
   const handleInputBlur = () => {
-    if (
-      !disableAutoFocus &&
-      !isAnyModalOpen() &&
-      searchInputRef.current
-    ) {
+    if (!disableAutoFocus && !isAnyModalOpen() && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   };
@@ -192,6 +184,7 @@ const ProductSearchCard = ({
   };
 
   const handleTrackingItemClick = (id) => {
+    if (idProfile !== 1) return;
     setControlStockQuery(String(id));
     setControlStockModalOpen(true);
     overlayPanelRef.current.hide();
@@ -331,7 +324,10 @@ const ProductSearchCard = ({
                   {Number(rowData.trackingCount) > 0 && (
                     <i
                       className="pi pi-link"
-                      style={{ cursor: "pointer" }}
+                      style={{
+                        cursor: "pointer",
+                        opacity: 1,
+                      }}
                       onClick={(e) => handleTrackingClick(e, rowData)}
                     ></i>
                   )}
@@ -439,8 +435,14 @@ const ProductSearchCard = ({
         {trackingList.map((item, index) => (
           <div
             key={index}
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => handleTrackingItemClick(item.id_control_stock)}
+            className="flex items-center gap-2"
+            style={{
+              cursor: idProfile === 1 ? "pointer" : "default",
+              opacity: 1,
+            }}
+            onClick={() =>
+              idProfile === 1 && handleTrackingItemClick(item.id_control_stock)
+            }
           >
             <span className="flex items-center">
               {item.id_control_stock}
@@ -466,4 +468,4 @@ const ProductSearchCard = ({
   );
 };
 
-export default ProductSearchCard
+export default ProductSearchCard;

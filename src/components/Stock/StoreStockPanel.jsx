@@ -5,6 +5,7 @@ import { useApiFetch } from "../../utils/useApiFetch";
 import { AuthContext } from "../../contexts/AuthContext";
 import getApiBaseUrl from "../../utils/getApiBaseUrl";
 import { OverlayPanel } from "primereact/overlaypanel";
+import ControlStockModal from "../modals/controlStock/ControlStockModal";
 
 function StoreStockPanel({ product }) {
   const apiFetch = useApiFetch();
@@ -15,7 +16,8 @@ function StoreStockPanel({ product }) {
 
   const [trackingList, setTrackingList] = useState([]);
   const overlayPanelRef = useRef(null);
-
+  const [controlStockModalOpen, setControlStockModalOpen] = useState(false);
+  const [controlStockQuery, setControlStockQuery] = useState("");
 
   useEffect(() => {
     apiFetch(`${API_BASE_URL}/shops`, { method: "GET" })
@@ -25,9 +27,7 @@ function StoreStockPanel({ product }) {
           const filtered = data.filter((s) => s.id_shop !== 1);
           setShops(filtered);
         } else {
-          const filtered = data.filter(
-            (s) => s.id_shop === shopId
-          );
+          const filtered = data.filter((s) => s.id_shop === shopId);
           setShops(filtered);
         }
       })
@@ -58,11 +58,21 @@ function StoreStockPanel({ product }) {
     overlayPanelRef.current.toggle(event);
   };
 
+  const handleTrackingItemClick = (id) => {
+    if (idProfile !== 1) return;
+    setControlStockQuery(String(id));
+    setControlStockModalOpen(true);
+    overlayPanelRef.current.hide();
+  };
+
   if (!product) {
     return (
       <div
         className="h-full flex items-center justify-center p-3"
-        style={{ backgroundColor: "var(--surface-0)", color: "var(--text-color)" }}
+        style={{
+          backgroundColor: "var(--surface-0)",
+          color: "var(--text-color)",
+        }}
       >
         <span>Seleccione un producto para ver stock</span>
       </div>
@@ -100,7 +110,10 @@ function StoreStockPanel({ product }) {
               {hasTracking && (
                 <i
                   className="pi pi-link"
-                  style={{ cursor: "pointer" }}
+                  style={{
+                    cursor: "pointer",
+                    opacity: 1,
+                  }}
                   onClick={(e) => handleStoreTrackingClick(e, shop.id_shop)}
                 ></i>
               )}
@@ -109,23 +122,38 @@ function StoreStockPanel({ product }) {
         })}
       </div>
       <OverlayPanel ref={overlayPanelRef}>
-              {trackingList.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <span className="flex items-center">
-                    {item.id_control_stock}
-                    <i className="pi pi-link" style={{ marginLeft: "0.5rem" }}></i>
-                  </span>
-                  <i
-                    className={`pi ${
-                      item.active_control_stock ? "pi-check" : "pi-times"
-                    }`}
-                    style={{
-                      color: item.active_control_stock ? "green" : "red",
-                    }}
-                  ></i>
-                </div>
-              ))}
-            </OverlayPanel>
+        {trackingList.map((item, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-2"
+            style={{
+              cursor: idProfile === 1 ? "pointer" : "default",
+              opacity: 1,
+            }}
+            onClick={() =>
+              idProfile === 1 && handleTrackingItemClick(item.id_control_stock)
+            }
+          >
+            <span className="flex items-center">
+              {item.id_control_stock}
+              <i className="pi pi-link" style={{ marginLeft: "0.5rem" }}></i>
+            </span>
+            <i
+              className={`pi ${
+                item.active_control_stock ? "pi-check" : "pi-times"
+              }`}
+              style={{
+                color: item.active_control_stock ? "green" : "red",
+              }}
+            ></i>
+          </div>
+        ))}
+      </OverlayPanel>
+      <ControlStockModal
+        isOpen={controlStockModalOpen}
+        onClose={() => setControlStockModalOpen(false)}
+        initialQuery={controlStockQuery}
+      />
     </div>
   );
 }
