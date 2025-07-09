@@ -89,31 +89,27 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       }
     });
 
-    // NUEVO: Función para calcular totales
+    // NUEVO: Función para calcular totales y descuentos
     function calculateTotals(orders) {
       let totalCash = 0,
         totalCard = 0,
-        totalBizum = 0;
+        totalBizum = 0,
+        discountSum = 0;
       orders.forEach((order) => {
         totalCash += order.total_cash || 0;
         totalCard += order.total_card || 0;
         totalBizum += order.total_bizum || 0;
+        order.order_details.forEach((detail) => {
+          const reduction = parseFloat(detail.reduction_amount_tax_incl) || 0;
+          const qty = parseFloat(detail.product_quantity) || 0;
+          if (reduction !== 0 && qty !== 0) {
+            discountSum += Math.abs(reduction * qty);
+          }
+        });
       });
-      return { totalCash, totalCard, totalBizum };
+      return { totalCash, totalCard, totalBizum, discountSum };
     }
-    const { totalCash, totalCard, totalBizum } = calculateTotals(data);
-
-    // Calcular suma de descuentos
-    let discountSum = 0;
-    data.forEach((order) => {
-      order.order_details.forEach((detail) => {
-        const reduction = parseFloat(detail.reduction_amount_tax_incl) || 0;
-        if (reduction !== 0) {
-          const original = parseFloat(detail.total_price_tax_incl);
-          discountSum += (original - reduction) * detail.product_quantity;
-        }
-      });
-    });
+    const { totalCash, totalCard, totalBizum, discountSum } = calculateTotals(data);
 
     // Actualizar columnas de la tabla para incluir "Hora"
     const tableColumn = [
@@ -123,7 +119,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       "Cant.",
       "Referencia",
       "Combinación",
-      "Pago",
       "Importe",
     ];
     const priceColumnIndex = tableColumn.indexOf("Importe");
@@ -248,7 +243,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           detail.product_quantity,
           detail.product_reference,
           detail.combination_name,
-          order.payment,
           precio,
         ]);
         if (detail.hasDiscount) {
@@ -270,6 +264,13 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           },
         ]);
       }
+      // Línea con el método de pago y el importe total
+      rows.push([
+        {
+          content: `Pago: ${order.payment}`,
+          colSpan: tableColumn.length,
+        },
+      ]);
       return rows;
     });
 
