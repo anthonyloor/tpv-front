@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import useToggle from "../../../hooks/useToggle";
+import PinValidationModal from "../pin/PinValidationModal";
 import useAddresses from "../../../hooks/useAddresses";
 import { Dialog } from "primereact/dialog";
 import { Steps } from "primereact/steps";
@@ -47,6 +48,8 @@ export default function CustomerStepperModal({
   // Para abrir/cerrar modales “crear”
   const showCreateCustomerModal = useToggle();
   const showCreateAddressModal = useToggle();
+  const pinModal = useToggle();
+  const [pendingClient, setPendingClient] = useState(null);
 
   const API_BASE_URL = getApiBaseUrl();
 
@@ -123,6 +126,13 @@ export default function CustomerStepperModal({
     setAddresses(data);
   };
 
+  const selectClient = (cli) => {
+    setSelectedRow(cli);
+    setSelectedClient(cli);
+    fetchAddressesForClient(cli);
+    setActiveIndex(1);
+  };
+
   const stepsItems = [
     { label: "Seleccionar Cliente" },
     { label: "Seleccionar Dirección" },
@@ -145,10 +155,20 @@ export default function CustomerStepperModal({
   );
 
   const onClientDoubleClick = (cli) => {
-    setSelectedRow(cli);
-    setSelectedClient(cli);
-    fetchAddressesForClient(cli);
-    setActiveIndex(1);
+    if (cli.id_default_group && cli.id_default_group !== 3) {
+      setPendingClient(cli);
+      pinModal.open();
+    } else {
+      selectClient(cli);
+    }
+  };
+
+  const handlePinSuccess = () => {
+    if (pendingClient) {
+      selectClient(pendingClient);
+      setPendingClient(null);
+    }
+    pinModal.close();
   };
 
   const renderStepClient = () => (
@@ -399,6 +419,13 @@ export default function CustomerStepperModal({
           }}
         />
       )}
+
+      <PinValidationModal
+        isOpen={pinModal.isOpen}
+        onClose={pinModal.close}
+        onSuccess={handlePinSuccess}
+        reason="seleccionar cliente"
+      />
     </>
   );
 }
