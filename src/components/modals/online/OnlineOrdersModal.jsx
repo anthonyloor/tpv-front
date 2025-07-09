@@ -14,7 +14,7 @@ import { Toast } from "primereact/toast";
 import { TabView, TabPanel } from "primereact/tabview";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import useProductSearchOptimized from "../../../hooks/useProductSearchOptimized";
-import { formatDate } from "../../../utils/dateUtils";
+import { formatFullDateTimeNoSeconds } from "../../../utils/dateUtils";
 import { AuthContext } from "../../../contexts/AuthContext";
 import ActionResultDialog from "../../common/ActionResultDialog";
 import generateTicket from "../../../utils/ticket";
@@ -552,7 +552,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                 />
                 <Column
                   header="Fecha"
-                  body={(row) => formatDate(row.date_add)}
+                  body={(row) => formatFullDateTimeNoSeconds(row.date_add)}
                   style={{
                     width: "auto",
                     textAlign: "center",
@@ -695,7 +695,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                 />
                 <Column
                   header="Fecha"
-                  body={(row) => formatDate(row.date_add)}
+                  body={(row) => formatFullDateTimeNoSeconds(row.date_add)}
                   style={{
                     width: "230px",
                     textAlign: "center",
@@ -1043,7 +1043,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                 <strong>Estado:</strong> {selectedOrder.current_state_name}
               </div>
               <div className="p-col-6">
-                <strong>Fecha:</strong> {formatDate(selectedOrder.date_add)}
+                <strong>Fecha:</strong> {formatFullDateTimeNoSeconds(selectedOrder.date_add)}
               </div>
               <div className="p-col-12">
                 <strong>Origen:</strong> {selectedOrder.origin}

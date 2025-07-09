@@ -10,6 +10,7 @@ import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import generateTicket from "../../../utils/ticket";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import { formatFullDateTime } from "../../../utils/dateUtils";
 import MovementDetailModal from "../transfers/MovementDetailModal";
 
 const ControlStockModal = ({
@@ -217,7 +218,7 @@ const ControlStockModal = ({
                     </div>
                     <div className="p-col">
                       <strong>Fecha creación seguimiento:</strong>{" "}
-                      {results.date_add}
+                      {formatFullDateTime(results.date_add)}
                     </div>
                     <div className="p-col">
                       <strong>Activo:</strong> {results.active ? "Sí" : "No"}
@@ -238,6 +239,7 @@ const ControlStockModal = ({
                         header="Fecha movimiento"
                         style={{ textAlign: "center" }}
                         alignHeader="center"
+                        body={(rowData) => formatFullDateTime(rowData.date)}
                       />
                       <Column
                         body={(rowData) => (

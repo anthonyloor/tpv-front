@@ -11,7 +11,7 @@ import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { generateClosureTicket } from "../../../utils/ticket";
-import { formatLongDate } from "../../../utils/dateUtils";
+import { formatLongDate, formatFullDateTime } from "../../../utils/dateUtils";
 
 const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
   const [sessions, setSessions] = useState([]);
@@ -253,8 +253,9 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
             <Column
               field="date_add"
               header="Fecha Apertura"
-              style={{ textAlign: "center", width: "130px" }}
+              style={{ textAlign: "center", width: "200px" }}
               alignHeader="center"
+              body={(rowData) => formatFullDateTime(rowData.date_add)}
             ></Column>
             <Column
               field="id_employee_open"
@@ -268,8 +269,11 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
             <Column
               field="date_close"
               header="Fecha Cierre"
-              style={{ textAlign: "center", width: "130px" }}
+              style={{ textAlign: "center", width: "200px" }}
               alignHeader="center"
+              body={(rowData) =>
+                rowData.date_close ? formatFullDateTime(rowData.date_close) : ""
+              }
             ></Column>
             <Column
               field="id_employee_close"

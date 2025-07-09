@@ -28,7 +28,7 @@ import JsBarcode from "jsbarcode";
 import useProductSearchOptimized from "../../../hooks/useProductSearchOptimized";
 import { ClientContext } from "../../../contexts/ClientContext";
 import { generatePriceLabels } from "../../../utils/generatePriceLabels";
-import { formatShortDate } from "../../../utils/dateUtils";
+import { formatFullDateTime } from "../../../utils/dateUtils";
 
 const TransferForm = forwardRef(
   ({ type, onSave, movementData, onFooterChange }, ref) => {
@@ -163,12 +163,11 @@ const TransferForm = forwardRef(
 
     useEffect(() => {
       if (isNewMovement) {
-        setCreateDate(new Date().toISOString().split("T")[0]);
+        setCreateDate(new Date());
         setEmployeeId(employeeId);
       } else {
         if (movementData?.date_add) {
-          const onlyDate = movementData.date_add.split(" ")[0];
-          setCreateDate(onlyDate);
+          setCreateDate(movementData.date_add);
         }
         setMovementStatus(movementData?.status || "en creacion");
         setEmployeeId(movementData?.employee);
@@ -1302,7 +1301,7 @@ const TransferForm = forwardRef(
             <div className="p-inputgroup flex-1">
               <FloatLabel>
                 <label>Fecha creación</label>
-                <InputText value={formatShortDate(createDate)} readOnly />
+                <InputText value={formatFullDateTime(createDate)} readOnly />
               </FloatLabel>
             </div>
             <div className="p-inputgroup flex-1">
