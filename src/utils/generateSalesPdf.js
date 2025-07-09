@@ -62,14 +62,17 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
     }
     yPos += 20;
 
-    // Procesar descuentos (order_cart_rules)
+    // Procesar descuentos (order_cart_rules) y calcular totales de descuento
+    let totalDiscounts = 0;
+    let totalVoucherDiscounts = 0;
     data.forEach((order) => {
       if (order.order_cart_rules && Array.isArray(order.order_cart_rules)) {
         order.order_cart_rules.forEach((rule) => {
-          if (rule.description.startsWith("Producto:")) {
+          const name = rule.name || "";
+          if (rule.description && rule.description.startsWith("Producto:")) {
             const prodIdentifier = rule.description
               .split("Producto:")[1]
-              .trim(); // Ej: "7073-25459"
+              .trim();
             order.order_details = order.order_details.map((detail) => {
               const detailIdentifier = `${detail.product_id}-${detail.product_attribute_id}`;
               if (detailIdentifier === prodIdentifier) {
@@ -78,9 +81,12 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
               }
               return detail;
             });
-          } else if (rule.description.startsWith("Descuento sobre venta")) {
+          } else if (/^Descuento (sobre|de)/i.test(name)) {
+            totalDiscounts += parseFloat(rule.value) || 0;
             order.hasGlobalDiscount = true;
-            order.globalDiscountName = rule.name + " sobre la venta";
+            order.globalDiscountName = rule.name;
+          } else if (/^Vale descuento/i.test(name)) {
+            totalVoucherDiscounts += parseFloat(rule.value) || 0;
           } else if (rule.name) {
             order.hasGlobalDiscount = true;
             order.globalDiscountName = rule.name;
@@ -103,17 +109,7 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
     }
     const { totalCash, totalCard, totalBizum } = calculateTotals(data);
 
-    // Calcular suma de descuentos
-    let discountSum = 0;
-    data.forEach((order) => {
-      order.order_details.forEach((detail) => {
-        const reduction = parseFloat(detail.reduction_amount_tax_incl) || 0;
-        if (reduction !== 0) {
-          const original = parseFloat(detail.total_price_tax_incl);
-          discountSum += (original - reduction) * detail.product_quantity;
-        }
-      });
-    });
+    // Sumas de descuento ya calculadas durante el procesamiento de reglas
 
     // Actualizar columnas de la tabla para incluir "Hora"
     const tableColumn = [
@@ -123,7 +119,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       "Cant.",
       "Referencia",
       "Combinación",
-      "Pago",
       "Importe",
     ];
     const priceColumnIndex = tableColumn.indexOf("Importe");
@@ -219,9 +214,8 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       order.payment = paymentText;
     });
 
-    const tableRows = data.flatMap((order) => {
+    data.forEach((order) => {
       let rows = [];
-      // Extraer hora de order.date_add (formato "HH:MM")
       const timeStr = order.date_add
         ? order.date_add.split(" ")[1].substring(0, 5)
         : "";
@@ -240,7 +234,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         } else {
           precio = Number(detail.total_price_tax_incl).toFixed(2) + "€";
         }
-        // Inserción de la hora al inicio de cada fila
         rows.push([
           timeStr,
           order.id_order,
@@ -248,7 +241,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           detail.product_quantity,
           detail.product_reference,
           detail.combination_name,
-          order.payment,
           precio,
         ]);
         if (detail.hasDiscount) {
@@ -270,65 +262,50 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           },
         ]);
       }
-      return rows;
-    });
+      rows.push([
+        {
+          content: `Pago: ${order.payment}`,
+          colSpan: tableColumn.length,
+          styles: { fontStyle: "bold" },
+        },
+      ]);
 
-    let rowColors = {};
-    let lastOrder = null;
-    let useGray = false;
-
-    doc.autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: yPos,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 12 },
-      theme: "grid",
-      didParseCell: function (data) {
-        if (data.cell.raw && data.cell.raw.colSpan) {
-          return;
-        }
-        if (
-          data.column.index === priceColumnIndex &&
-          data.cell.raw &&
-          data.cell.raw.discount
-        ) {
-          data.cell.text = [];
-        }
-        if (data.row.section === "body") {
-          const rowIndex = data.row.index;
-          if (rowColors[rowIndex] === undefined && data.column.index === 0) {
-            const currentOrder = data.cell.text[0];
-            if (currentOrder !== lastOrder) {
-              useGray = !useGray;
-              lastOrder = currentOrder;
+      doc.autoTable({
+        head: [tableColumn],
+        body: rows,
+        startY: yPos,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 12 },
+        theme: "grid",
+        didParseCell: function (data) {
+          if (data.column.index === priceColumnIndex && data.cell.raw && data.cell.raw.discount) {
+            data.cell.text = [];
+          }
+        },
+        didDrawCell: function (data) {
+          if (data.row.section === "body" && data.column.index === priceColumnIndex) {
+            if (data.cell.raw && data.cell.raw.discount) {
+              const originalText = data.cell.raw.original;
+              const discountedText = data.cell.raw.discounted;
+              const { x, y } = data.cell;
+              doc.setTextColor(0, 0, 0);
+              doc.setFontSize(8);
+              const origX = x + 2;
+              const origY = y + 10;
+              doc.text(originalText, origX, origY);
+              const origTextWidth = doc.getTextWidth(originalText);
+              doc.setDrawColor(255, 0, 0);
+              doc.setLineWidth(0.5);
+              doc.line(origX, origY - 2, origX + origTextWidth, origY - 2);
+              doc.setTextColor(255, 0, 0);
+              doc.setFontSize(12);
+              doc.text(discountedText, origX, origY + 10);
             }
-            rowColors[rowIndex] = useGray ? [240, 240, 240] : [255, 255, 255];
           }
-          data.cell.styles.fillColor = rowColors[rowIndex];
-        }
-      },
-      didDrawCell: function (data) {
-        if (data.row.section === "body" && data.column.index === priceColumnIndex) {
-          if (data.cell.raw && data.cell.raw.discount) {
-            const originalText = data.cell.raw.original;
-            const discountedText = data.cell.raw.discounted;
-            const { x, y } = data.cell;
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(8);
-            const origX = x + 2;
-            const origY = y + 10;
-            doc.text(originalText, origX, origY);
-            const origTextWidth = doc.getTextWidth(originalText);
-            doc.setDrawColor(255, 0, 0);
-            doc.setLineWidth(0.5);
-            doc.line(origX, origY - 2, origX + origTextWidth, origY - 2);
-            doc.setTextColor(255, 0, 0);
-            doc.setFontSize(12);
-            doc.text(discountedText, origX, origY + 10);
-          }
-        }
-      },
+        },
+      });
+
+      yPos = doc.lastAutoTable.finalY + 10;
     });
 
     let finalY = doc.lastAutoTable.finalY + 20;
@@ -359,12 +336,14 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
     );
 
     const totalsTableBody = [];
-    if (discountSum > 0) {
+    if (totalDiscounts > 0) {
+      totalsTableBody.push(["TOTAL DESCUENTOS:", totalDiscounts.toFixed(2) + "€"]);
+    }
+    if (totalVoucherDiscounts > 0) {
       totalsTableBody.push([
-        "TOTAL SIN DESCUENTOS:",
-        (totalPaid + discountSum).toFixed(2) + "€",
+        "TOTAL VALES DESCUENTOS:",
+        totalVoucherDiscounts.toFixed(2) + "€",
       ]);
-      totalsTableBody.push(["TOTAL DESCUENTOS:", discountSum.toFixed(2) + "€"]);
     }
     totalsTableBody.push(["TOTAL:", totalPaid.toFixed(2) + "€"]);
     doc.autoTable({
