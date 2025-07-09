@@ -187,11 +187,13 @@ const ProductSearchCard = ({
 
   // Función para abrir el overlay panel con los seguimientos
   const handleTrackingClick = (event, rowData) => {
+    if (idProfile !== 1) return;
     setTrackingList(rowData.controlStockList || []);
     overlayPanelRef.current.toggle(event);
   };
 
   const handleTrackingItemClick = (id) => {
+    if (idProfile !== 1) return;
     setControlStockQuery(String(id));
     setControlStockModalOpen(true);
     overlayPanelRef.current.hide();
@@ -331,8 +333,13 @@ const ProductSearchCard = ({
                   {Number(rowData.trackingCount) > 0 && (
                     <i
                       className="pi pi-link"
-                      style={{ cursor: "pointer" }}
-                      onClick={(e) => handleTrackingClick(e, rowData)}
+                      style={{
+                        cursor: idProfile === 1 ? "pointer" : "default",
+                        opacity: idProfile === 1 ? 1 : 0.5,
+                      }}
+                      onClick={(e) =>
+                        idProfile === 1 && handleTrackingClick(e, rowData)
+                      }
                     ></i>
                   )}
                 </>
@@ -439,8 +446,14 @@ const ProductSearchCard = ({
         {trackingList.map((item, index) => (
           <div
             key={index}
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => handleTrackingItemClick(item.id_control_stock)}
+            className="flex items-center gap-2"
+            style={{
+              cursor: idProfile === 1 ? "pointer" : "default",
+              opacity: idProfile === 1 ? 1 : 0.5,
+            }}
+            onClick={() =>
+              idProfile === 1 && handleTrackingItemClick(item.id_control_stock)
+            }
           >
             <span className="flex items-center">
               {item.id_control_stock}
