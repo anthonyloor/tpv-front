@@ -103,16 +103,20 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
     }
     const { totalCash, totalCard, totalBizum } = calculateTotals(data);
 
-    // Calcular suma de descuentos
+    // Calcular suma de descuentos y vales desde order_cart_rules
     let discountSum = 0;
+    let voucherSum = 0;
     data.forEach((order) => {
-      order.order_details.forEach((detail) => {
-        const reduction = parseFloat(detail.reduction_amount_tax_incl) || 0;
-        if (reduction !== 0) {
-          const original = parseFloat(detail.total_price_tax_incl);
-          discountSum += (original - reduction) * detail.product_quantity;
-        }
-      });
+      if (order.order_cart_rules && Array.isArray(order.order_cart_rules)) {
+        order.order_cart_rules.forEach((rule) => {
+          const name = rule.name ? rule.name.toLowerCase() : "";
+          if (name.startsWith("descuento sobre") || name.startsWith("descuento de")) {
+            discountSum += parseFloat(rule.value) || 0;
+          } else if (name.startsWith("vale descuento")) {
+            voucherSum += parseFloat(rule.value) || 0;
+          }
+        });
+      }
     });
 
     // Actualizar columnas de la tabla para incluir "Hora"
@@ -123,7 +127,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       "Cant.",
       "Referencia",
       "Combinación",
-      "Pago",
       "Importe",
     ];
     const priceColumnIndex = tableColumn.indexOf("Importe");
@@ -219,9 +222,10 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       order.payment = paymentText;
     });
 
-    const tableRows = data.flatMap((order) => {
-      let rows = [];
-      // Extraer hora de order.date_add (formato "HH:MM")
+    const tableRows = [];
+    const orderBoundaries = [];
+    data.forEach((order, idx) => {
+      const startRow = tableRows.length;
       const timeStr = order.date_add
         ? order.date_add.split(" ")[1].substring(0, 5)
         : "";
@@ -240,42 +244,56 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         } else {
           precio = Number(detail.total_price_tax_incl).toFixed(2) + "€";
         }
-        // Inserción de la hora al inicio de cada fila
-        rows.push([
-          timeStr,
+        tableRows.push([
+          { content: timeStr, orderId: idx },
           order.id_order,
           order.customer_name?.includes("TPV") ? "TPV" : order.customer_name,
           detail.product_quantity,
           detail.product_reference,
           detail.combination_name,
-          order.payment,
           precio,
         ]);
         if (detail.hasDiscount) {
-          rows.push([
+          tableRows.push([
             {
               content: detail.discountRuleName,
               colSpan: tableColumn.length,
+              orderId: idx,
               styles: { fillColor: "#ffe6e6", textColor: "red" },
             },
           ]);
         }
       });
       if (order.hasGlobalDiscount) {
-        rows.push([
+        tableRows.push([
           {
             content: order.globalDiscountName,
             colSpan: tableColumn.length,
+            orderId: idx,
             styles: { fillColor: "#ffe6e6", textColor: "red" },
           },
         ]);
       }
-      return rows;
+      tableRows.push([
+        {
+          content: `Pago: ${order.payment}`,
+          colSpan: tableColumn.length,
+          orderId: idx,
+        },
+      ]);
+      const endRow = tableRows.length - 1;
+      orderBoundaries.push({ orderId: idx, startRow, endRow });
+    });
+
+    const boundaryMap = {};
+    orderBoundaries.forEach((b) => {
+      boundaryMap[b.orderId] = b;
     });
 
     let rowColors = {};
     let lastOrder = null;
     let useGray = false;
+    const orderRects = {};
 
     doc.autoTable({
       head: [tableColumn],
@@ -309,23 +327,42 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         }
       },
       didDrawCell: function (data) {
-        if (data.row.section === "body" && data.column.index === priceColumnIndex) {
-          if (data.cell.raw && data.cell.raw.discount) {
-            const originalText = data.cell.raw.original;
-            const discountedText = data.cell.raw.discounted;
+        if (data.row.section === "body") {
+          const raw = data.cell.raw || {};
+          const orderId = raw.orderId;
+          if (orderId !== undefined) {
+            const rect = orderRects[orderId] || {
+              startX: data.table.startX,
+              startY: data.cell.y,
+              endY: data.cell.y + data.cell.height,
+              width: data.table.width,
+            };
+            rect.startY = Math.min(rect.startY, data.cell.y);
+            rect.endY = Math.max(rect.endY, data.cell.y + data.cell.height);
+            orderRects[orderId] = rect;
+
+            if (
+              data.row.index === boundaryMap[orderId].endRow &&
+              data.column.index === 0
+            ) {
+              doc.setDrawColor(0);
+              doc.rect(rect.startX, rect.startY, rect.width, rect.endY - rect.startY);
+            }
+          }
+          if (data.column.index === priceColumnIndex && raw.discount) {
             const { x, y } = data.cell;
             doc.setTextColor(0, 0, 0);
             doc.setFontSize(8);
             const origX = x + 2;
             const origY = y + 10;
-            doc.text(originalText, origX, origY);
-            const origTextWidth = doc.getTextWidth(originalText);
+            doc.text(raw.original, origX, origY);
+            const origTextWidth = doc.getTextWidth(raw.original);
             doc.setDrawColor(255, 0, 0);
             doc.setLineWidth(0.5);
             doc.line(origX, origY - 2, origX + origTextWidth, origY - 2);
             doc.setTextColor(255, 0, 0);
             doc.setFontSize(12);
-            doc.text(discountedText, origX, origY + 10);
+            doc.text(raw.discounted, origX, origY + 10);
           }
         }
       },
@@ -360,11 +397,10 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
 
     const totalsTableBody = [];
     if (discountSum > 0) {
-      totalsTableBody.push([
-        "TOTAL SIN DESCUENTOS:",
-        (totalPaid + discountSum).toFixed(2) + "€",
-      ]);
       totalsTableBody.push(["TOTAL DESCUENTOS:", discountSum.toFixed(2) + "€"]);
+    }
+    if (voucherSum > 0) {
+      totalsTableBody.push(["TOTAL VALES DESCUENTOS:", voucherSum.toFixed(2) + "€"]);
     }
     totalsTableBody.push(["TOTAL:", totalPaid.toFixed(2) + "€"]);
     doc.autoTable({
