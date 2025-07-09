@@ -274,7 +274,7 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
             <Column
               field="id_employee_close"
               header="Empleado Cierre"
-              style={{ textAlign: "center" }}
+              style={{ textAlign: "center", width: "130px" }}
               body={(rowData) => (
                 <EmployeeNameCell id_employee={rowData.id_employee_close} />
               )}
