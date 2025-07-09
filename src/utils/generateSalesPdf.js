@@ -103,16 +103,21 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
     }
     const { totalCash, totalCard, totalBizum } = calculateTotals(data);
 
-    // Calcular suma de descuentos
+    // Calcular suma de descuentos y vales de descuento desde order_cart_rules
     let discountSum = 0;
+    let voucherSum = 0;
     data.forEach((order) => {
-      order.order_details.forEach((detail) => {
-        const reduction = parseFloat(detail.reduction_amount_tax_incl) || 0;
-        if (reduction !== 0) {
-          const original = parseFloat(detail.total_price_tax_incl);
-          discountSum += (original - reduction) * detail.product_quantity;
-        }
-      });
+      if (Array.isArray(order.order_cart_rules)) {
+        order.order_cart_rules.forEach((rule) => {
+          const value = parseFloat(rule.value) || 0;
+          const name = rule.name ? rule.name.toLowerCase() : "";
+          if (name.startsWith("descuento sobre") || name.startsWith("descuento de")) {
+            discountSum += value;
+          } else if (name.startsWith("vale descuento")) {
+            voucherSum += value;
+          }
+        });
+      }
     });
 
     // Actualizar columnas de la tabla para incluir "Hora"
@@ -172,7 +177,7 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       });
     });
 
-    // Recalcular el texto de pago para cada orden
+    // Calcular detalles del pago para cada orden
     data.forEach((order) => {
       const payments = order.payment
         .split(",")
@@ -208,18 +213,15 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           amount: bizumAmount,
         });
       }
-      const nonZeroCount = includedMethods.filter((m) => m.amount > 0).length;
-      const paymentText = includedMethods
-        .map((m) =>
-          nonZeroCount > 1 && m.amount > 0
-            ? `${m.method}: ${m.amount.toFixed(2)}€`
-            : m.method
-        )
+      order.payment_summary = includedMethods
+        .filter((m) => m.amount > 0)
+        .map((m) => `${m.method} ${m.amount.toFixed(2)}€`)
         .join(", ");
-      order.payment = paymentText;
     });
 
-    const tableRows = data.flatMap((order) => {
+    let rowOrderMap = {};
+    let currentRowIndex = 0;
+    const tableRows = data.flatMap((order, orderIdx) => {
       let rows = [];
       // Extraer hora de order.date_add (formato "HH:MM")
       const timeStr = order.date_add
@@ -248,9 +250,11 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           detail.product_quantity,
           detail.product_reference,
           detail.combination_name,
-          order.payment,
+          "",
           precio,
         ]);
+        rowOrderMap[currentRowIndex] = orderIdx;
+        currentRowIndex++;
         if (detail.hasDiscount) {
           rows.push([
             {
@@ -259,6 +263,8 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
               styles: { fillColor: "#ffe6e6", textColor: "red" },
             },
           ]);
+          rowOrderMap[currentRowIndex] = orderIdx;
+          currentRowIndex++;
         }
       });
       if (order.hasGlobalDiscount) {
@@ -269,13 +275,26 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
             styles: { fillColor: "#ffe6e6", textColor: "red" },
           },
         ]);
+        rowOrderMap[currentRowIndex] = orderIdx;
+        currentRowIndex++;
       }
+      // Fila resumen de pago
+      rows.push([
+        {
+          content: `Pago: ${order.payment_summary}`,
+          colSpan: tableColumn.length,
+          styles: { fontStyle: "bold" },
+        },
+      ]);
+      rowOrderMap[currentRowIndex] = orderIdx;
+      currentRowIndex++;
       return rows;
     });
 
     let rowColors = {};
     let lastOrder = null;
     let useGray = false;
+    const orderRects = {};
 
     doc.autoTable({
       head: [tableColumn],
@@ -328,6 +347,27 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
             doc.text(discountedText, origX, origY + 10);
           }
         }
+        if (data.row.section === "body" && data.column.index === 0) {
+          const orderIdx = rowOrderMap[data.row.index];
+          if (orderIdx !== undefined) {
+            if (!orderRects[orderIdx]) {
+              orderRects[orderIdx] = {
+                startY: data.cell.y,
+                page: doc.internal.getNumberOfPages(),
+              };
+            }
+            const nextOrderIdx = rowOrderMap[data.row.index + 1];
+            if (nextOrderIdx !== orderIdx) {
+              const rect = orderRects[orderIdx];
+              if (rect.page === doc.internal.getNumberOfPages()) {
+                const width = doc.internal.pageSize.getWidth() - margin * 2;
+                const height = data.cell.y + data.cell.height - rect.startY;
+                doc.setDrawColor(0);
+                doc.rect(margin, rect.startY, width, height);
+              }
+            }
+          }
+        }
       },
     });
 
@@ -360,11 +400,10 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
 
     const totalsTableBody = [];
     if (discountSum > 0) {
-      totalsTableBody.push([
-        "TOTAL SIN DESCUENTOS:",
-        (totalPaid + discountSum).toFixed(2) + "€",
-      ]);
       totalsTableBody.push(["TOTAL DESCUENTOS:", discountSum.toFixed(2) + "€"]);
+    }
+    if (voucherSum > 0) {
+      totalsTableBody.push(["TOTAL VALES DESCUENTOS:", voucherSum.toFixed(2) + "€"]);
     }
     totalsTableBody.push(["TOTAL:", totalPaid.toFixed(2) + "€"]);
     doc.autoTable({
