@@ -258,6 +258,11 @@ const generateTicket = async (
     );
   }
 
+  const includesCashPayment =
+    (orderData.payment && orderData.payment.toLowerCase().includes("efectivo")) ||
+    (orderData.payment_amounts &&
+      parseFloat(orderData.payment_amounts.total_cash) > 0);
+
   // Construir el contenido del ticket
   const pdfContent = [
     ...(logoDataUrl
@@ -374,6 +379,19 @@ const generateTicket = async (
             style: "tTotals",
             margin: [0, 10, 15, 0],
           },
+          ...(includesCashPayment
+            ? [
+                {
+                  text: `RECIBIDO: ${
+                    orderData.payment_amounts?.cash_recived || 0
+                  }         DEVUELTO: ${
+                    orderData.payment_amounts?.cash_returned || 0
+                  }`,
+                  style: "tTotals",
+                  margin: [0, 0, 15, 0],
+                },
+              ]
+            : []),
         ]
       : [
           { text: "FORMA DE PAGO:", style: "tTotals", margin: [0, 10, 15, 0] },
@@ -411,6 +429,19 @@ const generateTicket = async (
             },
             layout: "noBorders",
           },
+          ...(includesCashPayment
+            ? [
+                {
+                  text: `RECIBIDO: ${
+                    orderData.payment_amounts?.cash_recived || 0
+                  }         DEVUELTO: ${
+                    orderData.payment_amounts?.cash_returned || 0
+                  }`,
+                  style: "tTotals",
+                  margin: [0, 0, 15, 0],
+                },
+              ]
+            : []),
         ]),
     // Nota de pie (si existen) con mayúsculas y negrita
     ...(config.ticket_text_footer_1
