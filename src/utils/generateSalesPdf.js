@@ -178,9 +178,10 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
 
     // Calcular detalles del pago para cada orden
     data.forEach((order) => {
-      const payments = order.payment
-        .split(",")
-        .map((p) => p.trim().toLowerCase());
+      const paymentField = order.payment ? order.payment.trim() : "";
+      const payments = paymentField
+        ? paymentField.split(",").map((p) => p.trim().toLowerCase())
+        : [];
       const includedMethods = [];
       const addMethod = (label, field) => {
         let amount = order[field];
@@ -207,9 +208,29 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       if (payments.includes("redsys - bizum")) {
         addMethod("redsys - bizum", "total_bizum");
       }
-      order.payment_summary = includedMethods
-        .map((m) => `${m.method} ${Number(m.amount).toFixed(2)}€`)
-        .join(", ");
+
+      // Incluir información de vale descuento en la línea de pago
+      let voucherAmount = 0;
+      if (Array.isArray(order.order_cart_rules)) {
+        order.order_cart_rules.forEach((rule) => {
+          const name = rule.name ? rule.name.toLowerCase() : "";
+          if (name.startsWith("vale descuento")) {
+            voucherAmount += parseFloat(rule.value) || 0;
+          }
+        });
+      }
+      if (voucherAmount > 0) {
+        includedMethods.push({ method: "vale descuento", amount: voucherAmount });
+      }
+
+      if (includedMethods.length === 0) {
+        // Si no hay métodos de pago especificados, mostrar sólo el total de la orden
+        order.payment_summary = `${Number(order.total_paid || 0).toFixed(2)}€`;
+      } else {
+        order.payment_summary = includedMethods
+          .map((m) => `${m.method} ${Number(m.amount).toFixed(2)}€`)
+          .join(", ");
+      }
     });
 
     let rowOrderMap = {};
@@ -380,10 +401,7 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
 
     finalY = doc.lastAutoTable.finalY + 20;
 
-    const totalPaid = data.reduce(
-      (acc, order) => acc + (order.total_paid || 0),
-      0
-    );
+    const totalPaid = totalCash + totalCard + totalBizum;
 
     const totalsTableBody = [];
     if (discountSum > 0) {
