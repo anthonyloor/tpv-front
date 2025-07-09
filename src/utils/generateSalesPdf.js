@@ -128,7 +128,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       "Cant.",
       "Referencia",
       "Combinación",
-      "Pago",
       "Importe",
     ];
     const priceColumnIndex = tableColumn.indexOf("Importe");
@@ -182,40 +181,34 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       const payments = order.payment
         .split(",")
         .map((p) => p.trim().toLowerCase());
-      const cashAmount = order.total_cash || 0;
-      const cardAmount = order.total_card || 0;
-      const bizumAmount = order.total_bizum || 0;
       const includedMethods = [];
+      const addMethod = (label, field) => {
+        let amount = order[field];
+        if (amount === null || amount === undefined || amount === "") {
+          amount = order.total_paid || 0;
+        }
+        includedMethods.push({ method: label, amount });
+      };
       if (payments.includes("efectivo")) {
-        includedMethods.push({ method: "efectivo", amount: cashAmount });
+        addMethod("efectivo", "total_cash");
       }
       if (payments.includes("contra reembolso")) {
-        includedMethods.push({
-          method: "contra reembolso",
-          amount: cashAmount,
-        });
+        addMethod("contra reembolso", "total_cash");
       }
       if (payments.includes("tarjeta")) {
-        includedMethods.push({ method: "tarjeta", amount: cardAmount });
+        addMethod("tarjeta", "total_card");
       }
       if (payments.includes("redsys - tarjeta")) {
-        includedMethods.push({
-          method: "redsys - tarjeta",
-          amount: cardAmount,
-        });
+        addMethod("redsys - tarjeta", "total_card");
       }
       if (payments.includes("bizum")) {
-        includedMethods.push({ method: "bizum", amount: bizumAmount });
+        addMethod("bizum", "total_bizum");
       }
       if (payments.includes("redsys - bizum")) {
-        includedMethods.push({
-          method: "redsys - bizum",
-          amount: bizumAmount,
-        });
+        addMethod("redsys - bizum", "total_bizum");
       }
       order.payment_summary = includedMethods
-        .filter((m) => m.amount > 0)
-        .map((m) => `${m.method} ${m.amount.toFixed(2)}€`)
+        .map((m) => `${m.method} ${Number(m.amount).toFixed(2)}€`)
         .join(", ");
     });
 
@@ -250,7 +243,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           detail.product_quantity,
           detail.product_reference,
           detail.combination_name,
-          "",
           precio,
         ]);
         rowOrderMap[currentRowIndex] = orderIdx;
@@ -260,7 +252,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
             {
               content: detail.discountRuleName,
               colSpan: tableColumn.length,
-              styles: { fillColor: "#ffe6e6", textColor: "red" },
             },
           ]);
           rowOrderMap[currentRowIndex] = orderIdx;
@@ -272,7 +263,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           {
             content: order.globalDiscountName,
             colSpan: tableColumn.length,
-            styles: { fillColor: "#ffe6e6", textColor: "red" },
           },
         ]);
         rowOrderMap[currentRowIndex] = orderIdx;
@@ -283,7 +273,7 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         {
           content: `Pago: ${order.payment_summary}`,
           colSpan: tableColumn.length,
-          styles: { fontStyle: "bold" },
+          styles: { fontStyle: "bold", halign: "right" },
         },
       ]);
       rowOrderMap[currentRowIndex] = orderIdx;
@@ -304,9 +294,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       styles: { fontSize: 12 },
       theme: "grid",
       didParseCell: function (data) {
-        if (data.cell.raw && data.cell.raw.colSpan) {
-          return;
-        }
         if (
           data.column.index === priceColumnIndex &&
           data.cell.raw &&
@@ -316,11 +303,11 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         }
         if (data.row.section === "body") {
           const rowIndex = data.row.index;
+          const orderIdx = rowOrderMap[rowIndex];
           if (rowColors[rowIndex] === undefined && data.column.index === 0) {
-            const currentOrder = data.cell.text[0];
-            if (currentOrder !== lastOrder) {
+            if (orderIdx !== lastOrder) {
               useGray = !useGray;
-              lastOrder = currentOrder;
+              lastOrder = orderIdx;
             }
             rowColors[rowIndex] = useGray ? [240, 240, 240] : [255, 255, 255];
           }
