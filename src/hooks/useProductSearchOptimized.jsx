@@ -259,20 +259,42 @@ const useProductSearchOptimized = ({
             );
           }
         }
-        const discObj = {
-          name: data.name || "",
-          description: data.description ? data.description + " venta" : "venta",
-          code: data.code || "",
-          reduction_amount: data.reduction_amount
-            ? Math.min(data.reduction_amount, currentCartTotal)
-            : 0,
-          reduction_percent: data.reduction_percent || 0,
+        const reduction_amount = data.reduction_amount
+          ? Math.min(data.reduction_amount, currentCartTotal)
+          : 0;
+        const reduction_percent = data.reduction_percent || 0;
+
+        const discountValue =
+          reduction_amount > 0
+            ? reduction_amount
+            : parseFloat(
+                ((currentCartTotal * reduction_percent) / 100).toFixed(2)
+              );
+
+        const label =
+          reduction_amount > 0
+            ? `${reduction_amount.toFixed(2)}€`
+            : `${reduction_percent}%`;
+
+        const fakeProduct = {
+          id_product: 0,
+          id_product_attribute: 0,
+          id_stock_available: 0,
+          product_name: `Vale descuento ${label}`,
+          combination_name: "",
+          reference_combination: "vale-descuento",
+          ean13_combination: "",
+          price_incl_tax: -discountValue,
+          final_price_incl_tax: -discountValue,
+          reduction_amount_tax_incl: -discountValue,
+          tax_rate: 0,
+          image_url: "",
+          shop_name: "",
+          id_shop: shopId,
         };
-        if (data && onAddDiscount) {
-          onAddDiscount(discObj);
-          window.dispatchEvent(
-            new CustomEvent("globalDiscountApplied", { detail: discObj })
-          );
+
+        if (onAddProduct) {
+          onAddProduct(fakeProduct, null, null, false, 1);
         }
         setGroupedProducts([]);
       } catch (error) {
