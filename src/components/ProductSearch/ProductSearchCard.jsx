@@ -96,21 +96,13 @@ const ProductSearchCard = ({
     document.querySelector('[role="dialog"]') !== null;
 
   const handleContainerClick = () => {
-    if (
-      !disableAutoFocus &&
-      !isAnyModalOpen() &&
-      searchInputRef.current
-    ) {
+    if (!disableAutoFocus && !isAnyModalOpen() && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   };
 
   const handleInputBlur = () => {
-    if (
-      !disableAutoFocus &&
-      !isAnyModalOpen() &&
-      searchInputRef.current
-    ) {
+    if (!disableAutoFocus && !isAnyModalOpen() && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   };
@@ -187,7 +179,6 @@ const ProductSearchCard = ({
 
   // Función para abrir el overlay panel con los seguimientos
   const handleTrackingClick = (event, rowData) => {
-    if (idProfile !== 1) return;
     setTrackingList(rowData.controlStockList || []);
     overlayPanelRef.current.toggle(event);
   };
@@ -334,12 +325,10 @@ const ProductSearchCard = ({
                     <i
                       className="pi pi-link"
                       style={{
-                        cursor: idProfile === 1 ? "pointer" : "default",
-                        opacity: idProfile === 1 ? 1 : 0.5,
+                        cursor: "pointer",
+                        opacity: 1,
                       }}
-                      onClick={(e) =>
-                        idProfile === 1 && handleTrackingClick(e, rowData)
-                      }
+                      onClick={(e) => handleTrackingClick(e, rowData)}
                     ></i>
                   )}
                 </>
@@ -449,7 +438,7 @@ const ProductSearchCard = ({
             className="flex items-center gap-2"
             style={{
               cursor: idProfile === 1 ? "pointer" : "default",
-              opacity: idProfile === 1 ? 1 : 0.5,
+              opacity: 1,
             }}
             onClick={() =>
               idProfile === 1 && handleTrackingItemClick(item.id_control_stock)
@@ -479,4 +468,4 @@ const ProductSearchCard = ({
   );
 };
 
-export default ProductSearchCard
+export default ProductSearchCard;

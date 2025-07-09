@@ -19,7 +19,6 @@ function StoreStockPanel({ product }) {
   const [controlStockModalOpen, setControlStockModalOpen] = useState(false);
   const [controlStockQuery, setControlStockQuery] = useState("");
 
-
   useEffect(() => {
     apiFetch(`${API_BASE_URL}/shops`, { method: "GET" })
       .then((res) => {
@@ -28,9 +27,7 @@ function StoreStockPanel({ product }) {
           const filtered = data.filter((s) => s.id_shop !== 1);
           setShops(filtered);
         } else {
-          const filtered = data.filter(
-            (s) => s.id_shop === shopId
-          );
+          const filtered = data.filter((s) => s.id_shop === shopId);
           setShops(filtered);
         }
       })
@@ -53,7 +50,6 @@ function StoreStockPanel({ product }) {
 
   // Función para abrir el overlay panel en cada tienda
   const handleStoreTrackingClick = (event, shopId) => {
-    if (idProfile !== 1) return;
     const stock = product.stocks.find(
       (s) => Number(s.id_shop) === Number(shopId)
     );
@@ -73,7 +69,10 @@ function StoreStockPanel({ product }) {
     return (
       <div
         className="h-full flex items-center justify-center p-3"
-        style={{ backgroundColor: "var(--surface-0)", color: "var(--text-color)" }}
+        style={{
+          backgroundColor: "var(--surface-0)",
+          color: "var(--text-color)",
+        }}
       >
         <span>Seleccione un producto para ver stock</span>
       </div>
@@ -112,12 +111,10 @@ function StoreStockPanel({ product }) {
                 <i
                   className="pi pi-link"
                   style={{
-                    cursor: idProfile === 1 ? "pointer" : "default",
-                    opacity: idProfile === 1 ? 1 : 0.5,
+                    cursor: "pointer",
+                    opacity: 1,
                   }}
-                  onClick={(e) =>
-                    idProfile === 1 && handleStoreTrackingClick(e, shop.id_shop)
-                  }
+                  onClick={(e) => handleStoreTrackingClick(e, shop.id_shop)}
                 ></i>
               )}
             </div>
@@ -131,7 +128,7 @@ function StoreStockPanel({ product }) {
             className="flex items-center gap-2"
             style={{
               cursor: idProfile === 1 ? "pointer" : "default",
-              opacity: idProfile === 1 ? 1 : 0.5,
+              opacity: 1,
             }}
             onClick={() =>
               idProfile === 1 && handleTrackingItemClick(item.id_control_stock)
