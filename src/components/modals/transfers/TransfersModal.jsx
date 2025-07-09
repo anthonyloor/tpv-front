@@ -22,7 +22,7 @@ import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { ProgressSpinner } from "primereact/progressspinner";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Toast } from "primereact/toast";
-import { formatDate } from "../../../utils/dateUtils";
+import { formatFullDateTime } from "../../../utils/dateUtils";
 
 // Definir filtros iniciales para global y para cada columna
 const initialFilters = {
@@ -154,10 +154,10 @@ const TransfersModal = ({ isOpen, onClose }) => {
               );
         const formattedData = filteredData.map((mov) => ({
           ...mov,
-          date_add: formatDate(mov.date_add),
-          date_excute: formatDate(mov.date_excute),
-          date_modified: formatDate(mov.date_modified),
-          date_recived: formatDate(mov.date_recived),
+          date_add: formatFullDateTime(mov.date_add),
+          date_excute: formatFullDateTime(mov.date_excute),
+          date_modified: formatFullDateTime(mov.date_modified),
+          date_recived: formatFullDateTime(mov.date_recived),
         }));
         setUnfilteredMovements(formattedData);
         setMovements(formattedData);
