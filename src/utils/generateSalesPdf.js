@@ -111,7 +111,10 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         order.order_cart_rules.forEach((rule) => {
           const value = parseFloat(rule.value) || 0;
           const name = rule.name ? rule.name.toLowerCase() : "";
-          if (name.startsWith("descuento sobre") || name.startsWith("descuento de")) {
+          if (
+            name.startsWith("descuento sobre") ||
+            name.startsWith("descuento de")
+          ) {
             discountSum += value;
           } else if (name.startsWith("vale descuento")) {
             voucherSum += value;
@@ -219,8 +222,11 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           }
         });
       }
-      if (voucherAmount > 0) {
-        includedMethods.push({ method: "vale descuento", amount: voucherAmount });
+      if (voucherAmount > 0 && includedMethods.length === 0) {
+        includedMethods.push({
+          method: "vale descuento",
+          amount: voucherAmount,
+        });
       }
 
       if (includedMethods.length === 0) {
@@ -336,7 +342,10 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         }
       },
       didDrawCell: function (data) {
-        if (data.row.section === "body" && data.column.index === priceColumnIndex) {
+        if (
+          data.row.section === "body" &&
+          data.column.index === priceColumnIndex
+        ) {
           if (data.cell.raw && data.cell.raw.discount) {
             const originalText = data.cell.raw.original;
             const discountedText = data.cell.raw.discounted;
@@ -408,7 +417,10 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       totalsTableBody.push(["TOTAL DESCUENTOS:", discountSum.toFixed(2) + "€"]);
     }
     if (voucherSum > 0) {
-      totalsTableBody.push(["TOTAL VALES DESCUENTOS:", voucherSum.toFixed(2) + "€"]);
+      totalsTableBody.push([
+        "TOTAL VALES DESCUENTOS:",
+        voucherSum.toFixed(2) + "€",
+      ]);
     }
     totalsTableBody.push(["TOTAL:", totalPaid.toFixed(2) + "€"]);
     doc.autoTable({
