@@ -103,16 +103,24 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
     }
     const { totalCash, totalCard, totalBizum } = calculateTotals(data);
 
-    // Calcular suma de descuentos
+    // Calcular suma de descuentos y vales de descuento desde order_cart_rules
     let discountSum = 0;
+    let voucherSum = 0;
     data.forEach((order) => {
-      order.order_details.forEach((detail) => {
-        const reduction = parseFloat(detail.reduction_amount_tax_incl) || 0;
-        if (reduction !== 0) {
-          const original = parseFloat(detail.total_price_tax_incl);
-          discountSum += (original - reduction) * detail.product_quantity;
-        }
-      });
+      if (Array.isArray(order.order_cart_rules)) {
+        order.order_cart_rules.forEach((rule) => {
+          const value = parseFloat(rule.value) || 0;
+          const name = rule.name ? rule.name.toLowerCase() : "";
+          if (
+            name.startsWith("descuento sobre") ||
+            name.startsWith("descuento de")
+          ) {
+            discountSum += value;
+          } else if (name.startsWith("vale descuento")) {
+            voucherSum += value;
+          }
+        });
+      }
     });
 
     // Actualizar columnas de la tabla para incluir "Hora"
@@ -123,7 +131,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       "Cant.",
       "Referencia",
       "Combinación",
-      "Pago",
       "Importe",
     ];
     const priceColumnIndex = tableColumn.indexOf("Importe");
@@ -172,54 +179,69 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       });
     });
 
-    // Recalcular el texto de pago para cada orden
+    // Calcular detalles del pago para cada orden
     data.forEach((order) => {
-      const payments = order.payment
-        .split(",")
-        .map((p) => p.trim().toLowerCase());
-      const cashAmount = order.total_cash || 0;
-      const cardAmount = order.total_card || 0;
-      const bizumAmount = order.total_bizum || 0;
+      const paymentField = order.payment ? order.payment.trim() : "";
+      const payments = paymentField
+        ? paymentField.split(",").map((p) => p.trim().toLowerCase())
+        : [];
       const includedMethods = [];
+      const addMethod = (label, field) => {
+        let amount = order[field];
+        if (amount === null || amount === undefined || amount === "") {
+          amount = order.total_paid || 0;
+        }
+        includedMethods.push({ method: label, amount });
+      };
       if (payments.includes("efectivo")) {
-        includedMethods.push({ method: "efectivo", amount: cashAmount });
+        addMethod("efectivo", "total_cash");
       }
       if (payments.includes("contra reembolso")) {
-        includedMethods.push({
-          method: "contra reembolso",
-          amount: cashAmount,
-        });
+        addMethod("contra reembolso", "total_cash");
       }
       if (payments.includes("tarjeta")) {
-        includedMethods.push({ method: "tarjeta", amount: cardAmount });
+        addMethod("tarjeta", "total_card");
       }
       if (payments.includes("redsys - tarjeta")) {
-        includedMethods.push({
-          method: "redsys - tarjeta",
-          amount: cardAmount,
-        });
+        addMethod("redsys - tarjeta", "total_card");
       }
       if (payments.includes("bizum")) {
-        includedMethods.push({ method: "bizum", amount: bizumAmount });
+        addMethod("bizum", "total_bizum");
       }
       if (payments.includes("redsys - bizum")) {
-        includedMethods.push({
-          method: "redsys - bizum",
-          amount: bizumAmount,
+        addMethod("redsys - bizum", "total_bizum");
+      }
+
+      // Incluir información de vale descuento en la línea de pago
+      let voucherAmount = 0;
+      if (Array.isArray(order.order_cart_rules)) {
+        order.order_cart_rules.forEach((rule) => {
+          const name = rule.name ? rule.name.toLowerCase() : "";
+          if (name.startsWith("vale descuento")) {
+            voucherAmount += parseFloat(rule.value) || 0;
+          }
         });
       }
-      const nonZeroCount = includedMethods.filter((m) => m.amount > 0).length;
-      const paymentText = includedMethods
-        .map((m) =>
-          nonZeroCount > 1 && m.amount > 0
-            ? `${m.method}: ${m.amount.toFixed(2)}€`
-            : m.method
-        )
-        .join(", ");
-      order.payment = paymentText;
+      if (voucherAmount > 0 && includedMethods.length === 0) {
+        includedMethods.push({
+          method: "vale descuento",
+          amount: voucherAmount,
+        });
+      }
+
+      if (includedMethods.length === 0) {
+        // Si no hay métodos de pago especificados, mostrar sólo el total de la orden
+        order.payment_summary = `${Number(order.total_paid || 0).toFixed(2)}€`;
+      } else {
+        order.payment_summary = includedMethods
+          .map((m) => `${m.method} ${Number(m.amount).toFixed(2)}€`)
+          .join(", ");
+      }
     });
 
-    const tableRows = data.flatMap((order) => {
+    let rowOrderMap = {};
+    let currentRowIndex = 0;
+    const tableRows = data.flatMap((order, orderIdx) => {
       let rows = [];
       // Extraer hora de order.date_add (formato "HH:MM")
       const timeStr = order.date_add
@@ -248,17 +270,19 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           detail.product_quantity,
           detail.product_reference,
           detail.combination_name,
-          order.payment,
           precio,
         ]);
+        rowOrderMap[currentRowIndex] = orderIdx;
+        currentRowIndex++;
         if (detail.hasDiscount) {
           rows.push([
             {
               content: detail.discountRuleName,
               colSpan: tableColumn.length,
-              styles: { fillColor: "#ffe6e6", textColor: "red" },
             },
           ]);
+          rowOrderMap[currentRowIndex] = orderIdx;
+          currentRowIndex++;
         }
       });
       if (order.hasGlobalDiscount) {
@@ -266,16 +290,28 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
           {
             content: order.globalDiscountName,
             colSpan: tableColumn.length,
-            styles: { fillColor: "#ffe6e6", textColor: "red" },
           },
         ]);
+        rowOrderMap[currentRowIndex] = orderIdx;
+        currentRowIndex++;
       }
+      // Fila resumen de pago
+      rows.push([
+        {
+          content: `Pago: ${order.payment_summary}`,
+          colSpan: tableColumn.length,
+          styles: { fontStyle: "bold", halign: "right" },
+        },
+      ]);
+      rowOrderMap[currentRowIndex] = orderIdx;
+      currentRowIndex++;
       return rows;
     });
 
     let rowColors = {};
     let lastOrder = null;
     let useGray = false;
+    const orderRects = {};
 
     doc.autoTable({
       head: [tableColumn],
@@ -285,9 +321,6 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
       styles: { fontSize: 12 },
       theme: "grid",
       didParseCell: function (data) {
-        if (data.cell.raw && data.cell.raw.colSpan) {
-          return;
-        }
         if (
           data.column.index === priceColumnIndex &&
           data.cell.raw &&
@@ -297,11 +330,11 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         }
         if (data.row.section === "body") {
           const rowIndex = data.row.index;
+          const orderIdx = rowOrderMap[rowIndex];
           if (rowColors[rowIndex] === undefined && data.column.index === 0) {
-            const currentOrder = data.cell.text[0];
-            if (currentOrder !== lastOrder) {
+            if (orderIdx !== lastOrder) {
               useGray = !useGray;
-              lastOrder = currentOrder;
+              lastOrder = orderIdx;
             }
             rowColors[rowIndex] = useGray ? [240, 240, 240] : [255, 255, 255];
           }
@@ -309,7 +342,10 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
         }
       },
       didDrawCell: function (data) {
-        if (data.row.section === "body" && data.column.index === priceColumnIndex) {
+        if (
+          data.row.section === "body" &&
+          data.column.index === priceColumnIndex
+        ) {
           if (data.cell.raw && data.cell.raw.discount) {
             const originalText = data.cell.raw.original;
             const discountedText = data.cell.raw.discounted;
@@ -326,6 +362,27 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
             doc.setTextColor(255, 0, 0);
             doc.setFontSize(12);
             doc.text(discountedText, origX, origY + 10);
+          }
+        }
+        if (data.row.section === "body" && data.column.index === 0) {
+          const orderIdx = rowOrderMap[data.row.index];
+          if (orderIdx !== undefined) {
+            if (!orderRects[orderIdx]) {
+              orderRects[orderIdx] = {
+                startY: data.cell.y,
+                page: doc.internal.getNumberOfPages(),
+              };
+            }
+            const nextOrderIdx = rowOrderMap[data.row.index + 1];
+            if (nextOrderIdx !== orderIdx) {
+              const rect = orderRects[orderIdx];
+              if (rect.page === doc.internal.getNumberOfPages()) {
+                const width = doc.internal.pageSize.getWidth() - margin * 2;
+                const height = data.cell.y + data.cell.height - rect.startY;
+                doc.setDrawColor(0);
+                doc.rect(margin, rect.startY, width, height);
+              }
+            }
           }
         }
       },
@@ -353,18 +410,17 @@ export const generateSalesPdf = (data, shopName, closureData, configData) => {
 
     finalY = doc.lastAutoTable.finalY + 20;
 
-    const totalPaid = data.reduce(
-      (acc, order) => acc + (order.total_paid || 0),
-      0
-    );
+    const totalPaid = totalCash + totalCard + totalBizum;
 
     const totalsTableBody = [];
     if (discountSum > 0) {
-      totalsTableBody.push([
-        "TOTAL SIN DESCUENTOS:",
-        (totalPaid + discountSum).toFixed(2) + "€",
-      ]);
       totalsTableBody.push(["TOTAL DESCUENTOS:", discountSum.toFixed(2) + "€"]);
+    }
+    if (voucherSum > 0) {
+      totalsTableBody.push([
+        "TOTAL VALES DESCUENTOS:",
+        voucherSum.toFixed(2) + "€",
+      ]);
     }
     totalsTableBody.push(["TOTAL:", totalPaid.toFixed(2) + "€"]);
     doc.autoTable({
