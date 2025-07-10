@@ -241,11 +241,6 @@ const NavbarCard = () => {
             icon: "pi pi-desktop",
             command: openCashRegister,
           },
-          {
-            label: "Descuentos",
-            icon: "pi pi-percentage",
-            command: openDiscountsList,
-          },
         ]),
     /*{
       label: "Configuración",
