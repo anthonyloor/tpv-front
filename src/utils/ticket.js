@@ -258,6 +258,102 @@ const generateTicket = async (
     );
   }
 
+  const includesCash =
+    typeof orderData.payment === "string" &&
+    orderData.payment.toLowerCase().includes("efectivo");
+
+  // Construir el contenido del ticket
+  const paymentSection =
+    orderData.id_shop === 1 || orderData.id_shop === 13
+      ? [
+          {
+            text: `FORMA DE PAGO: ${orderData.payment || ""}`,
+            style: "tTotals",
+            margin: [0, 10, 15, 0],
+          },
+          ...(includesCash
+            ? [
+                {
+                  text:
+                    "RECIBIDO: " +
+                    (orderData.payment_amounts?.cash_recived?.toString() ||
+                      "0"),
+                  style: "tTotals",
+                  margin: [0, 2, 15, 0],
+                  alignment: "left",
+                },
+                {
+                  text:
+                    "DEVUELTO: " +
+                    (orderData.payment_amounts?.cash_returned?.toString() ||
+                      "0"),
+                  style: "tTotals",
+                  margin: [0, 2, 15, 0],
+                  alignment: "left",
+                },
+              ]
+            : []),
+        ]
+      : [
+          { text: "FORMA DE PAGO:", style: "tTotals", margin: [0, 10, 15, 0] },
+          {
+            margin: [0, 2, 15, 0],
+            table: {
+              widths: ["33%", "33%", "33%"],
+              body: [
+                [
+                  { text: "EFECTIVO:", style: "tTotals" },
+                  { text: "TARJETA:", style: "tTotals" },
+                  { text: "BIZUM:", style: "tTotals" },
+                ],
+                [
+                  {
+                    text:
+                      orderData.payment_amounts?.total_cash?.toString() || "0",
+                    style: "tTotals",
+                    alignment: "right",
+                  },
+                  {
+                    text:
+                      orderData.payment_amounts?.total_card?.toString() || "0",
+                    style: "tTotals",
+                    alignment: "right",
+                  },
+                  {
+                    text:
+                      orderData.payment_amounts?.total_bizum?.toString() || "0",
+                    style: "tTotals",
+                    alignment: "right",
+                  },
+                ],
+              ],
+            },
+            layout: "noBorders",
+          },
+          ...(includesCash
+            ? [
+                {
+                  text:
+                    "RECIBIDO: " +
+                    (orderData.payment_amounts?.cash_recived?.toString() ||
+                      "0"),
+                  style: "tTotals",
+                  margin: [0, 2, 15, 0],
+                  alignment: "left",
+                },
+                {
+                  text:
+                    "DEVUELTO: " +
+                    (orderData.payment_amounts?.cash_returned?.toString() ||
+                      "0"),
+                  style: "tTotals",
+                  margin: [0, 2, 15, 0],
+                  alignment: "left",
+                },
+              ]
+            : []),
+        ];
+
   // Construir el contenido del ticket
   const pdfContent = [
     ...(logoDataUrl
@@ -367,51 +463,7 @@ const generateTicket = async (
         ]
       : []),
     // Forma de pago
-    ...(orderData.id_shop === 1 || orderData.id_shop === 13
-      ? [
-          {
-            text: `FORMA DE PAGO: ${orderData.payment || ""}`,
-            style: "tTotals",
-            margin: [0, 10, 15, 0],
-          },
-        ]
-      : [
-          { text: "FORMA DE PAGO:", style: "tTotals", margin: [0, 10, 15, 0] },
-          {
-            margin: [0, 2, 15, 0],
-            table: {
-              widths: ["33%", "33%", "33%"],
-              body: [
-                [
-                  { text: "EFECTIVO:", style: "tTotals" },
-                  { text: "TARJETA:", style: "tTotals" },
-                  { text: "BIZUM:", style: "tTotals" },
-                ],
-                [
-                  {
-                    text:
-                      orderData.payment_amounts?.total_cash?.toString() || "0",
-                    style: "tTotals",
-                    alignment: "right",
-                  },
-                  {
-                    text:
-                      orderData.payment_amounts?.total_card?.toString() || "0",
-                    style: "tTotals",
-                    alignment: "right",
-                  },
-                  {
-                    text:
-                      orderData.payment_amounts?.total_bizum?.toString() || "0",
-                    style: "tTotals",
-                    alignment: "right",
-                  },
-                ],
-              ],
-            },
-            layout: "noBorders",
-          },
-        ]),
+    ...paymentSection,
     // Nota de pie (si existen) con mayúsculas y negrita
     ...(config.ticket_text_footer_1
       ? [
