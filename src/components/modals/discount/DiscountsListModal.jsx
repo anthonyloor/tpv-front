@@ -19,7 +19,7 @@ const DiscountsListModal = ({ isOpen, onClose }) => {
     const now = new Date();
     const date2 = now.toISOString().split("T")[0];
     const past = new Date(now);
-    past.setMonth(past.getMonth() - 3);
+    past.setMonth(past.getMonth() - 6);
     const date1 = past.toISOString().split("T")[0];
     setLoading(true);
     try {
@@ -45,7 +45,15 @@ const DiscountsListModal = ({ isOpen, onClose }) => {
         `${API_BASE_URL}/get_cart_rule?code=${encodeURIComponent(searchTerm)}`,
         { method: "GET" }
       );
-      setDiscounts(data ? [data] : []);
+      if (
+        data &&
+        data.status === "error" &&
+        data.message === "Cart Rule not found"
+      ) {
+        setDiscounts([]);
+      } else {
+        setDiscounts(data ? [data] : []);
+      }
     } catch (err) {
       console.error("Error searching cart rule:", err);
       setDiscounts([]);
@@ -96,7 +104,12 @@ const DiscountsListModal = ({ isOpen, onClose }) => {
             className="w-full pl-8"
           />
         </span>
-        <Button label="Buscar" icon="pi pi-search" onClick={handleSearch} disabled={!searchTerm.trim()} />
+        <Button
+          label="Buscar"
+          icon="pi pi-search"
+          onClick={handleSearch}
+          disabled={!searchTerm.trim()}
+        />
         <Button label="Reset" icon="pi pi-refresh" onClick={resetSearch} />
       </div>
       <DataTable
@@ -106,6 +119,11 @@ const DiscountsListModal = ({ isOpen, onClose }) => {
         rows={7}
         className="p-datatable-sm"
         responsiveLayout="scroll"
+        emptyMessage={
+          searchTerm.trim()
+            ? "No se encuentra descuento con este código"
+            : "No se encontraron descuentos"
+        }
       >
         <Column
           field="date_from"
@@ -121,11 +139,44 @@ const DiscountsListModal = ({ isOpen, onClose }) => {
           style={{ textAlign: "center", width: "120px" }}
           alignHeader="center"
         />
-        <Column field="id_customer" header="Cliente" style={{ textAlign: "center", width: "80px" }} alignHeader="center" />
+        <Column
+          field="id_customer"
+          header="Cliente"
+          style={{ textAlign: "center", width: "80px" }}
+          alignHeader="center"
+        />
         <Column field="description" header="Descripción" />
-        <Column field="quantity" header="Cantidad" style={{ textAlign: "center", width: "80px" }} alignHeader="center" />
-        <Column header="Descuento" body={descuentoTemplate} style={{ textAlign: "center", width: "100px" }} alignHeader="center" />
-        <Column field="code" header="Código" style={{ textAlign: "center", width: "120px" }} alignHeader="center" />
+        <Column
+          field="quantity"
+          header="Cantidad"
+          style={{ textAlign: "center", width: "80px" }}
+          alignHeader="center"
+        />
+        <Column
+          header="Descuento"
+          body={descuentoTemplate}
+          style={{ textAlign: "center", width: "100px" }}
+          alignHeader="center"
+        />
+        <Column
+          field="code"
+          header="Código"
+          style={{ textAlign: "center", width: "120px" }}
+          alignHeader="center"
+        />
+        <Column
+          field="active"
+          header="Activo"
+          body={(row) => (
+            <span
+              className={`p-tag p-tag-${row.active ? "success" : "danger"}`}
+            >
+              {row.active ? "Activo" : "Inactivo"}
+            </span>
+          )}
+          style={{ textAlign: "center", width: "100px" }}
+          alignHeader="center"
+        />
       </DataTable>
     </Dialog>
   );
