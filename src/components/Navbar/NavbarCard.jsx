@@ -22,6 +22,7 @@ import OnlineOrdersModal from "../modals/online/OnlineOrdersModal";
 import InventoryModal from "../modals/inventory/InventoryModal";
 import ListCashRegisterModal from "../modals/cashRegister/ListCashRegisterModal";
 import ControlStockModal from "../modals/controlStock/ControlStockModal";
+import DiscountsListModal from "../modals/discount/DiscountsListModal";
 import useToggle from "../../hooks/useToggle";
 
 const NavbarCard = () => {
@@ -52,6 +53,7 @@ const NavbarCard = () => {
   const onlineOrdersModal = useToggle();
   const inventoryModal = useToggle();
   const controlStockModal = useToggle();
+  const discountsListModal = useToggle();
 
   const closeAllModals = () => {
     transfersModal.close();
@@ -63,6 +65,7 @@ const NavbarCard = () => {
     listCashRegisterModal.close();
     controlStockModal.close();
     inventoryModal.close();
+    discountsListModal.close();
     onlineOrdersModal.close();
     versionModal.close();
   };
@@ -102,6 +105,11 @@ const NavbarCard = () => {
   const openInventoryModal = () => {
     closeAllModals();
     inventoryModal.open();
+  };
+
+  const openDiscountsList = () => {
+    closeAllModals();
+    discountsListModal.open();
   };
 
   const openControlStock = () => {
@@ -215,6 +223,11 @@ const NavbarCard = () => {
             label: "Inventario",
             icon: "pi pi-list",
             command: openInventoryModal,
+          },
+          {
+            label: "Descuentos",
+            icon: "pi pi-percentage",
+            command: openDiscountsList,
           },
         ]
       : [
@@ -429,6 +442,12 @@ const NavbarCard = () => {
           isOpen={controlStockModal.isOpen}
           onClose={controlStockModal.close}
         />
+      )}
+
+      {discountsListModal.isOpen && (
+        <PortalOrNormal isInlineMode={isMobile}>
+          <DiscountsListModal isOpen onClose={discountsListModal.close} />
+        </PortalOrNormal>
       )}
     </>
   );
