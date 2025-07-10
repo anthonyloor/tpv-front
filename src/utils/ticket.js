@@ -280,6 +280,7 @@ const generateTicket = async (
                       "0"),
                   style: "tTotals",
                   margin: [0, 2, 15, 0],
+                  alignment: "left",
                 },
                 {
                   text:
@@ -288,6 +289,7 @@ const generateTicket = async (
                       "0"),
                   style: "tTotals",
                   margin: [0, 2, 15, 0],
+                  alignment: "left",
                 },
               ]
             : []),
@@ -337,6 +339,7 @@ const generateTicket = async (
                       "0"),
                   style: "tTotals",
                   margin: [0, 2, 15, 0],
+                  alignment: "left",
                 },
                 {
                   text:
@@ -345,6 +348,7 @@ const generateTicket = async (
                       "0"),
                   style: "tTotals",
                   margin: [0, 2, 15, 0],
+                  alignment: "left",
                 },
               ]
             : []),
