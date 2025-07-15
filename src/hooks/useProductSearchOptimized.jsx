@@ -247,8 +247,23 @@ const useProductSearchOptimized = ({
           );
           return;
         }
-        let currentCartTotal = 0;
         const licenseData = JSON.parse(localStorage.getItem("licenseData"));
+        const currentShopId = Number(licenseData?.id_shop);
+        const allowedShops =
+          data?.restrictions?.shop || data?.restrictions?.shops || [];
+        if (
+          Array.isArray(allowedShops) &&
+          allowedShops.length > 0 &&
+          !allowedShops
+            .map((s) => Number(s.id_shop ?? s.id))
+            .includes(currentShopId)
+        ) {
+          alert(
+            "Vale descuento no válido, motivo: no disponible en esta tienda"
+          );
+          return;
+        }
+        let currentCartTotal = 0;
         const cartRaw = localStorage.getItem(`cart_shop_${licenseData?.id_shop}`);
         if (cartRaw) {
           const parsedCart = JSON.parse(cartRaw);
