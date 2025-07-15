@@ -40,6 +40,7 @@ El comportamiento del hook varía según el formato del término de búsqueda:
 - **Entrada:** cadena que comienza por `#` (por ejemplo `#DESCUENTO10`).
 - **Función:** se consulta el endpoint de vales descuento y, si es válido, se añade automáticamente al ticket mediante `onAddDiscount`.
 - **Resultado:** el hook no devuelve productos, pero aplica el descuento al carrito activo.
+- **Nota:** si la respuesta incluye `restrictions.shop` con identificadores de tienda, el vale solo se aplicará cuando la tienda actual forme parte de dicha lista.
 
 ## Uso en componentes
 
