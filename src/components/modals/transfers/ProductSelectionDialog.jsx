@@ -184,7 +184,10 @@ const ProductSelectionDialog = ({
     return (
       <Checkbox
         checked={isSelected(rowData)}
-        onChange={() => handleCheckboxChange(rowData)}
+        onChange={(e) => {
+          e.originalEvent.stopPropagation();
+          handleCheckboxChange(rowData);
+        }}
       />
     );
   };
@@ -238,6 +241,7 @@ const ProductSelectionDialog = ({
               backgroundColor: "var(--surface-0)",
               color: "var(--text-color)",
             }}
+            onRowClick={(e) => handleCheckboxChange(e.data)}
           >
             <Column
               body={selectionBodyTemplate}
@@ -249,11 +253,17 @@ const ProductSelectionDialog = ({
             {showOriginStock && (
               <Column
                 header={`Stock ${originShopName}`}
-                body={(rowData) => (
-                  <>
-                    <div>{rowData.stockOrigin ?? 0}</div>
-                    {rowData.originControlStock &&
-                      rowData.originControlStock.length > 0 && (
+                body={(rowData) => {
+                  const activeCount = rowData.originControlStock
+                    ? rowData.originControlStock.filter(
+                        (cs) => cs.active_control_stock
+                      ).length
+                    : 0;
+                  return (
+                    <>
+                      {rowData.stockOrigin ?? 0}
+                      {activeCount > 0 ? ` | ${activeCount} ` : ""}
+                      {activeCount > 0 && (
                         <Button
                           icon="pi pi-link"
                           className="p-button-text p-button-sm"
@@ -265,18 +275,25 @@ const ProductSelectionDialog = ({
                           }
                         />
                       )}
-                  </>
-                )}
+                    </>
+                  );
+                }}
               />
             )}
             {showDestinationStock && (
               <Column
                 header={`Stock ${destinationShopName}`}
-                body={(rowData) => (
-                  <>
-                    <div>{rowData.stockDestination ?? 0}</div>
-                    {rowData.destinationControlStock &&
-                      rowData.destinationControlStock.length > 0 && (
+                body={(rowData) => {
+                  const activeCount = rowData.destinationControlStock
+                    ? rowData.destinationControlStock.filter(
+                        (cs) => cs.active_control_stock
+                      ).length
+                    : 0;
+                  return (
+                    <>
+                      {rowData.stockDestination ?? 0}
+                      {activeCount > 0 ? ` | ${activeCount} ` : ""}
+                      {activeCount > 0 && (
                         <Button
                           icon="pi pi-link"
                           className="p-button-text p-button-sm"
@@ -288,8 +305,9 @@ const ProductSelectionDialog = ({
                           }
                         />
                       )}
-                  </>
-                )}
+                    </>
+                  );
+                }}
               />
             )}
           </DataTable>
