@@ -1,4 +1,4 @@
-import React, { useState, useContext, useMemo, useEffect, useRef } from "react";
+import React, { useState, useContext, useMemo, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
@@ -23,6 +23,10 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
   const [selection, setSelection] = useState([]);
   const [quantities, setQuantities] = useState({});
   const toast = useRef(null);
+  const selectedKeys = useMemo(
+    () => new Set((selection || []).map((s) => s.uniqueKey)),
+    [selection],
+  );
   const stockShopIds = useMemo(
     () =>
       Object.keys(shopsDict)
@@ -54,12 +58,12 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
     })),
   );
 
-  useEffect(() => {
+  const handleSearch = () => {
     const term = search.trim();
     if (term.length >= 3) {
       searchProducts(term);
     }
-  }, [search, searchProducts]);
+  };
 
   const updateQuantity = (key, shop, value) => {
     setQuantities((prev) => ({
@@ -117,7 +121,7 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
   const quantityBody = (row, shopKey) => {
     const key = row.uniqueKey;
     const value = quantities[key]?.[shopKey] || 0;
-    const disabled = !selection.some((sel) => sel.uniqueKey === key);
+    const disabled = !selectedKeys.has(key);
     return (
       <InputNumber
         value={value}
@@ -164,9 +168,13 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
         <InputText
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSearch();
+          }}
           placeholder="Buscar producto"
           className="w-full"
         />
+        <Button icon="pi pi-search" onClick={handleSearch} aria-label="Buscar" />
       </div>
       <DataTable
         value={flatResults}
