@@ -46,16 +46,14 @@ const ProductSelectionDialog = ({
     }
   }, [visible]);
 
-  // Al hacer check
-  const handleCheckboxChange = (product) => {
+  const toggleSelection = (product) => {
     setSelectedItems((prev) => {
-      const found = prev.find(
+      const exists = prev.find(
         (p) =>
           p.id_product === product.id_product &&
           p.id_product_attribute === product.id_product_attribute
       );
-      if (found) {
-        // Quitar
+      if (exists) {
         return prev.filter(
           (p) =>
             !(
@@ -63,10 +61,8 @@ const ProductSelectionDialog = ({
               p.id_product_attribute === product.id_product_attribute
             )
         );
-      } else {
-        // Agregar
-        return [...prev, product];
       }
+      return [...prev, product];
     });
   };
 
@@ -186,7 +182,7 @@ const ProductSelectionDialog = ({
         checked={isSelected(rowData)}
         onChange={(e) => {
           e.originalEvent.stopPropagation();
-          handleCheckboxChange(rowData);
+          toggleSelection(rowData);
         }}
       />
     );
@@ -241,7 +237,8 @@ const ProductSelectionDialog = ({
               backgroundColor: "var(--surface-0)",
               color: "var(--text-color)",
             }}
-            onRowClick={(e) => handleCheckboxChange(e.data)}
+            dataKey="uniqueKey"
+            onRowClick={(e) => toggleSelection(e.data)}
           >
             <Column
               body={selectionBodyTemplate}
