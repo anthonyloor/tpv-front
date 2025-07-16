@@ -1,10 +1,11 @@
-import React, { useState, useContext, useMemo } from "react";
+import React, { useState, useContext, useMemo, useEffect, useRef } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputNumber } from "primereact/inputnumber";
+import { Toast } from "primereact/toast";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import useProductSearchOptimized from "../../../hooks/useProductSearchOptimized";
@@ -21,6 +22,7 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
   const [search, setSearch] = useState("");
   const [selection, setSelection] = useState([]);
   const [quantities, setQuantities] = useState({});
+  const toast = useRef(null);
   const stockShopIds = useMemo(
     () =>
       Object.keys(shopsDict)
@@ -52,22 +54,24 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
     })),
   );
 
-  const handleSearch = async () => {
-    if (!search.trim()) return;
-    await searchProducts(search);
-  };
+  useEffect(() => {
+    const term = search.trim();
+    if (term.length >= 3) {
+      searchProducts(term);
+    }
+  }, [search, searchProducts]);
 
-  const updateQuantity = (ean, shop, value) => {
+  const updateQuantity = (key, shop, value) => {
     setQuantities((prev) => ({
       ...prev,
-      [ean]: { ...prev[ean], [shop]: value },
+      [key]: { ...prev[key], [shop]: value },
     }));
   };
 
   const handleAdd = async () => {
     const payload = selection.map((row) => {
       const ean = row.ean13_combination || row.ean13_combination_0 || row.ean13;
-      const q = quantities[ean] || {};
+      const q = quantities[row.uniqueKey] || {};
       return {
         ean13: ean,
         quantity_shop_1: q.quantity_shop_1 || 0,
@@ -82,6 +86,14 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (toast.current) {
+        toast.current.show({
+          severity: "success",
+          summary: "Añadido",
+          detail: "Se ha añadido la combinación correctamente",
+          life: 3000,
+        });
+      }
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error("Error adding stock fixed:", err);
@@ -102,17 +114,15 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
     return s ? s.quantity : 0;
   };
 
-  const quantityBody = (ean, shopKey) => {
-    const value = quantities[ean]?.[shopKey] || 0;
-    const disabled = !selection.some((sel) => {
-      const e = sel.ean13_combination || sel.ean13_combination_0 || sel.ean13;
-      return e === ean;
-    });
+  const quantityBody = (row, shopKey) => {
+    const key = row.uniqueKey;
+    const value = quantities[key]?.[shopKey] || 0;
+    const disabled = !selection.some((sel) => sel.uniqueKey === key);
     return (
       <InputNumber
         value={value}
         disabled={disabled}
-        onChange={(e) => updateQuantity(ean, shopKey, e.value)}
+        onChange={(e) => updateQuantity(key, shopKey, e.value)}
         showButtons
         buttonLayout="horizontal"
         decrementButtonClassName="p-button-secondary"
@@ -120,6 +130,7 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
         incrementButtonIcon="pi pi-plus"
         decrementButtonIcon="pi pi-minus"
         min={0}
+        inputClassName="w-16"
       />
     );
   };
@@ -132,7 +143,7 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
       modal
       draggable={false}
       resizable={false}
-      style={{ width: "70vw", maxWidth: "900px" }}
+      style={{ width: "80vw", maxWidth: "1000px" }}
       footer={
         <div className="flex justify-end gap-2">
           <Button
@@ -148,17 +159,14 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
         </div>
       }
     >
+      <Toast ref={toast} />
       <div className="flex items-end gap-2 mb-3">
         <InputText
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSearch();
-          }}
           placeholder="Buscar producto"
           className="w-full"
         />
-        <Button label="Buscar" icon="pi pi-search" onClick={handleSearch} />
       </div>
       <DataTable
         value={flatResults}
@@ -192,27 +200,16 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
         ))}
         <Column
           header={`Cantidad ${shopsDict[9] || "Tienda 1"}`}
-          body={(row) => {
-            const ean =
-              row.ean13_combination || row.ean13_combination_0 || row.ean13;
-            return quantityBody(ean, "quantity_shop_1");
-          }}
+          body={(row) => quantityBody(row, "quantity_shop_1")}
+          style={{ borderLeft: "1px solid var(--surface-border)" }}
         />
         <Column
           header={`Cantidad ${shopsDict[11] || "Tienda 2"}`}
-          body={(row) => {
-            const ean =
-              row.ean13_combination || row.ean13_combination_0 || row.ean13;
-            return quantityBody(ean, "quantity_shop_2");
-          }}
+          body={(row) => quantityBody(row, "quantity_shop_2")}
         />
         <Column
           header={`Cantidad ${shopsDict[14] || "Tienda 3"}`}
-          body={(row) => {
-            const ean =
-              row.ean13_combination || row.ean13_combination_0 || row.ean13;
-            return quantityBody(ean, "quantity_shop_3");
-          }}
+          body={(row) => quantityBody(row, "quantity_shop_3")}
         />
       </DataTable>
     </Dialog>

@@ -3,6 +3,7 @@ import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import StockFixedAddModal from "./StockFixedAddModal";
@@ -14,6 +15,7 @@ const StockFixedModal = ({ isOpen, onClose }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const shopsDict = useShopsDictionary();
 
   const fetchList = async () => {
@@ -42,6 +44,18 @@ const StockFixedModal = ({ isOpen, onClose }) => {
     fetchList();
   };
 
+  const filteredData = React.useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (term.length < 3) return data;
+    return data.filter(
+      (item) =>
+        String(item.reference_combination).toLowerCase().includes(term) ||
+        String(item.combination_name || "")
+          .toLowerCase()
+          .includes(term),
+    );
+  }, [data, search]);
+
   return (
     <>
       <Dialog
@@ -53,15 +67,22 @@ const StockFixedModal = ({ isOpen, onClose }) => {
         resizable={false}
         style={{ width: "60vw", maxWidth: "800px" }}
       >
-        <div className="mb-3">
+        <div className="flex items-end gap-2 mb-3">
           <Button
             label="Añadir producto"
             icon="pi pi-plus"
             onClick={() => setAddModalOpen(true)}
           />
+          <span className="flex-1"></span>
+          <InputText
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar referencia"
+            className="w-40 md:w-60"
+          />
         </div>
         <DataTable
-          value={data}
+          value={filteredData}
           loading={loading}
           paginator
           rows={10}
@@ -81,7 +102,10 @@ const StockFixedModal = ({ isOpen, onClose }) => {
           <Column
             field="quantity_shop_1"
             header={shopsDict[9] || "Tienda 1"}
-            style={{ width: "100px" }}
+            style={{
+              width: "100px",
+              borderLeft: "1px solid var(--surface-border)",
+            }}
           />
           <Column
             field="quantity_shop_2"
