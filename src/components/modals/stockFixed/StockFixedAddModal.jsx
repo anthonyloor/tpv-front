@@ -23,17 +23,13 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
   const [selection, setSelection] = useState([]);
   const [quantities, setQuantities] = useState({});
   const toast = useRef(null);
-  const selectedKeys = useMemo(
-    () => new Set((selection || []).map((s) => s.uniqueKey)),
-    [selection],
-  );
   const stockShopIds = useMemo(
     () =>
       Object.keys(shopsDict)
         .map(Number)
         .filter((id) => id !== 1)
         .sort((a, b) => a - b),
-    [shopsDict],
+    [shopsDict]
   );
 
   const {
@@ -55,7 +51,7 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
       ...combo,
       product_name: group.product_name,
       uniqueKey: `${combo.id_product}_${combo.id_product_attribute}`,
-    })),
+    }))
   );
 
   const handleSearch = () => {
@@ -121,11 +117,9 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
   const quantityBody = (row, shopKey) => {
     const key = row.uniqueKey;
     const value = quantities[key]?.[shopKey] || 0;
-    const disabled = !selectedKeys.has(key);
     return (
       <InputNumber
         value={value}
-        disabled={disabled}
         onChange={(e) => updateQuantity(key, shopKey, e.value)}
         showButtons
         buttonLayout="horizontal"
@@ -134,7 +128,7 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
         incrementButtonIcon="pi pi-plus"
         decrementButtonIcon="pi pi-minus"
         min={0}
-        inputClassName="w-16"
+        inputClassName="w-14"
       />
     );
   };
@@ -147,7 +141,7 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
       modal
       draggable={false}
       resizable={false}
-      style={{ width: "80vw", maxWidth: "1000px" }}
+      style={{ width: "90vw", maxWidth: "1400px" }}
       footer={
         <div className="flex justify-end gap-2">
           <Button
@@ -174,7 +168,11 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
           placeholder="Buscar producto"
           className="w-full"
         />
-        <Button icon="pi pi-search" onClick={handleSearch} aria-label="Buscar" />
+        <Button
+          icon="pi pi-search"
+          onClick={handleSearch}
+          aria-label="Buscar"
+        />
       </div>
       <DataTable
         value={flatResults}
@@ -190,34 +188,53 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
       >
         <Column
           selectionMode="multiple"
-          headerStyle={{ width: "3em" }}
-        ></Column>
-        <Column header="Nombre" body={productNameTemplate} />
+          style={{ width: "3rem" }}
+          alignHeader={"center"}
+        />
+        <Column
+          header="Nombre"
+          body={productNameTemplate}
+          style={{ minWidth: "190px", textAlign: "left" }}
+          alignHeader={"left"}
+        />
         <Column
           header="EAN13"
           body={(row) =>
             row.ean13_combination || row.ean13_combination_0 || row.ean13 || ""
           }
+          style={{ minWidth: "150px", textAlign: "center" }}
+          alignHeader={"center"}
         />
         {stockShopIds.map((id) => (
           <Column
             key={id}
-            header={`Stock ${shopsDict[id] || id}`}
+            header={`${shopsDict[id] || id}`}
             body={(row) => stockForShop(row, id)}
+            style={{ minWidth: "80px", textAlign: "center" }}
+            alignHeader={"center"}
           />
         ))}
         <Column
           header={`Cantidad ${shopsDict[9] || "Tienda 1"}`}
           body={(row) => quantityBody(row, "quantity_shop_1")}
-          style={{ borderLeft: "1px solid var(--surface-border)" }}
+          style={{
+            borderLeft: "1px solid var(--surface-border)",
+            minWidth: "50px",
+            textAlign: "center",
+          }}
+          alignHeader={"center"}
         />
         <Column
           header={`Cantidad ${shopsDict[11] || "Tienda 2"}`}
           body={(row) => quantityBody(row, "quantity_shop_2")}
+          style={{ minWidth: "50px", textAlign: "center" }}
+          alignHeader={"center"}
         />
         <Column
           header={`Cantidad ${shopsDict[14] || "Tienda 3"}`}
           body={(row) => quantityBody(row, "quantity_shop_3")}
+          style={{ minWidth: "50px", textAlign: "center" }}
+          alignHeader={"center"}
         />
       </DataTable>
     </Dialog>

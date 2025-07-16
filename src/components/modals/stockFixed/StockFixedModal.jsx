@@ -52,7 +52,7 @@ const StockFixedModal = ({ isOpen, onClose }) => {
         String(item.reference_combination).toLowerCase().includes(term) ||
         String(item.combination_name || "")
           .toLowerCase()
-          .includes(term),
+          .includes(term)
     );
   }, [data, search]);
 
@@ -96,26 +96,39 @@ const StockFixedModal = ({ isOpen, onClose }) => {
             <span className="font-bold">{row.reference_combination}</span>
           )}
         >
-          <Column field="combination_name" header="Combinación" />
-          <Column field="id_stock" header="ID" style={{ width: "80px" }} />
-          <Column field="ean13" header="EAN13" style={{ width: "140px" }} />
+          <Column
+            field="combination_name"
+            header="Combinación"
+            style={{ width: "150px", textAlign: "left" }}
+            alignHeader={"left"}
+          />
+          <Column
+            field="ean13"
+            header="EAN13"
+            style={{ width: "150px", textAlign: "center" }}
+            alignHeader={"center"}
+          />
           <Column
             field="quantity_shop_1"
             header={shopsDict[9] || "Tienda 1"}
             style={{
               width: "100px",
+              textAlign: "center",
               borderLeft: "1px solid var(--surface-border)",
             }}
+            alignHeader={"center"}
           />
           <Column
             field="quantity_shop_2"
             header={shopsDict[11] || "Tienda 2"}
-            style={{ width: "100px" }}
+            style={{ width: "100px", textAlign: "center" }}
+            alignHeader={"center"}
           />
           <Column
             field="quantity_shop_3"
             header={shopsDict[14] || "Tienda 3"}
-            style={{ width: "100px" }}
+            style={{ width: "100px", textAlign: "center" }}
+            alignHeader={"center"}
           />
         </DataTable>
       </Dialog>
