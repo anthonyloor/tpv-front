@@ -183,6 +183,9 @@ const ProductSearchCardForTransfer = ({
           originControlStock: [],
           destinationControlStock: [],
           id_control_stock: prod.id_control_stock,
+          uniqueKey: key,
+          originTrackingCount: 0,
+          destinationTrackingCount: 0,
         };
       }
       if (prod.stocks && Array.isArray(prod.stocks)) {
@@ -195,10 +198,17 @@ const ProductSearchCardForTransfer = ({
         if (originStock) {
           map[key].stockOrigin = originStock.quantity;
           map[key].originControlStock = originStock.control_stock || [];
+          map[key].originTrackingCount = originStock.control_stock
+            ? originStock.control_stock.filter((cs) => cs.active_control_stock)
+                .length
+            : 0;
         }
         if (destStock) {
           map[key].stockDestination = destStock.quantity;
           map[key].destinationControlStock = destStock.control_stock || [];
+          map[key].destinationTrackingCount = destStock.control_stock
+            ? destStock.control_stock.filter((cs) => cs.active_control_stock).length
+            : 0;
         }
       }
     });

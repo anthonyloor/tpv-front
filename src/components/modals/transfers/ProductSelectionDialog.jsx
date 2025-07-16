@@ -234,6 +234,7 @@ const ProductSelectionDialog = ({
             value={products}
             responsiveLayout="scroll"
             emptyMessage="No hay productos para mostrar."
+            dataKey="uniqueKey"
             style={{
               backgroundColor: "var(--surface-0)",
               color: "var(--text-color)",
@@ -251,7 +252,10 @@ const ProductSelectionDialog = ({
                 header={`Stock ${originShopName}`}
                 body={(rowData) => (
                   <>
-                    <div>{rowData.stockOrigin ?? 0}</div>
+                    {rowData.stockOrigin ?? 0}
+                    {Number(rowData.originTrackingCount) > 0
+                      ? ` | ${rowData.originTrackingCount} `
+                      : ""}
                     {rowData.originControlStock &&
                       rowData.originControlStock.length > 0 && (
                         <Button
@@ -274,7 +278,10 @@ const ProductSelectionDialog = ({
                 header={`Stock ${destinationShopName}`}
                 body={(rowData) => (
                   <>
-                    <div>{rowData.stockDestination ?? 0}</div>
+                    {rowData.stockDestination ?? 0}
+                    {Number(rowData.destinationTrackingCount) > 0
+                      ? ` | ${rowData.destinationTrackingCount} `
+                      : ""}
                     {rowData.destinationControlStock &&
                       rowData.destinationControlStock.length > 0 && (
                         <Button
