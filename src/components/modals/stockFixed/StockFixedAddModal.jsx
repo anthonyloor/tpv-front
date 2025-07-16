@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useMemo } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
@@ -10,15 +10,25 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import useProductSearchOptimized from "../../../hooks/useProductSearchOptimized";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { ClientContext } from "../../../contexts/ClientContext";
+import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 
 const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
   const apiFetch = useApiFetch();
   const API_BASE_URL = getApiBaseUrl();
   const { idProfile } = useContext(AuthContext);
   const { selectedClient } = useContext(ClientContext);
+  const shopsDict = useShopsDictionary();
   const [search, setSearch] = useState("");
   const [selection, setSelection] = useState([]);
   const [quantities, setQuantities] = useState({});
+  const stockShopIds = useMemo(
+    () =>
+      Object.keys(shopsDict)
+        .map(Number)
+        .filter((id) => id !== 1)
+        .sort((a, b) => a - b),
+    [shopsDict],
+  );
 
   const {
     groupedProducts,
@@ -39,7 +49,7 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
       ...combo,
       product_name: group.product_name,
       uniqueKey: `${combo.id_product}_${combo.id_product_attribute}`,
-    }))
+    })),
   );
 
   const handleSearch = async () => {
@@ -79,9 +89,10 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const productNameTemplate = (row) => {
-    const comb = row.combination_name && row.combination_name !== ""
-      ? row.combination_name
-      : row.product_name;
+    const comb =
+      row.combination_name && row.combination_name !== ""
+        ? row.combination_name
+        : row.product_name;
     return `${row.reference_combination} - ${comb}`;
   };
 
@@ -124,8 +135,16 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
       style={{ width: "70vw", maxWidth: "900px" }}
       footer={
         <div className="flex justify-end gap-2">
-          <Button label="Cancelar" className="p-button-text" onClick={onClose} />
-          <Button label="Añadir" onClick={handleAdd} disabled={selection.length === 0} />
+          <Button
+            label="Cancelar"
+            className="p-button-text"
+            onClick={onClose}
+          />
+          <Button
+            label="Añadir"
+            onClick={handleAdd}
+            disabled={selection.length === 0}
+          />
         </div>
       }
     >
@@ -133,7 +152,9 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
         <InputText
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSearch();
+          }}
           placeholder="Buscar producto"
           className="w-full"
         />
@@ -151,30 +172,45 @@ const StockFixedAddModal = ({ isOpen, onClose, onSuccess }) => {
         rows={5}
         emptyMessage="Sin resultados"
       >
-        <Column selectionMode="multiple" headerStyle={{ width: "3em" }}></Column>
-        <Column header="Nombre" body={productNameTemplate} />
-        <Column header="EAN13" body={(row) => row.ean13_combination || row.ean13_combination_0 || row.ean13 || ""} />
-        <Column header="Stock tienda 1" body={(row) => stockForShop(row, 1)} />
-        <Column header="Stock tienda 2" body={(row) => stockForShop(row, 2)} />
-        <Column header="Stock tienda 3" body={(row) => stockForShop(row, 3)} />
         <Column
-          header="Cantidad tienda 1"
+          selectionMode="multiple"
+          headerStyle={{ width: "3em" }}
+        ></Column>
+        <Column header="Nombre" body={productNameTemplate} />
+        <Column
+          header="EAN13"
+          body={(row) =>
+            row.ean13_combination || row.ean13_combination_0 || row.ean13 || ""
+          }
+        />
+        {stockShopIds.map((id) => (
+          <Column
+            key={id}
+            header={`Stock ${shopsDict[id] || id}`}
+            body={(row) => stockForShop(row, id)}
+          />
+        ))}
+        <Column
+          header={`Cantidad ${shopsDict[9] || "Tienda 1"}`}
           body={(row) => {
-            const ean = row.ean13_combination || row.ean13_combination_0 || row.ean13;
+            const ean =
+              row.ean13_combination || row.ean13_combination_0 || row.ean13;
             return quantityBody(ean, "quantity_shop_1");
           }}
         />
         <Column
-          header="Cantidad tienda 2"
+          header={`Cantidad ${shopsDict[11] || "Tienda 2"}`}
           body={(row) => {
-            const ean = row.ean13_combination || row.ean13_combination_0 || row.ean13;
+            const ean =
+              row.ean13_combination || row.ean13_combination_0 || row.ean13;
             return quantityBody(ean, "quantity_shop_2");
           }}
         />
         <Column
-          header="Cantidad tienda 3"
+          header={`Cantidad ${shopsDict[14] || "Tienda 3"}`}
           body={(row) => {
-            const ean = row.ean13_combination || row.ean13_combination_0 || row.ean13;
+            const ean =
+              row.ean13_combination || row.ean13_combination_0 || row.ean13;
             return quantityBody(ean, "quantity_shop_3");
           }}
         />

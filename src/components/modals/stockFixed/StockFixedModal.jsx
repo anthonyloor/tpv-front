@@ -6,6 +6,7 @@ import { Button } from "primereact/button";
 import { useApiFetch } from "../../../utils/useApiFetch";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import StockFixedAddModal from "./StockFixedAddModal";
+import { useShopsDictionary } from "../../../hooks/useShopsDictionary";
 
 const StockFixedModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
@@ -13,11 +14,14 @@ const StockFixedModal = ({ isOpen, onClose }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const shopsDict = useShopsDictionary();
 
   const fetchList = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`${API_BASE_URL}/stock_fixed_list`, { method: "GET" });
+      const res = await apiFetch(`${API_BASE_URL}/stock_fixed_list`, {
+        method: "GET",
+      });
       setData(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error("Error fetching stock fixed list:", err);
@@ -50,7 +54,11 @@ const StockFixedModal = ({ isOpen, onClose }) => {
         style={{ width: "60vw", maxWidth: "800px" }}
       >
         <div className="mb-3">
-          <Button label="Añadir producto" icon="pi pi-plus" onClick={() => setAddModalOpen(true)} />
+          <Button
+            label="Añadir producto"
+            icon="pi pi-plus"
+            onClick={() => setAddModalOpen(true)}
+          />
         </div>
         <DataTable
           value={data}
@@ -59,12 +67,32 @@ const StockFixedModal = ({ isOpen, onClose }) => {
           rows={10}
           responsiveLayout="scroll"
           emptyMessage="No hay registros"
+          rowGroupMode="subheader"
+          groupRowsBy="reference_combination"
+          sortField="reference_combination"
+          sortOrder={1}
+          rowGroupHeaderTemplate={(row) => (
+            <span className="font-bold">{row.reference_combination}</span>
+          )}
         >
+          <Column field="combination_name" header="Combinación" />
           <Column field="id_stock" header="ID" style={{ width: "80px" }} />
-          <Column field="ean13" header="EAN13" style={{ width: "150px" }} />
-          <Column field="quantity_shop_1" header="Tienda 1" style={{ width: "100px" }} />
-          <Column field="quantity_shop_2" header="Tienda 2" style={{ width: "100px" }} />
-          <Column field="quantity_shop_3" header="Tienda 3" style={{ width: "100px" }} />
+          <Column field="ean13" header="EAN13" style={{ width: "140px" }} />
+          <Column
+            field="quantity_shop_1"
+            header={shopsDict[9] || "Tienda 1"}
+            style={{ width: "100px" }}
+          />
+          <Column
+            field="quantity_shop_2"
+            header={shopsDict[11] || "Tienda 2"}
+            style={{ width: "100px" }}
+          />
+          <Column
+            field="quantity_shop_3"
+            header={shopsDict[14] || "Tienda 3"}
+            style={{ width: "100px" }}
+          />
         </DataTable>
       </Dialog>
       {addModalOpen && (
