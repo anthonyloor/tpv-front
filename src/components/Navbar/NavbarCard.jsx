@@ -23,6 +23,7 @@ import InventoryModal from "../modals/inventory/InventoryModal";
 import ListCashRegisterModal from "../modals/cashRegister/ListCashRegisterModal";
 import ControlStockModal from "../modals/controlStock/ControlStockModal";
 import DiscountsListModal from "../modals/discount/DiscountsListModal";
+import StockFixedModal from "../modals/stockFixed/StockFixedModal";
 import useToggle from "../../hooks/useToggle";
 
 const NavbarCard = () => {
@@ -54,6 +55,7 @@ const NavbarCard = () => {
   const inventoryModal = useToggle();
   const controlStockModal = useToggle();
   const discountsListModal = useToggle();
+  const stockFixedModal = useToggle();
 
   const closeAllModals = () => {
     transfersModal.close();
@@ -64,6 +66,7 @@ const NavbarCard = () => {
     pinDialog.close();
     listCashRegisterModal.close();
     controlStockModal.close();
+    stockFixedModal.close();
     inventoryModal.close();
     discountsListModal.close();
     onlineOrdersModal.close();
@@ -110,6 +113,11 @@ const NavbarCard = () => {
   const openDiscountsList = () => {
     closeAllModals();
     discountsListModal.open();
+  };
+
+  const openStockFixed = () => {
+    closeAllModals();
+    stockFixedModal.open();
   };
 
   const openControlStock = () => {
@@ -169,6 +177,11 @@ const NavbarCard = () => {
                 label: "Seguimiento",
                 icon: "pi pi-link",
                 command: openControlStock,
+              },
+              {
+                label: "Aviso Stock Correo",
+                icon: "pi pi-envelope",
+                command: openStockFixed,
               },
             ],
           },
@@ -441,6 +454,13 @@ const NavbarCard = () => {
         <ControlStockModal
           isOpen={controlStockModal.isOpen}
           onClose={controlStockModal.close}
+        />
+      )}
+
+      {stockFixedModal.isOpen && (
+        <StockFixedModal
+          isOpen={stockFixedModal.isOpen}
+          onClose={stockFixedModal.close}
         />
       )}
 
