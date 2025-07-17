@@ -13,6 +13,8 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import generateTicket from "../../../utils/ticket";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import JsBarcode from "jsbarcode";
+import { generatePriceLabels } from "../../../utils/generatePriceLabels";
 
 const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   const [orderId, setOrderId] = useState("");
@@ -462,6 +464,95 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
     }
   };
 
+  const handleReprintLabels = async () => {
+    const productsToPrint = selectedRows.filter((p) => p.id_control_stock);
+    if (productsToPrint.length === 0) {
+      toast.current.show({
+        severity: "warn",
+        summary: "Advertencia",
+        detail: "No hay productos con seguimiento para imprimir.",
+      });
+      return;
+    }
+
+    const payloadItems = productsToPrint.map((prod) => ({
+      prod,
+      payload: {
+        ean13: prod.product_ean13,
+        id_control_stock: prod.id_control_stock,
+      },
+    }));
+
+    const responses = await Promise.all(
+      payloadItems.map(({ payload, prod }) =>
+        apiFetch(`${API_BASE_URL}/get_product_price_tag`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }).then((tagInfo) => ({ prod, tagInfo }))
+      )
+    );
+
+    const tagMap = {};
+    responses.forEach(({ prod, tagInfo }) => {
+      const key = (prod.product_ean13 || "") + "-" + prod.id_control_stock;
+      tagMap[key] = tagInfo;
+    });
+
+    const detailedData = productsToPrint.map((prod) => ({
+      detail: {
+        ean13: prod.product_ean13,
+        id_product_attribute: prod.product_attribute_id,
+        price: prod.unit_price_tax_incl,
+        control_stocks: [{ id_control_stock: prod.id_control_stock }],
+      },
+      productInfo: {
+        product_name: prod.product_name,
+        combination_name: prod.combination_name,
+        price: prod.unit_price_tax_incl,
+      },
+    }));
+
+    const labelsHtml = generatePriceLabels(detailedData, { tagMap });
+    const pageStyle =
+      "@page { size: 62mm 32mm; margin: 1mm; } body { margin: 0; }";
+    const printWindow = window.open("", "_blank", "width=600,height=400");
+    printWindow.document.write(
+      `<html><head><style>${pageStyle}</style></head><body>${labelsHtml}</body></html>`
+    );
+    printWindow.document.close();
+    printWindow.addEventListener("load", () => {
+      detailedData.forEach(({ detail }, dataIndex) => {
+        detail.control_stocks.forEach((cs, csIndex) => {
+          const barcodeId = `barcode-${dataIndex}-${csIndex}`;
+          const svgElem = printWindow.document.getElementById(barcodeId);
+          if (svgElem) {
+            try {
+              JsBarcode(svgElem, (detail.ean13 || "") + cs.id_control_stock, {
+                format: "code128",
+                width: 2,
+                height: 100,
+                displayValue: false,
+                fontSize: 18,
+                margin: 4,
+                textPosition: "bottom",
+                textAlign: "center",
+                rotation: 0,
+              });
+              svgElem.style.width = "230px";
+              svgElem.style.height = "75px";
+            } catch (err) {
+              console.error("Error generando código de barras:", err);
+            }
+          }
+        });
+      });
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    });
+  };
+
   // Render
   return (
     <>
@@ -753,8 +844,14 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
               </div>
             )}
 
-          {/* Botón Aceptar */}
-          <div className="flex justify-end mt-3">
+          {/* Botones de acción */}
+          <div className="flex justify-end mt-3 gap-2">
+            <Button
+              label="Reimprimir etiquetas"
+              className="p-button-secondary"
+              disabled={selectedRows.length === 0}
+              onClick={handleReprintLabels}
+            />
             <Button
               label="Aceptar"
               className="p-button p-button-primary"
