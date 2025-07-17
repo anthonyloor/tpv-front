@@ -21,6 +21,7 @@ import generateTicket from "../../../utils/ticket";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { ClientContext } from "../../../contexts/ClientContext";
+import { formatCurrencyES } from "../../../utils/formatters";
 
 const OnlineOrdersModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
@@ -361,7 +362,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
           <Column
             header="Total €"
             field="total_price_tax_incl"
-            body={(rowData) => Number(rowData.total_price_tax_incl).toFixed(2)}
+            body={(rowData) => formatCurrencyES(rowData.total_price_tax_incl)}
             bodyStyle={{ textAlign: "center", width: "10%" }}
           />
         </DataTable>
@@ -611,7 +612,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                 <Column
                   field="total_paid"
                   header="Total (€)"
-                  body={(data) => Number(data.total_paid)?.toFixed(2)}
+                  body={(data) => formatCurrencyES(data.total_paid)}
                   style={{
                     width: "auto",
                     textAlign: "center",
@@ -754,7 +755,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                 <Column
                   field="total_paid"
                   header="Total (€)"
-                  body={(data) => Number(data.total_paid)?.toFixed(2)}
+                  body={(data) => formatCurrencyES(data.total_paid)}
                   style={{
                     width: "100px",
                     textAlign: "center",
@@ -1036,8 +1037,7 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
                 <strong>Pago:</strong> {selectedOrder.payment}
               </div>
               <div className="p-col-6">
-                <strong>Total (€):</strong>{" "}
-                {Number(selectedOrder.total_paid)?.toFixed(2)}
+                <strong>Total (€):</strong> {formatCurrencyES(selectedOrder.total_paid)}
               </div>
               <div className="p-col-6">
                 <strong>Estado:</strong> {selectedOrder.current_state_name}
@@ -1068,14 +1068,14 @@ const OnlineOrdersModal = ({ isOpen, onClose }) => {
               <Column
                 header="Precio"
                 field="product_price"
-                body={(rowData) => Number(rowData.product_price)?.toFixed(2)}
+                body={(rowData) => formatCurrencyES(rowData.product_price)}
                 bodyStyle={{ textAlign: "center" }}
               />
               <Column
                 header="Total €"
                 field="total_price_tax_incl"
                 body={(rowData) =>
-                  Number(rowData.total_price_tax_incl)?.toFixed(2)
+                  formatCurrencyES(rowData.total_price_tax_incl)
                 }
                 bodyStyle={{ textAlign: "center" }}
               />

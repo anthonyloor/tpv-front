@@ -20,6 +20,7 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import generateTicket from "../../../utils/ticket";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import { formatCurrencyES } from "../../../utils/formatters";
 
 const ReprintModal = ({ isOpen, onClose }) => {
   const apiFetch = useApiFetch();
@@ -192,15 +193,15 @@ const ReprintModal = ({ isOpen, onClose }) => {
               <Column
                 field="unit_price_tax_incl"
                 header="P/U (€)"
-                body={(data) => data.unit_price_tax_incl.toFixed(2)}
+                body={(data) => formatCurrencyES(data.unit_price_tax_incl)}
                 style={{ textAlign: "right" }}
               />
               <Column
                 header="Total (€)"
                 body={(rowData) =>
-                  (
+                  formatCurrencyES(
                     rowData.unit_price_tax_incl * rowData.product_quantity
-                  ).toFixed(2)
+                  )
                 }
                 style={{ textAlign: "right" }}
               />
@@ -214,7 +215,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
                   <Column
                     field="value"
                     header="Valor"
-                    body={(data) => data.value.toFixed(2) + " €"}
+                    body={(data) => formatCurrencyES(data.value)}
                     style={{ textAlign: "right" }}
                   />
                 </DataTable>
@@ -481,7 +482,7 @@ const ReprintModal = ({ isOpen, onClose }) => {
             <Column
               field="total_paid"
               header="Total"
-              body={(data) => data.total_paid?.toFixed(2)}
+              body={(data) => formatCurrencyES(data.total_paid)}
               style={{
                 width: "100px",
                 textAlign: "center",

@@ -49,9 +49,10 @@ const OpenPosModal = ({ tokenParam, onSubmit, errorMessage }) => {
             value={initCash}
             onValueChange={(e) => setInitCash(e.value)}
             onKeyDown={handleKeyDown}
-            mode="decimal"
+            mode="currency"
+            currency="EUR"
+            locale="es-ES"
             min={0}
-            locale="es"
             className="w-full"
             inputClassName="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
