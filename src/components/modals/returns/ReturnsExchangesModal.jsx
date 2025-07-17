@@ -13,6 +13,7 @@ import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import generateTicket from "../../../utils/ticket";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
+import { formatCurrencyES } from "../../../utils/formatters";
 
 const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
   const [orderId, setOrderId] = useState("");
@@ -622,7 +623,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                             opacity: "0.8",
                           }}
                         >
-                          {originalPrice.toFixed(2)} €
+                          {formatCurrencyES(originalPrice)}
                         </span>
                         <br />
                         <span
@@ -631,12 +632,12 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                             fontWeight: "bold",
                           }}
                         >
-                          {row.reduction_amount_tax_incl.toFixed(2)} €
+                          {formatCurrencyES(row.reduction_amount_tax_incl)}
                         </span>
                       </div>
                     );
                   }
-                  return `${originalPrice.toFixed(2)} €`;
+                  return formatCurrencyES(originalPrice);
                 }}
               />
               <Column
@@ -668,7 +669,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                             opacity: "0.8",
                           }}
                         >
-                          {originalTotal.toFixed(2)} €
+                          {formatCurrencyES(originalTotal)}
                         </span>
                         <br />
                         <span
@@ -677,12 +678,12 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                             fontWeight: "bold",
                           }}
                         >
-                          {discountedTotal.toFixed(2)} €
+                          {formatCurrencyES(discountedTotal)}
                         </span>
                       </div>
                     );
                   }
-                  return `${originalTotal.toFixed(2)} €`;
+                  return formatCurrencyES(originalTotal);
                 }}
               />
               <Column
@@ -744,7 +745,7 @@ const ReturnsExchangesModal = ({ isOpen, onClose, onAddProduct }) => {
                         <td className="py-2">{disc.code}</td>
                         <td className="py-2">{disc.name}</td>
                         <td className="py-2 text-right">
-                          {disc.value.toFixed(2)} €
+                          {formatCurrencyES(disc.value)}
                         </td>
                       </tr>
                     ))}

@@ -11,6 +11,7 @@ import { useShopsDictionary } from "../../hooks/useShopsDictionary";
 import { ConfigContext } from "../../contexts/ConfigContext";
 import { formatShortDate } from "../../utils/dateUtils";
 import generateSessionsPdf from "../../utils/generateSessionsPdf";
+import { formatCurrencyES } from "../../utils/formatters";
 
 const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
   const apiFetch = useApiFetch();
@@ -115,18 +116,18 @@ const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
       const tbizum = parseFloat(s.total_bizum) || 0;
       return {
         ...s,
-        total_cash: tc,
-        total_card: tcard,
-        total_bizum: tbizum,
-        total: tc + tcard + tbizum,
+        total_cash: +tc.toFixed(2),
+        total_card: +tcard.toFixed(2),
+        total_bizum: +tbizum.toFixed(2),
+        total: +(tc + tcard + tbizum).toFixed(2),
       };
     });
 
     const totals = rows.reduce(
       (acc, r) => {
-        acc.total_cash += r.total_cash;
-        acc.total_card += r.total_card;
-        acc.total_bizum += r.total_bizum;
+        acc.total_cash = +(acc.total_cash + r.total_cash).toFixed(2);
+        acc.total_card = +(acc.total_card + r.total_card).toFixed(2);
+        acc.total_bizum = +(acc.total_bizum + r.total_bizum).toFixed(2);
         return acc;
       },
       { total_cash: 0, total_card: 0, total_bizum: 0 }
@@ -138,7 +139,7 @@ const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
         total_cash: totals.total_cash,
         total_card: totals.total_card,
         total_bizum: totals.total_bizum,
-        total: totals.total_cash + totals.total_card + totals.total_bizum,
+        total: +(totals.total_cash + totals.total_card + totals.total_bizum).toFixed(2),
         isTotal: true,
       });
     }
@@ -186,10 +187,34 @@ const NewSalesReportModal = ({ isOpen, onClose, inlineMode = false }) => {
           style={{ textAlign: "center", width: "120px" }}
           alignHeader="center"
         ></Column>
-        <Column field="total_cash" header="Total Efectivo" style={{ textAlign: "center", width: "120px" }} alignHeader="center"></Column>
-        <Column field="total_card" header="Total Tarjeta" style={{ textAlign: "center", width: "120px" }} alignHeader="center"></Column>
-        <Column field="total_bizum" header="Total Bizum" style={{ textAlign: "center", width: "120px" }} alignHeader="center"></Column>
-        <Column field="total" header="Total" style={{ textAlign: "center", width: "120px" }} alignHeader="center"></Column>
+        <Column
+          field="total_cash"
+          header="Total Efectivo"
+          style={{ textAlign: "center", width: "120px" }}
+          alignHeader="center"
+          body={(row) => formatCurrencyES(row.total_cash)}
+        ></Column>
+        <Column
+          field="total_card"
+          header="Total Tarjeta"
+          style={{ textAlign: "center", width: "120px" }}
+          alignHeader="center"
+          body={(row) => formatCurrencyES(row.total_card)}
+        ></Column>
+        <Column
+          field="total_bizum"
+          header="Total Bizum"
+          style={{ textAlign: "center", width: "120px" }}
+          alignHeader="center"
+          body={(row) => formatCurrencyES(row.total_bizum)}
+        ></Column>
+        <Column
+          field="total"
+          header="Total"
+          style={{ textAlign: "center", width: "120px" }}
+          alignHeader="center"
+          body={(row) => formatCurrencyES(row.total)}
+        ></Column>
       </DataTable>
     </Dialog>
   );

@@ -16,6 +16,7 @@ import { useEmployeesDictionary } from "../../../hooks/useEmployeesDictionary";
 import { ConfigContext } from "../../../contexts/ConfigContext";
 import { Dialog } from "primereact/dialog";
 import { generateSalesPdf } from "../../../utils/generateSalesPdf";
+import { formatCurrencyES } from "../../../utils/formatters";
 import "jspdf-autotable";
 import { formatLongDate } from "../../../utils/dateUtils";
 
@@ -27,9 +28,9 @@ const CloseCashRegisterForm = ({ onClose }) => {
   const [fetchedTotalCash, setFetchedTotalCash] = useState(0.0);
   const [fetchedTotalCard, setFetchedTotalCard] = useState(0.0);
   const [fetchedTotalBizum, setFetchedTotalBizum] = useState(0.0);
-  const [inputTotalCash, setInputTotalCash] = useState("");
-  const [inputTotalCard, setInputTotalCard] = useState("");
-  const [inputTotalBizum, setInputTotalBizum] = useState("");
+  const [inputTotalCash, setInputTotalCash] = useState(null);
+  const [inputTotalCard, setInputTotalCard] = useState(null);
+  const [inputTotalBizum, setInputTotalBizum] = useState(null);
   const [isCloseButtonDisabled, setIsCloseButtonDisabled] = useState(true);
   const [salesCount, setSalesCount] = useState(0);
   const [returnsCount, setReturnsCount] = useState(0);
@@ -94,10 +95,10 @@ const CloseCashRegisterForm = ({ onClose }) => {
   }, [license, apiFetch, API_BASE_URL]);
 
   useEffect(() => {
-    const inputCashNum = inputTotalCash === "" ? 0 : parseFloat(inputTotalCash);
-    const inputCardNum = inputTotalCard === "" ? 0 : parseFloat(inputTotalCard);
+    const inputCashNum = inputTotalCash == null ? 0 : parseFloat(inputTotalCash);
+    const inputCardNum = inputTotalCard == null ? 0 : parseFloat(inputTotalCard);
     const inputBizumNum =
-      inputTotalBizum === "" ? 0 : parseFloat(inputTotalBizum);
+      inputTotalBizum == null ? 0 : parseFloat(inputTotalBizum);
     const validInput =
       inputCashNum === fetchedTotalCash &&
       inputCardNum === fetchedTotalCard &&
@@ -413,7 +414,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
                 <i className="pi pi-money-bill" />
               </span>
               <InputText
-                value={`${formatNumber(fetchedTotalCash.toFixed(2))} €`}
+                value={formatCurrencyES(fetchedTotalCash)}
                 disabled
                 className="text-right"
               />
@@ -432,7 +433,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
                 <i className="pi pi-credit-card" />
               </span>
               <InputText
-                value={`${formatNumber(fetchedTotalCard.toFixed(2))} €`}
+                value={formatCurrencyES(fetchedTotalCard)}
                 disabled
                 className="text-right"
               />
@@ -451,7 +452,7 @@ const CloseCashRegisterForm = ({ onClose }) => {
                 <i className="pi pi-phone" />
               </span>
               <InputText
-                value={`${formatNumber(fetchedTotalBizum.toFixed(2))} €`}
+                value={formatCurrencyES(fetchedTotalBizum)}
                 disabled
                 className="text-right"
               />
@@ -510,7 +511,9 @@ const CloseCashRegisterForm = ({ onClose }) => {
             inputId="inputTotalCash"
             value={inputTotalCash}
             onValueChange={(e) => setInputTotalCash(e.value)}
-            mode="decimal"
+            mode="currency"
+            currency="EUR"
+            locale="es-ES"
             className="mt-1 block w-full border border-gray-300 rounded-md p-2"
           />
         </div>
@@ -525,7 +528,9 @@ const CloseCashRegisterForm = ({ onClose }) => {
             inputId="inputTotalCard"
             value={inputTotalCard}
             onValueChange={(e) => setInputTotalCard(e.value)}
-            mode="decimal"
+            mode="currency"
+            currency="EUR"
+            locale="es-ES"
             className="mt-1 block w-full border border-gray-300 rounded-md p-2"
           />
         </div>
@@ -540,7 +545,9 @@ const CloseCashRegisterForm = ({ onClose }) => {
             inputId="inputTotalBizum"
             value={inputTotalBizum}
             onValueChange={(e) => setInputTotalBizum(e.value)}
-            mode="decimal"
+            mode="currency"
+            currency="EUR"
+            locale="es-ES"
             className="mt-1 block w-full border border-gray-300 rounded-md p-2 mb-4"
           />
         </div>

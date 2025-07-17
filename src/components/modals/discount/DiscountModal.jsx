@@ -198,6 +198,9 @@ const DiscountModal = ({
             showButtons={false}
             className="flex-grow"
             placeholder={discountType === "percentage" ? "0-100" : ">= 0"}
+            mode={discountType === "percentage" ? "decimal" : "currency"}
+            currency="EUR"
+            locale="es-ES"
           />
           <span className="ml-2">
             {discountType === "percentage" ? "%" : "€"}

@@ -12,6 +12,7 @@ import { ConfigContext } from "../../../contexts/ConfigContext";
 import { AuthContext } from "../../../contexts/AuthContext";
 import { generateClosureTicket } from "../../../utils/ticket";
 import { formatLongDate, formatFullDateTime } from "../../../utils/dateUtils";
+import { formatCurrencyES } from "../../../utils/formatters";
 
 const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
   const [sessions, setSessions] = useState([]);
@@ -289,24 +290,28 @@ const ListCashRegisterModal = ({ isOpen, onClose, inlineMode = false }) => {
               header="Caja Inicial"
               style={{ textAlign: "center", width: "100px" }}
               alignHeader="center"
+              body={(rowData) => formatCurrencyES(rowData.init_cash)}
             ></Column>
             <Column
               field="total_cash"
               header="Total Efectivo"
               style={{ textAlign: "center", width: "100px" }}
               alignHeader="center"
+              body={(rowData) => formatCurrencyES(rowData.total_cash)}
             ></Column>
             <Column
               field="total_card"
               header="Total Tarjeta"
               style={{ textAlign: "center", width: "100px" }}
               alignHeader="center"
+              body={(rowData) => formatCurrencyES(rowData.total_card)}
             ></Column>
             <Column
               field="total_bizum"
               header="Total Bizum"
               style={{ textAlign: "center", width: "100px" }}
               alignHeader="center"
+              body={(rowData) => formatCurrencyES(rowData.total_bizum)}
             ></Column>
             <Column
               field="active"
