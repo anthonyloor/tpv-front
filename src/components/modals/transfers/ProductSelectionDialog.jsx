@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Checkbox } from "primereact/checkbox";
 import { Button } from "primereact/button";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { useApiFetch } from "../../../utils/useApiFetch";
@@ -45,33 +44,6 @@ const ProductSelectionDialog = ({
       setSelectedBarcodeItems([]);
     }
   }, [visible]);
-
-  const toggleSelection = (product) => {
-    setSelectedItems((prev) => {
-      const exists = prev.find(
-        (p) =>
-          p.id_product === product.id_product &&
-          p.id_product_attribute === product.id_product_attribute
-      );
-      if (exists) {
-        return prev.filter(
-          (p) =>
-            !(
-              p.id_product === product.id_product &&
-              p.id_product_attribute === product.id_product_attribute
-            )
-        );
-      }
-      return [...prev, product];
-    });
-  };
-
-  const isSelected = (product) =>
-    !!selectedItems.find(
-      (p) =>
-        p.id_product === product.id_product &&
-        p.id_product_attribute === product.id_product_attribute
-    );
 
   // Nuevas funciones para manejar la selección en la columna Cod. Barras
   const handleBarcodeClick = (product) => {
@@ -175,19 +147,6 @@ const ProductSelectionDialog = ({
     );
   };
 
-  // Función para renderizar la columna de selección (Checkbox) modificada para permitir selección múltiple en todos los registros
-  const selectionBodyTemplate = (rowData) => {
-    return (
-      <Checkbox
-        checked={isSelected(rowData)}
-        onChange={(e) => {
-          e.originalEvent.stopPropagation();
-          toggleSelection(rowData);
-        }}
-      />
-    );
-  };
-
   // Se modifica la función para renderizar el código de barras, haciéndola clickable
   const barcodeBodyTemplate = (rowData) => {
     return (
@@ -231,17 +190,18 @@ const ProductSelectionDialog = ({
         <div className="overflow-auto" style={{ maxHeight: "65vh" }}>
           <DataTable
             value={products}
+            selection={selectedItems}
+            onSelectionChange={(e) => setSelectedItems(e.value)}
             responsiveLayout="scroll"
             emptyMessage="No hay productos para mostrar."
             style={{
               backgroundColor: "var(--surface-0)",
               color: "var(--text-color)",
             }}
-            dataKey="uniqueKey"
-            onRowClick={(e) => toggleSelection(e.data)}
+            // Eliminamos onRowClick para evitar conflictos
           >
             <Column
-              body={selectionBodyTemplate}
+              selectionMode="multiple"
               style={{ textAlign: "center", width: "80px" }}
             />
             <Column header="Producto" field="product_name" />
