@@ -172,6 +172,7 @@ const ProductSearchCardForTransfer = ({
         map[key] = {
           id_product: prod.id_product,
           id_product_attribute: prod.id_product_attribute,
+          uniqueKey: key,
           product_name: prod.combination_name
             ? `${prod.reference_combination} - ${prod.combination_name}`
             : prod.product_name,

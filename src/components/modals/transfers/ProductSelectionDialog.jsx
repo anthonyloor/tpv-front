@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { Dialog } from "primereact/dialog";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Checkbox } from "primereact/checkbox";
 import { Button } from "primereact/button";
 import getApiBaseUrl from "../../../utils/getApiBaseUrl";
 import { useApiFetch } from "../../../utils/useApiFetch";
@@ -45,37 +44,6 @@ const ProductSelectionDialog = ({
       setSelectedBarcodeItems([]);
     }
   }, [visible]);
-
-  // Al hacer check
-  const handleCheckboxChange = (product) => {
-    setSelectedItems((prev) => {
-      const found = prev.find(
-        (p) =>
-          p.id_product === product.id_product &&
-          p.id_product_attribute === product.id_product_attribute
-      );
-      if (found) {
-        // Quitar
-        return prev.filter(
-          (p) =>
-            !(
-              p.id_product === product.id_product &&
-              p.id_product_attribute === product.id_product_attribute
-            )
-        );
-      } else {
-        // Agregar
-        return [...prev, product];
-      }
-    });
-  };
-
-  const isSelected = (product) =>
-    !!selectedItems.find(
-      (p) =>
-        p.id_product === product.id_product &&
-        p.id_product_attribute === product.id_product_attribute
-    );
 
   // Nuevas funciones para manejar la selección en la columna Cod. Barras
   const handleBarcodeClick = (product) => {
@@ -179,16 +147,6 @@ const ProductSelectionDialog = ({
     );
   };
 
-  // Función para renderizar la columna de selección (Checkbox) modificada para permitir selección múltiple en todos los registros
-  const selectionBodyTemplate = (rowData) => {
-    return (
-      <Checkbox
-        checked={isSelected(rowData)}
-        onChange={() => handleCheckboxChange(rowData)}
-      />
-    );
-  };
-
   // Se modifica la función para renderizar el código de barras, haciéndola clickable
   const barcodeBodyTemplate = (rowData) => {
     return (
@@ -232,15 +190,18 @@ const ProductSelectionDialog = ({
         <div className="overflow-auto" style={{ maxHeight: "65vh" }}>
           <DataTable
             value={products}
+            selection={selectedItems}
+            onSelectionChange={(e) => setSelectedItems(e.value)}
             responsiveLayout="scroll"
             emptyMessage="No hay productos para mostrar."
             style={{
               backgroundColor: "var(--surface-0)",
               color: "var(--text-color)",
             }}
+            // Eliminamos onRowClick para evitar conflictos
           >
             <Column
-              body={selectionBodyTemplate}
+              selectionMode="multiple"
               style={{ textAlign: "center", width: "80px" }}
             />
             <Column header="Producto" field="product_name" />
@@ -249,11 +210,17 @@ const ProductSelectionDialog = ({
             {showOriginStock && (
               <Column
                 header={`Stock ${originShopName}`}
-                body={(rowData) => (
-                  <>
-                    <div>{rowData.stockOrigin ?? 0}</div>
-                    {rowData.originControlStock &&
-                      rowData.originControlStock.length > 0 && (
+                body={(rowData) => {
+                  const activeCount = rowData.originControlStock
+                    ? rowData.originControlStock.filter(
+                        (cs) => cs.active_control_stock
+                      ).length
+                    : 0;
+                  return (
+                    <>
+                      {rowData.stockOrigin ?? 0}
+                      {activeCount > 0 ? ` | ${activeCount} ` : ""}
+                      {activeCount > 0 && (
                         <Button
                           icon="pi pi-link"
                           className="p-button-text p-button-sm"
@@ -265,18 +232,25 @@ const ProductSelectionDialog = ({
                           }
                         />
                       )}
-                  </>
-                )}
+                    </>
+                  );
+                }}
               />
             )}
             {showDestinationStock && (
               <Column
                 header={`Stock ${destinationShopName}`}
-                body={(rowData) => (
-                  <>
-                    <div>{rowData.stockDestination ?? 0}</div>
-                    {rowData.destinationControlStock &&
-                      rowData.destinationControlStock.length > 0 && (
+                body={(rowData) => {
+                  const activeCount = rowData.destinationControlStock
+                    ? rowData.destinationControlStock.filter(
+                        (cs) => cs.active_control_stock
+                      ).length
+                    : 0;
+                  return (
+                    <>
+                      {rowData.stockDestination ?? 0}
+                      {activeCount > 0 ? ` | ${activeCount} ` : ""}
+                      {activeCount > 0 && (
                         <Button
                           icon="pi pi-link"
                           className="p-button-text p-button-sm"
@@ -288,8 +262,9 @@ const ProductSelectionDialog = ({
                           }
                         />
                       )}
-                  </>
-                )}
+                    </>
+                  );
+                }}
               />
             )}
           </DataTable>
