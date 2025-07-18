@@ -64,10 +64,13 @@ const useProductSearchOptimized = ({
   const [isLoading, setIsLoading] = useState(false);
   const [productToConfirm, setProductToConfirm] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [foreignConfirmDialogOpen, setForeignConfirmDialogOpen] = useState(false);
+  const [foreignConfirmDialogOpen, setForeignConfirmDialogOpen] =
+    useState(false);
   const [foreignProductCandidate, setForeignProductCandidate] = useState(null);
-  const [soldLabelConfirmDialogOpen, setSoldLabelConfirmDialogOpen] = useState(false);
-  const [soldLabelProductCandidate, setSoldLabelProductCandidate] = useState(null);
+  const [soldLabelConfirmDialogOpen, setSoldLabelConfirmDialogOpen] =
+    useState(false);
+  const [soldLabelProductCandidate, setSoldLabelProductCandidate] =
+    useState(null);
   const API_BASE_URL = getApiBaseUrl();
   const toast = useRef(null);
 
@@ -85,11 +88,14 @@ const useProductSearchOptimized = ({
 
   const fetchControlStock = async (ean13) => {
     try {
-      const res = await apiFetch(`${API_BASE_URL}/get_controll_stock_filtered`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ean13 }),
-      });
+      const res = await apiFetch(
+        `${API_BASE_URL}/get_controll_stock_filtered`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ean13 }),
+        }
+      );
       return Array.isArray(res) ? res : [];
     } catch (err) {
       if (err.status === 404) return [];
@@ -214,7 +220,7 @@ const useProductSearchOptimized = ({
         playSound("success");
       }
     });
-  }; 
+  };
 
   const handleSearch = async (
     searchTerm,
@@ -241,7 +247,11 @@ const useProductSearchOptimized = ({
           return;
         }
         const client = JSON.parse(localStorage.getItem("selectedClient"));
-        if (client && data.id_customer && client.id_customer !== data.id_customer) {
+        if (
+          client &&
+          data.id_customer &&
+          client.id_customer !== data.id_customer
+        ) {
           alert(
             "Vale descuento no válido, motivo: no pertenece al cliente seleccionado"
           );
@@ -249,22 +259,31 @@ const useProductSearchOptimized = ({
         }
         const licenseData = JSON.parse(localStorage.getItem("licenseData"));
         const currentShopId = Number(licenseData?.id_shop);
-        const allowedShops =
-          data?.restrictions?.shop || data?.restrictions?.shops || [];
-        if (
-          Array.isArray(allowedShops) &&
-          allowedShops.length > 0 &&
-          !allowedShops
-            .map((s) => Number(s.id_shop ?? s.id))
-            .includes(currentShopId)
-        ) {
+        let allowedShops = [];
+        if (data && data.restrictions) {
+          if (data.restrictions.id_shop) {
+            allowedShops = data.restrictions.id_shop
+              .toString()
+              .split(",")
+              .map(Number);
+          } else {
+            const shops =
+              data.restrictions.shop || data.restrictions.shops || [];
+            allowedShops = Array.isArray(shops)
+              ? shops.map((s) => Number(s.id_shop ?? s.id))
+              : [Number(shops.id_shop ?? shops.id)];
+          }
+        }
+        if (allowedShops.length > 0 && !allowedShops.includes(currentShopId)) {
           alert(
             "Vale descuento no válido, motivo: no disponible en esta tienda"
           );
           return;
         }
         let currentCartTotal = 0;
-        const cartRaw = localStorage.getItem(`cart_shop_${licenseData?.id_shop}`);
+        const cartRaw = localStorage.getItem(
+          `cart_shop_${licenseData?.id_shop}`
+        );
         if (cartRaw) {
           const parsedCart = JSON.parse(cartRaw);
           if (parsedCart && parsedCart.items) {
@@ -378,7 +397,9 @@ const useProductSearchOptimized = ({
         }
         prod.id_control_stock = match.id_control_stock;
         prod.active_control_stock = match.active;
-        const filtered = forEan13 ? [prod] : filterProductsForShop([prod], shopId);
+        const filtered = forEan13
+          ? [prod]
+          : filterProductsForShop([prod], shopId);
         let groups = groupProducts(filtered);
         groups = await attachControlStock(groups);
         if (filtered.length === 1 && match.active) {
